@@ -1,23 +1,61 @@
-﻿@inherits LayoutComponentBase
+﻿@using EasyLab.Components.Pages
+@using EasyLab.Servizi
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inherits LayoutComponentBase
+@inject StateKeeperService StateKeeper
+@inject NavigationManager Navigation
+@inject ProtectedSessionStorage SessionStorage
+
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+    @if (!string.IsNullOrEmpty(StateKeeper.CurrentUsername))
+    {
+        <main>
+            <Header></Header>
+            <article class="content px-4">
+                @Body
+            </article>
+            <Footer></Footer>
+        </main>
+    }
+    else
+    {
+        @* Mostriamo un placeholder vuoto o un caricamento mentre OnAfterRender fa il redirect *@
+        <div class="d-flex justify-content-center align-items-center" style="height: 100vh; background: #f8f9fa;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading</span>
+            </div>
         </div>
-
-        <article class="content px-4">
-            @Body
-        </article>
-    </main>
+    }
 </div>
 
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (string.IsNullOrEmpty(StateKeeper.CurrentUsername))
+            {
+                // Prova a recuperare l'utente dalla session storage del browser
+                var result = await SessionStorage.GetAsync<string>("currentUsername");
+                if (result.Success && !string.IsNullOrEmpty(result.Value))
+                {
+                    StateKeeper.CurrentUsername = result.Value;
+                    StateKeeper.NotifyStateChanged();
+                    StateHasChanged();
+                    return;
+                }
+
+                await Task.Yield();
+                Navigation.NavigateTo("/login");
+            }
+        }
+    }
+}
+
 <div id="blazor-error-ui">
-    An unhandled error has occurred.
+    UnhandledError
     <a href="" class="reload">Reload</a>
     <a class="dismiss">🗙</a>
 </div>
+

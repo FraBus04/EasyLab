@@ -1,0 +1,148 @@
+﻿@inject NavigationManager NavManager
+@inject IJSRuntime JSRuntime
+@using EasyLab.Servizi
+@using Microsoft.Extensions.Localization
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject StateKeeperService StateKeeper
+@inject ProtectedSessionStorage SessionStorage
+@rendermode InteractiveServer
+
+<header class="Header">
+	<div class="Header-Container">
+		<div @onclick="Home">
+			<img style="cursor: pointer; width: auto; height: auto;" src="/images/EASY-20-60.png" alt="Home" />
+		</div>
+		<div @onclick="Materiali">
+			<button>
+                <img src="/images/MatSVG.svg" alt="Materiali" />
+			</button>
+			<span>Materiali</span>
+		</div>
+		<div @onclick="Prodotti">
+			<button>
+                <img src="/images/SchedaProdottoSVG.svg" alt="Prodotti" />
+			</button>
+			<span>Prodotti</span>
+		</div> 
+		@* <div @onclick="DiBa">
+			<button>
+				<img src="/images/DiBaSVG.svg" alt="DiBa" />
+			</button>
+			<span>DiBa</span>
+		</div> *@
+		<div class="dropdown">
+			<button>
+				<img src="/images/UteSWG.svg" alt="Gestione Utenti" />
+			</button>
+            <span>Gestione Utenti</span>
+			<div class="dropdown-content">
+				<button @onclick="Logout">
+					<img src="/images/bouser_32x32.png" alt="Logout" />
+                    <span>@string.Format("Logout", StateKeeper.CurrentUsername)</span>
+				</button>
+				<button @onclick="CreaUtente">
+					<img src="/images/Add32.png" alt="Creazione utenti" />
+                    <span>Creazione utenti</span>
+				</button>
+				<button @onclick="ModificaUtente">
+					<img src="/images/ide_32x32.png" alt="Modifica utenti" />
+                    <span>Modifica utenti</span>
+				</button>
+			</div>
+		</div>
+	</div>
+</header>
+
+@code {
+    private async Task Logout(MouseEventArgs e)
+    {
+        StateKeeper.CurrentUsername = null;
+        StateKeeper.NotifyStateChanged();
+        await SessionStorage.DeleteAsync("currentUsername");
+        NavManager.NavigateTo("/login");
+    }
+
+    private async Task CreaUtente(MouseEventArgs e)
+    {
+        if (e.ShiftKey)
+        {
+            await JSRuntime.InvokeVoidAsync("open", "/utenti/crea", "_blank");
+        }
+        else
+        {
+            NavManager.NavigateTo("/utenti/crea");
+        }
+    }
+
+    private async Task ModificaUtente(MouseEventArgs e)
+    {
+        if (e.ShiftKey)
+        {
+            await JSRuntime.InvokeVoidAsync("open", "/utenti/modifica", "_blank");
+        }
+        else
+        {
+            NavManager.NavigateTo("/utenti/modifica");
+        }
+    }
+
+    private async Task Home(MouseEventArgs e)
+    {
+        if (e.ShiftKey)
+        {
+            await JSRuntime.InvokeVoidAsync("open", "/", "_blank");
+        }
+        else
+        {
+            NavManager.NavigateTo("/");
+        }
+    }
+
+    private async Task Articoli(MouseEventArgs e)
+    {
+        if (e.ShiftKey)
+        {
+            await JSRuntime.InvokeVoidAsync("open", "/Articoli", "_blank");
+        }
+        else
+        {
+            NavManager.NavigateTo("/Articoli");
+        }
+    }
+
+    private async Task Materiali(MouseEventArgs e)
+    {
+        if (e.ShiftKey)
+        {
+            await JSRuntime.InvokeVoidAsync("open", "/Materiali", "_blank");
+        }
+        else
+        {
+            NavManager.NavigateTo("/Materiali");
+        }
+    }
+
+    private async Task DiBa(MouseEventArgs e)
+    {
+        if (e.ShiftKey)
+        {
+            await JSRuntime.InvokeVoidAsync("open", "/DiBa", "_blank");
+        }
+        else
+        {
+            NavManager.NavigateTo("/DiBa");
+        }
+    }
+
+    private async Task Prodotti(MouseEventArgs e)
+    {
+        if (e.ShiftKey)
+        {
+            await JSRuntime.InvokeVoidAsync("open", "/Prodotti", "_blank");
+        }
+        else
+        {
+            NavManager.NavigateTo("/Prodotti");
+        }
+    }
+}

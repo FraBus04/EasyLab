@@ -1,0 +1,31 @@
+@inherits LayoutComponentBase
+
+<div class="login-page">
+    <main>
+        <article class="content">
+            @Body
+        </article>
+    </main>
+</div>
+
+<style>
+    .login-page {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        background-color: #FAFAFA;
+    }
+
+    main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+    }
+</style>

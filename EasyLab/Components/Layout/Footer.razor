@@ -1,0 +1,42 @@
+@rendermode InteractiveServer
+@using EasyLab.Models
+@using EasyLab.Servizi
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<SeaseTstContext> dbContextFactory
+@inject StateKeeperService StateKeeper
+@implements IDisposable
+
+<footer class="Footer">
+    <div class="Footer-Container-Left">
+        <div class="footer-item">
+            <img src="/images/bouser_16x16.png" alt="User" />
+            <span>@StateKeeper.CurrentUsername</span>
+        </div>
+        <div class="footer-item">
+            <img src="/images/managedatasource_16x16.png" alt="DB" />
+            <span>@NomeDatabase</span>
+        </div>
+    </div>
+
+    <div class="Footer-Container-Right">
+        <span>Versione: </span>
+        <span>0.0.0</span>
+    </div>
+</footer>
+
+@code {
+    string? NomeDatabase;
+    private SeaseTstContext context;
+
+    protected override void OnInitialized()
+    {
+        context = dbContextFactory.CreateDbContext();
+        NomeDatabase = context.Database.GetDbConnection().Database;
+        StateKeeper.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        StateKeeper.OnChange -= StateHasChanged;
+    }
+}

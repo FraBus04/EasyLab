@@ -1,5 +1,6 @@
 using EasyLab.Components;
 using EasyLab.Models;
+using EasyLab.Servizi;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,6 +8,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddSingleton<StateKeeperService>();
 
 // Recupera la stringa di connessione
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
