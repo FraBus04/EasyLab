@@ -1,3 +1,4 @@
+using DevExpress.Blazor;
 using EasyLab.Components;
 using EasyLab.Models;
 using EasyLab.Servizi;
@@ -7,7 +8,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        options.DetailedErrors = builder.Environment.IsDevelopment();
+    });
+
+builder.Services.AddDevExpressBlazor();
 
 builder.Services.AddSingleton<StateKeeperService>();
 
@@ -16,7 +22,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 // Registra la DbContextFactory (consigliata per Blazor)
 builder.Services.AddDbContextFactory<SeaseTstContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseSqlServer(connectionString, sql => sql.UseCompatibilityLevel(120)));
 
 var app = builder.Build();
 

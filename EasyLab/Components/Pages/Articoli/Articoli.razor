@@ -1,0 +1,549 @@
+@page "/Articoli"
+@page "/Materiali"
+@page "/Prodotti"
+@using EasyLab.Models
+@using EasyLab.Components.Utils
+@using Microsoft.EntityFrameworkCore
+@rendermode InteractiveServer
+@inject NavigationManager NavigationManager
+@inject IDbContextFactory<SeaseTstContext> DbFactory
+@implements IDisposable
+
+<PageTitle>Articoli</PageTitle>
+
+<div class="articoli-page">
+
+@if (loading)
+{
+    <Loading></Loading>
+}
+
+<div class="articoli-toolbar d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="@(() => MostraFiltri = !MostraFiltri)">
+        @(MostraFiltri ? "Nascondi filtri" : "Mostra filtri")
+    </button>
+    <div class="d-flex align-items-end gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="@(() => myColumnChooser.Visible = !myColumnChooser.Visible)">Colonne</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ShowListOnly">Lista</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ShowSplitView">Split</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ShowDetailsOnly">Dettaglio</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="ExportToExcel">Esporta Excel</button>
+    </div>
+</div>
+
+@if (MostraFiltri)
+{
+    <div class="articoli-filtri p-2 mb-2 border rounded d-flex flex-wrap gap-3 align-items-end">
+        <div style="min-width:220px;">
+            <label class="form-label small mb-0">Brand</label>
+            <CheckboxDropdown TItem="Contatti"
+                              Data="@Brands"
+                              @bind-SelectedItems="BrandSelezionati"
+                              TextFieldSelector="@(b => b.Societa1)"
+                              NullText="Tutti i brand"
+                              SelectAllText="Tutti i brand" />
+        </div>
+        <div style="min-width:220px;">
+            <label class="form-label small mb-0">Stagione</label>
+            <CheckboxDropdown TItem="Stagioni"
+                              Data="@Stagioni"
+                              @bind-SelectedItems="StagioneSelezionati"
+                              TextFieldSelector="@(s => s.Cod ?? string.Empty)"
+                              NullText="Tutte le stagioni"
+                              SelectAllText="Tutte le stagioni" />
+        </div>
+        <div>
+            <label class="form-label small mb-0 d-block">Tipo</label>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="tipoPR" checked="@TipiSelezionati.Contains("PR")" @onchange="@(e => OnTipoChecked("PR", e.Value))" />
+                <label class="form-check-label" for="tipoPR">Prodotti</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="tipoMP" checked="@TipiSelezionati.Contains("MP")" @onchange="@(e => OnTipoChecked("MP", e.Value))" />
+                <label class="form-check-label" for="tipoMP">Materiali</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="tipoSM" checked="@TipiSelezionati.Contains("SM")" @onchange="@(e => OnTipoChecked("SM", e.Value))" />
+                <label class="form-check-label" for="tipoSM">Semilavorati</label>
+            </div>
+        </div>
+        <DxButton Text="Cerca" RenderStyle="ButtonRenderStyle.Primary" Click="Cerca" />
+    </div>
+}
+
+<DxSplitter Height="calc(100vh - 300px)">
+    <Panes>
+        <DxSplitterPane Size="60%" MinSize="300px" @bind-Collapsed="@ListPaneCollapsed">
+            <DxGrid @ref="MyGrid"
+                    Data="@DataSource"
+                    KeyFieldName="Cd"
+                    ShowSearchBox="true"
+                    ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                    AllowSelectRowByClick="true"
+                    PagerVisible="false"
+                    VirtualScrollingEnabled="true"
+                    CssClass="h-100"
+                    HighlightRowOnHover="true"
+                    EditMode="GridEditMode.PopupEditForm"
+                    CustomizeEditModel="OnCustomizeEditModel"
+                    EditModelSaving="OnEditModelSaving"
+                    DataItemDeleting="OnDelete"
+                    FocusedRowEnabled="true"
+                    FocusedRowChanged="RigaSelezionataCambiata">
+                <Columns>
+                    <DxGridCommandColumn Width="110px" NewButtonVisible="true" EditButtonVisible="true" DeleteButtonVisible="true" ShowInColumnChooser="false" />
+                    <DxGridDataColumn FieldName="Cd" Caption="Codice" />
+                    <DxGridDataColumn FieldName="Tipo" Caption="Tipo" Width="70px" />
+                    <DxGridDataColumn FieldName="Contatto" Caption="Brand" />
+                    <DxGridDataColumn FieldName="Stag" Caption="Stagione" Width="90px" />
+                    <DxGridDataColumn FieldName="Parte" Caption="Parte" />
+                    <DxGridDataColumn FieldName="ParteDesc" Caption="Descrizione" />
+                    <DxGridDataColumn FieldName="Mod" Caption="Modello" />
+                    <DxGridDataColumn FieldName="Tess" Caption="Tessuto" />
+                    <DxGridDataColumn FieldName="Nota" Caption="Note" Visible="false" />
+                    <DxGridDataColumn FieldName="Guid" Caption="Guid" Visible="false" />
+                    <DxGridDataColumn FieldName="IdModNoStag" Caption="Modello No Stag" Visible="false">
+                        <CellDisplayTemplate Context="ctx">@GetText("Modello", ctx.Value)</CellDisplayTemplate>
+                    </DxGridDataColumn>
+                    <DxGridDataColumn FieldName="IdMod" Caption="Modello" Visible="false">
+                        <CellDisplayTemplate Context="ctx">@GetText("Modello", ctx.Value)</CellDisplayTemplate>
+                    </DxGridDataColumn>
+                    <DxGridDataColumn FieldName="IdMat" Caption="Materiale" Visible="false">
+                        <CellDisplayTemplate Context="ctx">@GetText("Materiale", ctx.Value)</CellDisplayTemplate>
+                    </DxGridDataColumn>
+                    <DxGridDataColumn FieldName="SetTaglie.Cod" Caption="Set Taglie" Visible="false" />
+                    <DxGridDataColumn FieldName="SetTaglieDettBase.Tg" Caption="Taglia Base" Visible="false" />
+                    <DxGridDataColumn FieldName="SetTaglieDettDa.Tg" Caption="Taglia Da" Visible="false" />
+                    <DxGridDataColumn FieldName="SetTaglieDettA.Tg" Caption="Taglia A" Visible="false" />
+                    <DxGridDataColumn FieldName="IdNazione" Caption="Nazione" Visible="false">
+                        <CellDisplayTemplate Context="ctx">@GetText("Nazione", ctx.Value)</CellDisplayTemplate>
+                    </DxGridDataColumn>
+                    <DxGridDataColumn FieldName="TabKw.Descr" Caption="KW" Visible="false" />
+                    <DxGridDataColumn FieldName="ContattiFornPref.Societa1" Caption="Fornitore Pref." Visible="false" />
+                    <DxGridDataColumn FieldName="ContattiLabPrev.Societa1" Caption="Laboratorio Prev." Visible="false" />
+                    <DxGridDataColumn FieldName="CodArtFornitore" Caption="Cod. Art. Fornitore" Visible="false" />
+                    <DxGridDataColumn FieldName="CdOp" Caption="CdOp" Visible="false" />
+                    <DxGridDataColumn FieldName="Um" Caption="UM" Visible="false" />
+                    <DxGridDataColumn FieldName="Umutil" Caption="UM Utile" Visible="false" />
+                    <DxGridDataColumn FieldName="UmutilConv" Caption="UM Utile Conv." Visible="false" />
+                    <DxGridDataColumn FieldName="Umpeso" Caption="UM Peso" Visible="false" />
+                    <DxGridDataColumn FieldName="Peso" Caption="Peso" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizione1.Composizione" Caption="Composizione 1" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizione2.Composizione" Caption="Composizione 2" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizione3.Composizione" Caption="Composizione 3" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizione4.Composizione" Caption="Composizione 4" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizione5.Composizione" Caption="Composizione 5" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizionePo1.Posizione" Caption="Posizione 1" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizionePo2.Posizione" Caption="Posizione 2" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizionePo3.Posizione" Caption="Posizione 3" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizionePo4.Posizione" Caption="Posizione 4" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizionePo5.Posizione" Caption="Posizione 5" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav1.Descrizione" Caption="Lavaggio 1" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav2.Descrizione" Caption="Lavaggio 2" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav3.Descrizione" Caption="Lavaggio 3" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav4.Descrizione" Caption="Lavaggio 4" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav5.Descrizione" Caption="Lavaggio 5" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav6.Descrizione" Caption="Lavaggio 6" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav11.Descrizione" Caption="Lavaggio 11" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav12.Descrizione" Caption="Lavaggio 12" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav13.Descrizione" Caption="Lavaggio 13" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav14.Descrizione" Caption="Lavaggio 14" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav15.Descrizione" Caption="Lavaggio 15" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav16.Descrizione" Caption="Lavaggio 16" Visible="false" />
+                    <DxGridDataColumn FieldName="TabRagg1.Descr" Caption="Raggruppamento 1" Visible="false" />
+                    <DxGridDataColumn FieldName="TabRagg2.Descr" Caption="Raggruppamento 2" Visible="false" />
+                    <DxGridDataColumn FieldName="TabRagg3.Descr" Caption="Raggruppamento 3" Visible="false" />
+                    <DxGridDataColumn FieldName="TabRagg4.Descr" Caption="Raggruppamento 4" Visible="false" />
+                    <DxGridDataColumn FieldName="TabRagg5.Descr" Caption="Raggruppamento 5" Visible="false" />
+                    <DxGridDataColumn FieldName="Cad" Caption="Cad" Visible="false" />
+                    <DxGridDataColumn FieldName="BaseProv" Caption="Base Provincia" Visible="false" />
+                    <DxGridDataColumn FieldName="LeadTimeGg" Caption="Lead Time (gg)" Visible="false" />
+                    <DxGridDataColumn FieldName="CkMatMis" Caption="Ck Mat. Misura" Visible="false" />
+                    <DxGridDataColumn FieldName="CkSemilav" Caption="Ck Semilavorato" Visible="false" />
+                    <DxGridDataColumn FieldName="TabCatMerceologica.Descrizione" Caption="Categoria Merc." Visible="false" />
+                    <DxGridDataColumn FieldName="TabGender.Descr" Caption="Gender" Visible="false" />
+                    <DxGridDataColumn FieldName="VociDoganali" Caption="Voci Doganali" Visible="false" />
+                    <DxGridDataColumn FieldName="TabTipoMpScar.Descr" Caption="Mat. Prima Scarico" Visible="false" />
+                    <DxGridDataColumn FieldName="PathImg" Caption="Path Immagine" Visible="false" />
+                    <DxGridDataColumn FieldName="Tp" Caption="TP" Visible="false" />
+                    <DxGridDataColumn FieldName="IdTipoMat" Caption="Tipo Materiale" Visible="false">
+                        <CellDisplayTemplate Context="ctx">@GetText("TipoMateriale", ctx.Value)</CellDisplayTemplate>
+                    </DxGridDataColumn>
+                    <DxGridDataColumn FieldName="CdFamMat" Caption="Cod. Famiglia Mat." Visible="false" />
+                    <DxGridDataColumn FieldName="StatoAppBol" Caption="Stato Appr. Bol" Visible="false" />
+                    <DxGridDataColumn FieldName="StatoAppDiBa" Caption="Stato Appr. DiBa" Visible="false" />
+                    <DxGridDataColumn FieldName="StatoApp" Caption="Stato Approvazione" Visible="false" />
+                    <DxGridDataColumn FieldName="Hutile" Caption="H Utile" Visible="false" />
+                    <DxGridDataColumn FieldName="CkMp" Caption="Ck MP" Visible="false" />
+                    <DxGridDataColumn FieldName="CkMrp" Caption="Ck MRP" Visible="false" />
+                    <DxGridDataColumn FieldName="CkFabb" Caption="Ck Fabbisogno" Visible="false" />
+                </Columns>
+                <TotalSummary>
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="Cd" FooterColumnName="ParteDesc" />
+                </TotalSummary>
+            </DxGrid>
+        </DxSplitterPane>
+        <DxSplitterPane @bind-Collapsed="@DetailsPaneCollapsed">
+            @if (ArticoloSelezionato != null)
+            {
+                <div class="detail-card p-3">
+                    <h5 class="mb-3">@ArticoloSelezionato.Cd</h5>
+                    <p><strong>Tipo:</strong> @ArticoloSelezionato.Tipo</p>
+                    <p><strong>Brand:</strong> @ArticoloSelezionato.Contatto</p>
+                    <p><strong>Stagione:</strong> @ArticoloSelezionato.Stag</p>
+                    <p><strong>Parte:</strong> @ArticoloSelezionato.Parte</p>
+                    <p><strong>Descrizione:</strong> @ArticoloSelezionato.ParteDesc</p>
+                    <p><strong>Modello:</strong> @ArticoloSelezionato.Mod</p>
+                    <p><strong>Tessuto:</strong> @ArticoloSelezionato.Tess</p>
+                    <p><strong>Note:</strong> @ArticoloSelezionato.Nota</p>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted p-3">Seleziona un articolo per vedere il dettaglio.</p>
+            }
+        </DxSplitterPane>
+    </Panes>
+</DxSplitter>
+
+<CustomColumnChooser @ref="myColumnChooser"
+                     dxGrid="MyGrid"
+                     Columns="@(MyGrid?.GetColumns().Where(c => c is DxGridDataColumn).ToList() ?? new())"
+                     StaticColumns="@(MyGrid?.GetColumns().Where(c => c is DxGridCommandColumn).ToList() ?? new())"
+                     SelectedColumns="@(MyGrid?.GetVisibleColumns().Where(c => c is DxGridDataColumn).ToList() ?? new())" />
+
+<DxPopup @bind-Visible="_dialogVisible"
+         CloseOnOutsideClick="false"
+         ShowCloseButton="false"
+         ShowFooter="true"
+         HeaderText="@_dialogTitle"
+         Width="420px"
+         Height="auto">
+    <BodyContentTemplate>
+        <div style="white-space: pre-line; padding: 4px 0;">@_dialogMessage</div>
+    </BodyContentTemplate>
+    <FooterContentTemplate>
+        @foreach (var btn in _dialogButtons)
+        {
+            var b = btn;
+            <DxButton Text="@b.Label" RenderStyle="@b.RenderStyle" Click="() => OnDialogButtonClick(b.Value)" />
+        }
+    </FooterContentTemplate>
+</DxPopup>
+
+</div>
+
+@code {
+    private SeaseTstContext context = null!;
+    private DxGrid MyGrid = default!;
+    private List<BasiAll>? DataSource;
+    private List<Contatti> Brands = new();
+    private List<Stagioni> Stagioni = new();
+    private BasiAll? ArticoloSelezionato;
+
+    private List<Contatti> BrandSelezionati = new();
+    private List<Stagioni> StagioneSelezionati = new();
+    private List<string> TipiSelezionati = new() { "PR", "MP", "SM" };
+
+    private CustomColumnChooser myColumnChooser = default!;
+    private Dictionary<string, Dictionary<int, string>> Lookups = new();
+
+    private bool loading = true;
+    private bool MostraFiltri = true;
+    private bool ListPaneCollapsed = false;
+    private bool DetailsPaneCollapsed = false;
+
+    private bool _dialogVisible;
+    private string _dialogTitle = "";
+    private string _dialogMessage = "";
+    private List<(string Label, string Value, ButtonRenderStyle RenderStyle)> _dialogButtons = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        context = await DbFactory.CreateDbContextAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            loading = true;
+            StateHasChanged();
+            try
+            {
+                Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
+                Stagioni = await context.Stagionis.AsNoTracking().OrderByDescending(s => s.Id).ToListAsync();
+                await CaricaLookups();
+                ApplyRouteFilters();
+                await Cerca();
+            }
+            finally
+            {
+                loading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void ApplyRouteFilters()
+    {
+        var uri = NavigationManager.Uri;
+        if (uri.Contains("/Materiali", StringComparison.OrdinalIgnoreCase))
+        {
+            TipiSelezionati = new List<string> { "MP" };
+        }
+        else if (uri.Contains("/Prodotti", StringComparison.OrdinalIgnoreCase))
+        {
+            TipiSelezionati = new List<string> { "PR" };
+        }
+    }
+
+    private void OnTipoChecked(string tipo, object? isChecked)
+    {
+        var check = isChecked is bool b && b;
+        if (check && !TipiSelezionati.Contains(tipo))
+        {
+            TipiSelezionati.Add(tipo);
+        }
+        else if (!check)
+        {
+            TipiSelezionati.Remove(tipo);
+        }
+    }
+
+    private async Task CaricaLookups()
+    {
+        // IdNazione e' short sul DB (Tab_Nazioni.Id e' int): nessuna relazione EF possibile.
+        Lookups["Nazione"] = SafeDictionary(await context.TabNazionis.AsNoTracking().ToListAsync(),
+            n => n.Id, n => n.Nazione ?? n.Cod ?? n.Id.ToString());
+        // BasiModelli/BasiMateriali hanno PK composite e TabTipoMateriale ha PK stringa (CdTipoMat):
+        // "Id" non e' garantito univoco su queste tabelle, quindi nessuna relazione EF e' possibile;
+        // restano risolte via dizionario (con SafeDictionary a protezione di eventuali duplicati).
+        Lookups["Modello"] = SafeDictionary(await context.BasiModellis.AsNoTracking().ToListAsync(),
+            m => m.Id, m => string.IsNullOrWhiteSpace(m.Nome) ? m.Mdl : m.Nome);
+        Lookups["Materiale"] = SafeDictionary(await context.BasiMaterialis.AsNoTracking().ToListAsync(),
+            m => m.Id, m => m.DescMat);
+        Lookups["TipoMateriale"] = SafeDictionary(await context.TabTipoMateriales.AsNoTracking().ToListAsync(),
+            t => t.Id, t => t.Descr ?? t.CdTipoMat);
+    }
+
+    private static Dictionary<int, string> SafeDictionary<T>(List<T> items, Func<T, int> keySelector, Func<T, string?> textSelector)
+    {
+        var dict = new Dictionary<int, string>();
+        foreach (var item in items)
+        {
+            dict[keySelector(item)] = textSelector(item) ?? "";
+        }
+        return dict;
+    }
+
+    private string GetText(string key, object? value)
+    {
+        if (value == null) return "";
+        var id = Convert.ToInt32(value);
+        if (Lookups.TryGetValue(key, out var dict) && dict.TryGetValue(id, out var text) && !string.IsNullOrWhiteSpace(text))
+        {
+            return text;
+        }
+        return id.ToString();
+    }
+
+    private async Task Cerca()
+    {
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            var query = context.BasiAlls.AsNoTracking()
+                .AsSplitQuery()
+                .Include(a => a.SetTaglie)
+                .Include(a => a.SetTaglieDettBase)
+                .Include(a => a.SetTaglieDettDa)
+                .Include(a => a.SetTaglieDettA)
+                .Include(a => a.TabKw)
+                .Include(a => a.ContattiFornPref)
+                .Include(a => a.ContattiLabPrev)
+                .Include(a => a.TabComposizione1)
+                .Include(a => a.TabComposizione2)
+                .Include(a => a.TabComposizione3)
+                .Include(a => a.TabComposizione4)
+                .Include(a => a.TabComposizione5)
+                .Include(a => a.TabComposizionePo1)
+                .Include(a => a.TabComposizionePo2)
+                .Include(a => a.TabComposizionePo3)
+                .Include(a => a.TabComposizionePo4)
+                .Include(a => a.TabComposizionePo5)
+                .Include(a => a.TabSimboliLav1)
+                .Include(a => a.TabSimboliLav2)
+                .Include(a => a.TabSimboliLav3)
+                .Include(a => a.TabSimboliLav4)
+                .Include(a => a.TabSimboliLav5)
+                .Include(a => a.TabSimboliLav6)
+                .Include(a => a.TabSimboliLav11)
+                .Include(a => a.TabSimboliLav12)
+                .Include(a => a.TabSimboliLav13)
+                .Include(a => a.TabSimboliLav14)
+                .Include(a => a.TabSimboliLav15)
+                .Include(a => a.TabSimboliLav16)
+                .Include(a => a.TabRagg1)
+                .Include(a => a.TabRagg2)
+                .Include(a => a.TabRagg3)
+                .Include(a => a.TabRagg4)
+                .Include(a => a.TabRagg5)
+                .Include(a => a.TabCatMerceologica)
+                .Include(a => a.TabGender)
+                .Include(a => a.TabTipoMpScar)
+                .Where(a => a.Stato == "A")
+                .Where(a => a.Tipo != null && TipiSelezionati.Contains(a.Tipo));
+
+            if (BrandSelezionati.Any())
+            {
+                var brandIds = BrandSelezionati.Select(b => b.Id).ToList();
+                query = query.Where(a => brandIds.Contains(a.IdContatto));
+            }
+            if (StagioneSelezionati.Any())
+            {
+                var stagioneIds = StagioneSelezionati.Select(s => s.Id).ToList();
+                query = query.Where(a => a.IdStag != null && stagioneIds.Contains(a.IdStag.Value));
+            }
+
+            DataSource = await query.OrderBy(a => a.Cd).ToListAsync();
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void RigaSelezionataCambiata(GridFocusedRowChangedEventArgs e)
+    {
+        ArticoloSelezionato = e.DataItem as BasiAll;
+        StateHasChanged();
+    }
+
+    private void OnCustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        if (e.IsNew)
+        {
+            var tipoDefault = TipiSelezionati.Count == 1 ? TipiSelezionati[0] : "PR";
+            e.EditModel = new BasiAll
+            {
+                Cd = "",
+                Tipo = tipoDefault,
+                IdContatto = 0,
+                Contatto = "",
+                IdStag = null,
+                Stag = "",
+                Parte = "",
+                ParteDesc = "",
+                Mod = "",
+                Tess = "",
+                Nota = null,
+                Tp = "",
+                IdMod = 0,
+                IdMat = 0,
+                IdTipoMat = 0,
+                CkMatMis = 0,
+                CkSemilav = false,
+                Stato = "A"
+            };
+        }
+    }
+
+    private async Task OnEditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        var model = (BasiAll)e.EditModel;
+        if (string.IsNullOrWhiteSpace(model.Cd))
+        {
+            await ShowDialog("Errore", "Il codice articolo è obbligatorio.", ("OK", "ok", ButtonRenderStyle.Primary));
+            e.Cancel = true;
+            return;
+        }
+
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            if (e.IsNew)
+            {
+                context.BasiAlls.Add(model);
+            }
+            else
+            {
+                var dataItem = (BasiAll)e.DataItem;
+                e.CopyChangesToDataItem();
+                context.BasiAlls.Update(dataItem);
+            }
+            await context.SaveChangesAsync();
+            await Cerca();
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnDelete(GridDataItemDeletingEventArgs e)
+    {
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            var model = (BasiAll)e.DataItem;
+            context.BasiAlls.Remove(model);
+            await context.SaveChangesAsync();
+            await Cerca();
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ExportToExcel()
+    {
+        var fileName = $"Articoli_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+        await MyGrid.ExportToXlsxAsync(fileName, new GridXlExportOptions());
+    }
+
+    private Task<string> ShowDialog(string title, string message, params (string Label, string Value, ButtonRenderStyle RenderStyle)[] buttons)
+    {
+        _dialogTitle = title;
+        _dialogMessage = message;
+        _dialogButtons = buttons.ToList();
+        _dialogVisible = true;
+        StateHasChanged();
+        return Task.FromResult(string.Empty);
+    }
+
+    private void OnDialogButtonClick(string value)
+    {
+        _dialogVisible = false;
+    }
+
+    private void ShowListOnly()
+    {
+        ListPaneCollapsed = false;
+        DetailsPaneCollapsed = true;
+    }
+
+    private void ShowSplitView()
+    {
+        ListPaneCollapsed = false;
+        DetailsPaneCollapsed = false;
+    }
+
+    private void ShowDetailsOnly()
+    {
+        ListPaneCollapsed = true;
+        DetailsPaneCollapsed = false;
+    }
+
+    public void Dispose()
+    {
+        context?.Dispose();
+    }
+}

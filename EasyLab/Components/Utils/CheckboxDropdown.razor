@@ -1,0 +1,137 @@
+@typeparam TItem
+@implements IDisposable
+
+@if (isOpen)
+{
+    <div class="checkbox-dropdown-overlay" @onclick="OnOverlayClick" @onclick:stopPropagation></div>
+}
+
+<div class="checkbox-dropdown">
+    <div class="checkbox-dropdown-toggle" @onclick="ToggleDropdown" @onclick:stopPropagation>
+        <span class="checkbox-dropdown-text">
+            @if (SelectedItems.Count == 0)
+            {
+                @NullText
+            }
+            else if (SelectedItems.Count == GetAvailableItems().Count())
+            {
+                <span class="fw-semibold">@SelectAllText</span>
+            }
+            else
+            {
+                @string.Join(", ", SelectedItems.Select(GetDisplayText))
+            }
+        </span>
+        <span class="checkbox-dropdown-arrow">?</span>
+    </div>
+
+    @if (isOpen)
+    {
+        <div class="checkbox-dropdown-menu" @onclick:stopPropagation>
+            <div class="checkbox-dropdown-item checkbox-dropdown-select-all" @onclick="ToggleSelectAll">
+                <input type="checkbox" checked="@IsAllSelected" @onchange="ToggleSelectAll" @onclick:stopPropagation />
+                <span class="fw-bold">@SelectAllText</span>
+            </div>
+            <div class="checkbox-dropdown-divider"></div>
+            @foreach (var item in GetAvailableItems())
+            {
+                var currentItem = item;
+                var isChecked = SelectedItems.Contains(currentItem);
+                <div class="checkbox-dropdown-item" @onclick="() => ToggleItem(currentItem)">
+                    <input type="checkbox" checked="@isChecked" @onchange="() => ToggleItem(currentItem)" @onclick:stopPropagation />
+                    <span>@GetDisplayText(currentItem)</span>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public IEnumerable<TItem>? Data { get; set; }
+    [Parameter] public List<TItem> SelectedItems { get; set; } = new();
+    [Parameter] public EventCallback<List<TItem>> SelectedItemsChanged { get; set; }
+    [Parameter] public Func<TItem, string>? TextFieldSelector { get; set; }
+    [Parameter] public string NullText { get; set; } = "Select...";
+    [Parameter] public string SelectAllText { get; set; } = "Select All";
+
+    private bool isOpen = false;
+
+    private bool IsAllSelected => GetAvailableItems().Any() && SelectedItems.Count == GetAvailableItems().Count();
+
+    protected override void OnInitialized()
+    {
+        CheckboxDropdownInterop.OnCloseAll += HandleCloseAll;
+    }
+
+    public void Dispose()
+    {
+        CheckboxDropdownInterop.OnCloseAll -= HandleCloseAll;
+    }
+
+    private void HandleCloseAll()
+    {
+        if (isOpen)
+        {
+            isOpen = false;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private IReadOnlyList<TItem> GetAvailableItems()
+    {
+        if (Data == null) return Array.Empty<TItem>();
+        return Data as IReadOnlyList<TItem> ?? Data.ToList();
+    }
+
+    private string GetDisplayText(TItem item)
+    {
+        if (TextFieldSelector != null) return TextFieldSelector(item);
+        return item?.ToString() ?? "";
+    }
+
+    private void ToggleDropdown()
+    {
+        if (isOpen)
+        {
+            isOpen = false;
+        }
+        else
+        {
+            CheckboxDropdownInterop.CloseAll();
+            isOpen = true;
+        }
+    }
+
+    private void OnOverlayClick()
+    {
+        CheckboxDropdownInterop.CloseAll();
+    }
+
+    private async Task ToggleSelectAll()
+    {
+        if (IsAllSelected)
+        {
+            SelectedItems = new List<TItem>();
+        }
+        else
+        {
+            SelectedItems = GetAvailableItems().ToList();
+        }
+        await SelectedItemsChanged.InvokeAsync(SelectedItems);
+    }
+
+    private async Task ToggleItem(TItem item)
+    {
+        var list = new List<TItem>(SelectedItems);
+        if (list.Contains(item))
+        {
+            list.Remove(item);
+        }
+        else
+        {
+            list.Add(item);
+        }
+        SelectedItems = list;
+        await SelectedItemsChanged.InvokeAsync(SelectedItems);
+    }
+}

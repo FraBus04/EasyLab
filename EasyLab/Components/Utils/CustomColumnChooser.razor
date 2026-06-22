@@ -1,0 +1,81 @@
+﻿<DxWindow Width="max(25vw, 250px)"
+          MinWidth="300"
+          MinHeight="200"
+          MaxWidth="350"
+          MaxHeight="500"
+          HeaderText="Colonne"
+    AllowDrag=true
+AllowDragByHeaderOnly=true
+ShowCloseButton=true
+Visible="@Visible"
+Closing="()=> Visible=false">
+
+    <BodyContentTemplate>
+        <DxListBox Context="why" Data="@Columns"
+                   TextFieldName="@nameof(DxGridColumn.Caption)"
+                   Values="SelectedColumns"
+                   CssClass="w-100"
+                   SelectionMode="@ListBoxSelectionMode.Multiple"
+                   ShowCheckboxes="true"
+                   ShowSearchBox="true"
+                   ShowSelectAllCheckbox="true"
+                   
+                   ValuesChanged="@((IEnumerable<IGridColumn> values) => SelectedDataItemsChanged(values))">
+                       <ItemDisplayTemplate>
+                           <div style="text-align:center">@(((IGridColumn)why.DataItem).Caption)</div>
+                       </ItemDisplayTemplate>
+                   </DxListBox>
+
+
+    </BodyContentTemplate>
+</DxWindow>
+
+
+
+
+@code {
+    [Parameter]
+    public List<IGridColumn> Columns { get; set; } = new List<IGridColumn>();
+    [Parameter]
+    public DxGrid dxGrid { get; set; } = null!;
+
+
+
+    [Parameter]
+    public List<IGridColumn> StaticColumns { get; set; } = new List<IGridColumn>();
+    [Parameter]
+    public List<IGridColumn> SelectedColumns { get; set; } = new List<IGridColumn>();
+
+    public bool Visible { get; set; } = false;
+    public void SelectedDataItemsChanged(IEnumerable<IGridColumn> values)
+    {
+        SelectedColumns.Clear();
+        SelectedColumns.AddRange(StaticColumns.Cast<DxGridColumn>());
+        List<DxGridColumn> orderedColumns = values.Cast<DxGridColumn>().ToList();
+        DxGridColumn last = orderedColumns.LastOrDefault();
+        orderedColumns.Remove(last);
+        orderedColumns.Insert(0, last);
+        SelectedColumns.AddRange(orderedColumns);
+        SelectedColumns.OrderBy(asd => asd.Caption);
+        StateHasChanged();
+        UpdateGrid();
+    }
+
+    public void UpdateGrid()
+    {
+        dxGrid.BeginUpdate();
+        var allColumns = dxGrid.GetColumns();
+        foreach (var column in allColumns)
+        {
+            if (SelectedColumns.Contains(column))
+            {
+                column.Visible = true;
+            }
+            else
+            {
+                column.Visible = false;
+            }
+        }
+        dxGrid.EndUpdate();
+    }
+}
