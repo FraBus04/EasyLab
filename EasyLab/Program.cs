@@ -1,10 +1,19 @@
 using EasyLab.Components;
+using EasyLab.Models;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Recupera la stringa di connessione
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// Registra la DbContextFactory (consigliata per Blazor)
+builder.Services.AddDbContextFactory<SeaseTstContext>(options =>
+    options.UseSqlServer(connectionString));
 
 var app = builder.Build();
 
