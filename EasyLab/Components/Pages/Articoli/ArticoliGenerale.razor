@@ -1,0 +1,148 @@
+@using EasyLab.Models
+
+@if (ArticoloSelezionato != null)
+{
+    <div class="generale-container">
+        <div class="section-card full-width">
+            <div class="product-hero">
+                <div class="product-image-wrapper">
+                    @if (ArticoloSelezionato.BasiImmagini?.Immagine2 != null)
+                    {
+                        <img src="data:image/png;base64,@Convert.ToBase64String(ArticoloSelezionato.BasiImmagini.Immagine2)" alt="@ArticoloSelezionato.Cd" />
+                    }
+                    else
+                    {
+                        <div class="no-image-placeholder">
+                            <span>N/D</span>
+                        </div>
+                    }
+                </div>
+
+                <div class="product-identity">
+                    <div class="product-codes">
+                        <div class="product-code">@ArticoloSelezionato.Cd</div>
+                        <div class="product-code">@ArticoloSelezionato.Parte</div>
+                    </div>
+                    <div class="product-name">@(ArticoloSelezionato.ParteDesc ?? "—")</div>
+
+                    <div class="info-grid info-grid-4">
+                        <div class="info-field">
+                            <span class="info-label">Tipo</span>
+                            <span class="info-value">@ArticoloSelezionato.Tipo</span>
+                        </div>
+                        <div class="info-field">
+                            <span class="info-label">Stagione</span>
+                            <span class="info-value">@ArticoloSelezionato.Stag</span>
+                        </div>
+                        <div class="info-field">
+                            <span class="info-label">Gender</span>
+                            <span class="@(ArticoloSelezionato.TabGender != null ? "info-value" : "info-value-na")">
+                                @(ArticoloSelezionato.TabGender?.Descr ?? "N/D")
+                            </span>
+                        </div>
+                        <div class="info-field">
+                            <span class="info-label">Set Taglie</span>
+                            <span class="@(ArticoloSelezionato.SetTaglie != null ? "info-value" : "info-value-na")">
+                                @(ArticoloSelezionato.SetTaglie?.Cod ?? "N/D")
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <DxFormLayout>
+            <DxFormLayoutGroup ColSpanSm="12" ColSpanMd="12" Caption="Dati Anagrafici">
+                <DxFormLayoutItem Caption="Brand" ColSpanMd="4">
+                    <DxTextBox Enabled="false" Text="@ArticoloSelezionato.Contatto"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Modello" ColSpanMd="4">
+                    <DxTextBox Enabled="false" Text="@GetText("Modello", ArticoloSelezionato.IdMod)"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Modello No Stag" ColSpanMd="4">
+                    <DxTextBox Enabled="false" Text="@GetText("Modello", ArticoloSelezionato.IdModNoStag)"></DxTextBox>
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem BeginRow Caption="Categoria Merceologica" ColSpanMd="4">
+                    <DxTextBox Enabled="false" Text="@(ArticoloSelezionato.TabCatMerceologica?.Descrizione ?? "N/D")"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Materiale" ColSpanMd="4">
+                    <DxTextBox Enabled="false" Text="@GetText("Materiale", ArticoloSelezionato.IdMat)"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Tipo Materiale" ColSpanMd="4">
+                    <DxTextBox Enabled="false" Text="@GetText("TipoMateriale", ArticoloSelezionato.IdTipoMat)"></DxTextBox>
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem BeginRow Caption="Modello (Mod)" ColSpanMd="4">
+                    <DxTextBox Enabled="false" Text="@ArticoloSelezionato.Mod"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Tessuto" ColSpanMd="4">
+                    <DxTextBox Enabled="false" Text="@ArticoloSelezionato.Tess"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Stato" ColSpanMd="4">
+                    <DxTextBox Enabled="false" Text="@ArticoloSelezionato.Stato"></DxTextBox>
+                </DxFormLayoutItem>
+            </DxFormLayoutGroup>
+
+            <DxFormLayoutGroup ColSpanSm="12" ColSpanMd="12" Caption="Altri Dati">
+                <DxFormLayoutItem Caption="Nazione" ColSpanMd="3">
+                    <DxTextBox Enabled="false" Text="@GetText("Nazione", ArticoloSelezionato.IdNazione)"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="KW" ColSpanMd="3">
+                    <DxTextBox Enabled="false" Text="@(ArticoloSelezionato.TabKw?.Descr ?? "N/D")"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Fornitore Pref." ColSpanMd="3">
+                    <DxTextBox Enabled="false" Text="@(ArticoloSelezionato.ContattiFornPref?.Societa1 ?? "N/D")"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Laboratorio Prev." ColSpanMd="3">
+                    <DxTextBox Enabled="false" Text="@(ArticoloSelezionato.ContattiLabPrev?.Societa1 ?? "N/D")"></DxTextBox>
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem BeginRow Caption="Raggruppamenti" ColSpanMd="6">
+                    <DxTextBox Enabled="false" Text="@Raggruppamenti"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Lead Time (gg)" ColSpanMd="3">
+                    <DxTextBox Enabled="false" Text="@ArticoloSelezionato.LeadTimeGg?.ToString()"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Mat. Prima Scarico" ColSpanMd="3">
+                    <DxTextBox Enabled="false" Text="@(ArticoloSelezionato.TabTipoMpScar?.Descr ?? "N/D")"></DxTextBox>
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem BeginRow Caption="UM" ColSpanMd="3">
+                    <DxTextBox Enabled="false" Text="@ArticoloSelezionato.Um"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="UM Utile" ColSpanMd="3">
+                    <DxTextBox Enabled="false" Text="@ArticoloSelezionato.Umutil"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="UM Peso" ColSpanMd="3">
+                    <DxTextBox Enabled="false" Text="@ArticoloSelezionato.Umpeso"></DxTextBox>
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Peso" ColSpanMd="3">
+                    <DxTextBox Enabled="false" Text="@ArticoloSelezionato.Peso?.ToString()"></DxTextBox>
+                </DxFormLayoutItem>
+            </DxFormLayoutGroup>
+
+            <DxFormLayoutGroup ColSpanSm="12" ColSpanMd="12" Caption="Note">
+                <DxFormLayoutItem ColSpanMd="12">
+                    <DxMemo Enabled="false" Rows="3" MaxRows="10" Text="@(ArticoloSelezionato.Nota ?? "N/D")"></DxMemo>
+                </DxFormLayoutItem>
+            </DxFormLayoutGroup>
+        </DxFormLayout>
+    </div>
+}
+
+@code {
+    [Parameter] public BasiAll? ArticoloSelezionato { get; set; }
+    [Parameter] public Dictionary<string, Dictionary<int, string>> Lookups { get; set; } = new();
+
+    private string Raggruppamenti => ArticoloSelezionato == null ? "" : string.Join(", ", new[]
+    {
+        ArticoloSelezionato.TabRagg1?.Descr,
+        ArticoloSelezionato.TabRagg2?.Descr,
+        ArticoloSelezionato.TabRagg3?.Descr,
+        ArticoloSelezionato.TabRagg4?.Descr,
+        ArticoloSelezionato.TabRagg5?.Descr
+    }.Where(s => !string.IsNullOrWhiteSpace(s)));
+
+    private string GetText(string key, object? value) => LookupResolver.GetText(Lookups, key, value);
+}

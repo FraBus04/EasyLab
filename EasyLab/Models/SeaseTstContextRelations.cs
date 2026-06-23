@@ -45,6 +45,7 @@ public partial class SeaseTstContext
             entity.HasOne(b => b.TabCatMerceologica).WithMany().HasForeignKey(b => b.IdCatMerc).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(b => b.TabGender).WithMany().HasForeignKey(b => b.IdGender).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(b => b.TabTipoMpScar).WithMany().HasForeignKey(b => b.IdMpscar).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(b => b.BasiImmagini).WithMany().HasForeignKey(b => b.PathImg).HasPrincipalKey(i => i.PathImg).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
         });
     }
 }

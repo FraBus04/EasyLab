@@ -14,10 +14,10 @@
     
     <div class="login-card">
         <div class="login-logo-container">
-            <img src="/images/EasyPlmSVG.svg" alt="EasyPLM Logo" class="login-logo" />
+            <img src="/images/EasyLab.png" alt="EasyLab Logo" class="login-logo" />
         </div>
         
-        <h3 class="login-title">Fashion PLM</h3>
+        <h3 class="login-title">EasyLab WebApp</h3>
         
         <div class="form-group">
             <label for="username" class="form-label">Username</label>
@@ -68,18 +68,13 @@
 
     private async Task Accedi()
     {
-        // Validazione base richiesta dall'utente: se nome utente non è vuoto procediamo
         if (!string.IsNullOrWhiteSpace(Username) && !string.IsNullOrWhiteSpace(Password))
         {
-            // In una situazione reale qui si verificherebbe la password
-            // Se l'accesso va a buon fine, impostiamo l'utente
             StateKeeper.CurrentUsername = Username.ToUpper();
             StateKeeper.NotifyStateChanged();
 
-            // Salva l'utente nella session storage per persistere al reload
             await SessionStorage.SetAsync("currentUsername", StateKeeper.CurrentUsername);
 
-            // Reindirizziamo alla home dopo il successo
             Navigation.NavigateTo("/");
         }
         else

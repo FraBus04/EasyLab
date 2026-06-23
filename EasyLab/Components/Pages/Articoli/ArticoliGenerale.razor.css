@@ -1,0 +1,248 @@
+/* ── Section Card (hero only) ── */
+.section-card {
+    background: #ffffff;
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px 24px 16px;
+    margin-bottom: 16px;
+    transition: box-shadow 0.2s ease;
+}
+
+.section-card:hover {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* ── Product Hero (Image + Identity) ── */
+.product-hero {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+}
+
+.product-image-wrapper {
+    flex-shrink: 0;
+    width: 200px;
+    height: 240px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+}
+
+.product-image-wrapper:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.product-image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.product-image-wrapper::after {
+    content: "\f00e";
+    font-family: "Font Awesome 5 Free", "Font Awesome 6 Free";
+    font-weight: 900;
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #495057;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+.product-image-wrapper:hover::after {
+    opacity: 1;
+}
+
+.no-image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
+    gap: 8px;
+}
+
+.no-image-placeholder i {
+    font-size: 2.5rem;
+}
+
+.no-image-placeholder span {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+}
+
+.product-identity {
+    /*flex: 1;*/
+    /*min-width: 0;*/
+}
+
+.product-codes {
+    display: flex;
+    gap: 25px;
+}
+.product-code {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #212529;
+    letter-spacing: 0.02em;
+    line-height: 1.4;
+    margin-bottom: 2px;
+}
+
+.product-fabric {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 6px;
+}
+
+.product-name {
+    font-size: 1.4rem;
+    color: #6c757d;
+    margin-bottom: 2px;
+    line-height: 1.4;
+}
+
+.product-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.badge-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.badge-season {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.badge-gender {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.badge-model-type {
+    background: #fce4ec;
+    color: #c62828;
+}
+
+.badge-fit {
+    background: #f3e5f5;
+    color: #6a1b9a;
+}
+
+.badge-seasonality {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+/* ── Info Fields (hero identity row) ── */
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 4px 16px;
+}
+
+.info-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.info-field {
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0;
+    min-height: 44px;
+}
+
+.info-label {
+    font-size: 0.85rem;
+    letter-spacing: 0.06em;
+    color: #868e96;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 3px;
+}
+
+.info-value {
+    font-size: 0.95rem;
+    color: #212529;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.info-value-na {
+    font-size: 0.9rem;
+    color: #ced4da;
+    font-weight: 400;
+    font-style: italic;
+}
+
+/* ── Page Layout ── */
+.generale-container {
+    padding: 8px 4px;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .product-hero {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .product-image-wrapper {
+        width: 160px;
+        height: 200px;
+    }
+
+    .product-badges {
+        justify-content: center;
+    }
+
+    .info-grid,
+    .info-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .info-grid,
+    .info-grid-4 {
+        grid-template-columns: 1fr;
+    }
+}

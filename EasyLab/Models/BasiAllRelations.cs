@@ -42,4 +42,5 @@ public partial class BasiAll
     public virtual TabCatMerceologica? TabCatMerceologica { get; set; }
     public virtual TabGender? TabGender { get; set; }
     public virtual TabTipoMpScar? TabTipoMpScar { get; set; }
+    public virtual BasiImmagini? BasiImmagini { get; set; }
 }

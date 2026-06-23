@@ -181,22 +181,58 @@
                 <TotalSummary>
                     <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="Cd" FooterColumnName="ParteDesc" />
                 </TotalSummary>
+                <EditFormTemplate Context="editContext">
+                    @{
+                        var model = (BasiAll)editContext.EditModel;
+                        var isNew = editContext.DataItem == null;
+                    }
+                    <DxFormLayout>
+                        <DxFormLayoutItem Caption="Codice" ColSpanMd="6">
+                            <DxTextBox @bind-Text="model.Cd" ReadOnly="@(!isNew)" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Tipo" ColSpanMd="6">
+                            <DxComboBox Data="@TipiDisponibili" @bind-Value="model.Tipo" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Brand" ColSpanMd="6">
+                            <DxComboBox Data="@Brands"
+                                        Value="@model.IdContatto"
+                                        ValueChanged="@((int v) => OnBrandChanged(model, v))"
+                                        ValueFieldName="Id"
+                                        TextFieldName="Societa1"
+                                        ValidationEnabled="false" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Stagione" ColSpanMd="6">
+                            <DxComboBox Data="@Stagioni"
+                                        Value="@model.IdStag"
+                                        ValueChanged="@((int? v) => OnStagioneChanged(model, v))"
+                                        ValueFieldName="Id"
+                                        TextFieldName="Cod"
+                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                        ValidationEnabled="false" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Parte" ColSpanMd="6">
+                            <DxTextBox @bind-Text="model.Parte" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Descrizione" ColSpanMd="6">
+                            <DxTextBox @bind-Text="model.ParteDesc" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Modello" ColSpanMd="6">
+                            <DxTextBox @bind-Text="model.Mod" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Tessuto" ColSpanMd="6">
+                            <DxTextBox @bind-Text="model.Tess" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Note" ColSpanMd="12">
+                            <DxMemo @bind-Text="model.Nota" Rows="3" />
+                        </DxFormLayoutItem>
+                    </DxFormLayout>
+                </EditFormTemplate>
             </DxGrid>
         </DxSplitterPane>
         <DxSplitterPane @bind-Collapsed="@DetailsPaneCollapsed">
             @if (ArticoloSelezionato != null)
             {
-                <div class="detail-card p-3">
-                    <h5 class="mb-3">@ArticoloSelezionato.Cd</h5>
-                    <p><strong>Tipo:</strong> @ArticoloSelezionato.Tipo</p>
-                    <p><strong>Brand:</strong> @ArticoloSelezionato.Contatto</p>
-                    <p><strong>Stagione:</strong> @ArticoloSelezionato.Stag</p>
-                    <p><strong>Parte:</strong> @ArticoloSelezionato.Parte</p>
-                    <p><strong>Descrizione:</strong> @ArticoloSelezionato.ParteDesc</p>
-                    <p><strong>Modello:</strong> @ArticoloSelezionato.Mod</p>
-                    <p><strong>Tessuto:</strong> @ArticoloSelezionato.Tess</p>
-                    <p><strong>Note:</strong> @ArticoloSelezionato.Nota</p>
-                </div>
+                <ArticoliGenerale ArticoloSelezionato="@ArticoloSelezionato" Lookups="@Lookups" />
             }
             else
             {
@@ -244,6 +280,7 @@
     private List<Contatti> BrandSelezionati = new();
     private List<Stagioni> StagioneSelezionati = new();
     private List<string> TipiSelezionati = new() { "PR", "MP", "SM" };
+    private static readonly List<string> TipiDisponibili = new() { "PR", "MP", "SM" };
 
     private CustomColumnChooser myColumnChooser = default!;
     private Dictionary<string, Dictionary<int, string>> Lookups = new();
@@ -273,9 +310,10 @@
             {
                 Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
                 Stagioni = await context.Stagionis.AsNoTracking().OrderByDescending(s => s.Id).ToListAsync();
+                BrandSelezionati = Brands.ToList();
+                StagioneSelezionati = Stagioni.ToList();
                 await CaricaLookups();
                 ApplyRouteFilters();
-                await Cerca();
             }
             finally
             {
@@ -313,12 +351,8 @@
 
     private async Task CaricaLookups()
     {
-        // IdNazione e' short sul DB (Tab_Nazioni.Id e' int): nessuna relazione EF possibile.
         Lookups["Nazione"] = SafeDictionary(await context.TabNazionis.AsNoTracking().ToListAsync(),
             n => n.Id, n => n.Nazione ?? n.Cod ?? n.Id.ToString());
-        // BasiModelli/BasiMateriali hanno PK composite e TabTipoMateriale ha PK stringa (CdTipoMat):
-        // "Id" non e' garantito univoco su queste tabelle, quindi nessuna relazione EF e' possibile;
-        // restano risolte via dizionario (con SafeDictionary a protezione di eventuali duplicati).
         Lookups["Modello"] = SafeDictionary(await context.BasiModellis.AsNoTracking().ToListAsync(),
             m => m.Id, m => string.IsNullOrWhiteSpace(m.Nome) ? m.Mdl : m.Nome);
         Lookups["Materiale"] = SafeDictionary(await context.BasiMaterialis.AsNoTracking().ToListAsync(),
@@ -337,16 +371,7 @@
         return dict;
     }
 
-    private string GetText(string key, object? value)
-    {
-        if (value == null) return "";
-        var id = Convert.ToInt32(value);
-        if (Lookups.TryGetValue(key, out var dict) && dict.TryGetValue(id, out var text) && !string.IsNullOrWhiteSpace(text))
-        {
-            return text;
-        }
-        return id.ToString();
-    }
+    private string GetText(string key, object? value) => LookupResolver.GetText(Lookups, key, value);
 
     private async Task Cerca()
     {
@@ -393,6 +418,7 @@
                 .Include(a => a.TabCatMerceologica)
                 .Include(a => a.TabGender)
                 .Include(a => a.TabTipoMpScar)
+                .Include(a => a.BasiImmagini)
                 .Where(a => a.Stato == "A")
                 .Where(a => a.Tipo != null && TipiSelezionati.Contains(a.Tipo));
 
@@ -420,6 +446,18 @@
     {
         ArticoloSelezionato = e.DataItem as BasiAll;
         StateHasChanged();
+    }
+
+    private void OnBrandChanged(BasiAll model, int value)
+    {
+        model.IdContatto = value;
+        model.Contatto = Brands.FirstOrDefault(b => b.Id == value)?.Societa1 ?? "";
+    }
+
+    private void OnStagioneChanged(BasiAll model, int? value)
+    {
+        model.IdStag = value;
+        model.Stag = value == null ? "" : (Stagioni.FirstOrDefault(s => s.Id == value)?.Cod ?? "");
     }
 
     private void OnCustomizeEditModel(GridCustomizeEditModelEventArgs e)
@@ -473,7 +511,7 @@
             {
                 var dataItem = (BasiAll)e.DataItem;
                 e.CopyChangesToDataItem();
-                context.BasiAlls.Update(dataItem);
+                context.Entry(dataItem).State = EntityState.Modified;
             }
             await context.SaveChangesAsync();
             await Cerca();
@@ -492,7 +530,9 @@
         try
         {
             var model = (BasiAll)e.DataItem;
-            context.BasiAlls.Remove(model);
+            e.Cancel = true;
+            model.Stato = "C";
+            context.Entry(model).State = EntityState.Modified;
             await context.SaveChangesAsync();
             await Cerca();
         }
