@@ -1,0 +1,221 @@
+@using EasyLab.Models
+@using DevExpress.Blazor.RichEdit
+@using DevExpress.Blazor.Office
+@using Microsoft.EntityFrameworkCore
+@inject IDbContextFactory<SeaseTstContext> DbFactory
+
+@if (ArticoloSelezionato != null)
+{
+    <DxFormLayout>
+        <DxFormLayoutGroup ColSpanMd="6" Caption="Dettagli Tecnici">
+
+            <DxFormLayoutItem Caption="Modellista" ColSpanMd="6">
+                <DxTextBox Enabled="false" Text="N/D"></DxTextBox>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="File CAD" ColSpanMd="6">
+                <DxTextBox Enabled="false" Text="@ArticoloSelezionato.Cad"></DxTextBox>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Filo Cucitura" ColSpanMd="6">
+                <DxTextBox Enabled="false" Text="N/D"></DxTextBox>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Trattamento" ColSpanMd="6">
+                <DxTextBox Enabled="false" Text="N/D"></DxTextBox>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Filo Impuntura" ColSpanMd="6">
+                <DxTextBox Enabled="false" Text="N/D"></DxTextBox>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Stiro" ColSpanMd="6">
+                <DxTextBox Enabled="false" Text="N/D"></DxTextBox>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Tipo Punto" ColSpanMd="6">
+                <DxTextBox Enabled="false" Text="N/D"></DxTextBox>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Imballo" ColSpanMd="6">
+                <DxTextBox Enabled="false" Text="N/D"></DxTextBox>
+            </DxFormLayoutItem>
+
+        </DxFormLayoutGroup>
+
+        <DxFormLayoutGroup ColSpanMd="3" Caption="Base Provincia">
+            <DxFormLayoutItem ColSpanMd="12">
+                <DxTextBox Enabled="false" Text="@ArticoloSelezionato.BaseProv"></DxTextBox>
+            </DxFormLayoutItem>
+        </DxFormLayoutGroup>
+
+        <DxFormLayoutGroup ColSpanMd="3" Caption="Avanzamento Modello">
+
+            <DxFormLayoutItem Caption="CAD" ColSpanMd="12">
+                <DxTextBox Enabled="false" Text="@ArticoloSelezionato.Cad"></DxTextBox>
+            </DxFormLayoutItem>
+
+            <DxFormLayoutItem Caption="Avanzamento" ColSpanMd="12">
+                <DxTextBox Enabled="false" Text="N/D"></DxTextBox>
+            </DxFormLayoutItem>
+
+        </DxFormLayoutGroup>
+    </DxFormLayout>
+
+    <div class="row-table mt-3">
+        <h3>Schede Tecniche</h3>
+        <DxGrid Data="@SchedeTecniche" KeyFieldName="Id">
+            <Columns>
+                <DxGridDataColumn FieldName="Id" Caption="ID" Visible="false" />
+                <DxGridDataColumn Caption="Cod">
+                    <CellDisplayTemplate Context="cellContext">
+                        @{
+                            var scheda = (SchedaTecnicaTestum)cellContext.DataItem;
+                        }
+                        <a href="javascript:void(0)" @onclick="() => OpenScheda(scheda)">@scheda.Cod</a>
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+                <DxGridDataColumn FieldName="Stato" Caption="Stato" Width="80px" />
+                <DxGridDataColumn FieldName="CkEffettiva" Caption="Effettiva" Width="90px" />
+                <DxGridDataColumn FieldName="CkEasy" Caption="Easy" Width="80px" />
+                <DxGridDataColumn FieldName="DataUpd" Caption="Aggiornato il" Width="140px" />
+            </Columns>
+        </DxGrid>
+    </div>
+
+    <DxPopup @bind-Visible="PopupVisible"
+             HeaderText="@($"Scheda Tecnica {SchedaInEdit?.Cod}")"
+             Shown="OnPopupShown"
+             Closing="OnPopupClosing"
+             CloseOnOutsideClick="false"
+             ShowFooter="true"
+             Width="1100px"
+             Height="750px">
+        <BodyContentTemplate>
+            @if (RichEditReady)
+            {
+                <DxRichEdit @ref="RichEdit"
+                            @bind-DocumentContent="DocumentContent"
+                            DocumentFormat="@DocumentFormatInUso"
+                            CheckSpelling="false"
+                            BarMode="BarMode.Ribbon"
+                            CssClass="w-100"
+                                style="height:100%;"
+                                DocumentLoaded="OnDocumentLoaded"/>
+            }
+        </BodyContentTemplate>
+        <FooterContentTemplate>
+            <DxButton Text="Annulla" RenderStyle="ButtonRenderStyle.Secondary" Click="ClosePopup" />
+            <DxButton Text="Salva" RenderStyle="ButtonRenderStyle.Primary" Click="SaveRichText" />
+        </FooterContentTemplate>
+    </DxPopup>
+}
+else
+{
+    <p class="text-muted p-3">Nessun articolo selezionato.</p>
+}
+
+@code {
+    [Parameter] public BasiAll? ArticoloSelezionato { get; set; }
+
+    private List<SchedaTecnicaTestum> SchedeTecniche = new();
+    private int? idModCaricato;
+
+    private DxRichEdit? RichEdit;
+    private bool PopupVisible;
+    private bool RichEditReady;
+    private byte[]? DocumentContent;
+    private DocumentFormat DocumentFormatInUso = DocumentFormat.OpenXml;
+    private SchedaTecnicaTestum? SchedaInEdit;
+    DotNetObjectReference<ArticoliSchedaTecnica>? dotNetRef;
+
+    async Task OnDocumentLoaded()
+    {
+        await Task.Delay(100);
+        dotNetRef ??= DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("initDropZone", "richedit-dropzone", dotNetRef);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ArticoloSelezionato != null && ArticoloSelezionato.IdMod != idModCaricato)
+        {
+            idModCaricato = ArticoloSelezionato.IdMod;
+            using var context = await DbFactory.CreateDbContextAsync();
+            SchedeTecniche = await context.SchedaTecnicaTesta
+                .AsNoTracking()
+                .Where(s => s.IdMod == ArticoloSelezionato.IdMod)
+                .OrderBy(s => s.Cod)
+                .ToListAsync();
+        }
+    }
+
+    private void OpenScheda(SchedaTecnicaTestum scheda)
+    {
+        SchedaInEdit = scheda;
+        (DocumentContent, DocumentFormatInUso) = DecodeRichText(scheda.RichText);
+        RichEditReady = false;
+        PopupVisible = true;
+    }
+
+    private async Task OnPopupShown()
+    {
+        // Si attende che il popup abbia finito la propria animazione/ridimensionamento
+        // prima di montare il RichEdit: montarlo subito (prima che il container abbia
+        // le dimensioni finali) e' la causa del rendering "rotto" segnalato.
+        await Task.Delay(300);
+        RichEditReady = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnPopupClosing(PopupClosingEventArgs e)
+    {
+        RichEditReady = false;
+        SchedaInEdit = null;
+    }
+
+    private void ClosePopup()
+    {
+        PopupVisible = false;
+        RichEditReady = false;
+        SchedaInEdit = null;
+    }
+
+    private static (byte[]? Content, DocumentFormat Format) DecodeRichText(string? value)
+    {
+        if (string.IsNullOrEmpty(value)) return (null, DocumentFormat.OpenXml);
+        try
+        {
+            // Caso normale: il documento e' stato salvato dall'editor stesso come OpenXml in Base64.
+            return (Convert.FromBase64String(value), DocumentFormat.OpenXml);
+        }
+        catch (FormatException)
+        {
+            // Dati legacy: RichText contiene RTF in chiaro (es. "{\rtf1...}").
+            return (System.Text.Encoding.UTF8.GetBytes(value), DocumentFormat.Rtf);
+        }
+    }
+
+    private async Task SaveRichText()
+    {
+        if (RichEdit == null || SchedaInEdit == null) return;
+
+        await RichEdit.SaveDocumentAsync();
+        if (DocumentContent != null)
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var dbItem = await context.SchedaTecnicaTesta.FirstOrDefaultAsync(s => s.Id == SchedaInEdit.Id);
+            if (dbItem != null)
+            {
+                dbItem.RichText = DocumentFormatInUso == DocumentFormat.Rtf
+                    ? System.Text.Encoding.UTF8.GetString(DocumentContent)
+                    : Convert.ToBase64String(DocumentContent);
+                dbItem.DataUpd = DateTime.Now;
+                await context.SaveChangesAsync();
+                SchedaInEdit.RichText = dbItem.RichText;
+            }
+        }
+
+        ClosePopup();
+    }
+}

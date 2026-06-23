@@ -1,0 +1,14 @@
+@using EasyLab.Models
+
+@if (ArticoloSelezionato != null)
+{
+    <p class="text-muted p-3">Stato ordini non disponibile per questo articolo.</p>
+}
+else
+{
+    <p class="text-muted p-3">Nessun articolo selezionato.</p>
+}
+
+@code {
+    [Parameter] public BasiAll? ArticoloSelezionato { get; set; }
+}

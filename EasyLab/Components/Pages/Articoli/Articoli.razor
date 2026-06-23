@@ -230,17 +230,196 @@
             </DxGrid>
         </DxSplitterPane>
         <DxSplitterPane @bind-Collapsed="@DetailsPaneCollapsed">
-            @if (ArticoloSelezionato != null)
-            {
-                <ArticoliGenerale ArticoloSelezionato="@ArticoloSelezionato" Lookups="@Lookups" />
-            }
-            else
-            {
-                <p class="text-muted p-3">Seleziona un articolo per vedere il dettaglio.</p>
-            }
-        </DxSplitterPane>
-    </Panes>
-</DxSplitter>
+                <div class="d-flex flex-column" style="height: 100%;">
+                    @if (ArticoloSelezionato != null)
+                    {
+                    @if (MostraDettagli)
+                    {
+                        var bytes = Brands.FirstOrDefault(b => b.Id == ArticoloSelezionato.IdContatto)?.Immagine;
+                        if (bytes != null)
+                        {
+                            Base64 = Convert.ToBase64String(bytes);
+                        }
+
+                        <div class="modern-article-header p-3 rounded shadow-sm d-flex align-items-center flex-shrink-0 gap-2">
+
+                            <button type="button" class="btn btn-sm d-flex align-items-center justify-content-center flex-shrink-0"
+                                    style="width:28px;height:28px;background:transparent;color:#ff8c00;border:1px solid #ff8c00;border-radius:50%;padding:0;"
+                                    title="Nascondi dettagli"
+                                    @onclick="@(() => HideDetails())">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z" />
+                                </svg>
+                            </button>
+
+                            <div class="header-divider"></div>
+                        <img src="data:image/png;base64,@Base64" style="height:40px; cursor: pointer;" title="🔍" />
+                        <div class="header-divider"></div>
+
+                        <div class="header-section header-section-fixed">
+                        <div class="icon-container me-3 text-success">
+                            <i class="oi oi-layers header-icon-size"></i>
+                        </div>
+                        <div class="d-flex flex-column">
+                            <span class="header-label text-uppercase fw-bold">Stagione</span>
+                            <span class="header-value">@ArticoloSelezionato.Stag</span>
+                        </div>
+                    </div>
+
+                    <div class="header-divider"></div>
+
+                            <div class="header-section header-section-fixed">
+                                <div class="icon-container me-3 text-warning">
+                                    <i class="oi oi-tag header-icon-size"></i>
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <span class="header-label text-uppercase fw-bold">Codice Articolo</span>
+                                    <span class="header-value">@ArticoloSelezionato.Cd</span>
+                                </div>
+                            </div>
+
+                        <div class="header-divider"></div>
+
+                        @if (!string.IsNullOrWhiteSpace(ArticoloSelezionato.Parte))
+                        {
+                            <div class="header-section header-section-fixed">
+                                <div class="icon-container me-3 text-success">
+                                    <i class="oi oi-layers header-icon-size"></i>
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <span class="header-label text-uppercase fw-bold">Codice Parte</span>
+                                    <span class="header-value">@ArticoloSelezionato.Parte</span>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+
+                            <div class="header-section header-section-fixed">
+                                <div class="icon-container me-3 text-success">
+                                    <i class="oi oi-layers header-icon-size"></i>
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <span class="header-label text-uppercase fw-bold">Tipo</span>
+                                    <span class="header-value">@ArticoloSelezionato.Tipo</span>
+                                </div>
+                            </div>
+                        }
+                        <div class="header-divider"></div>
+
+                            <div class="header-section header-section-fluid">
+                                <div class="icon-container me-3 text-info">
+                                    <i class="oi oi-info header-icon-size"></i>
+                                </div>
+                                <div class="d-flex flex-column flex-column-no-min">
+                                    <span class="header-label text-uppercase fw-bold">Descrizione</span>
+                                    <span class="header-value" title="@ArticoloSelezionato.ParteDesc">@ArticoloSelezionato.ParteDesc</span>
+                                </div>
+                            </div>
+
+                            <div class="ms-auto d-flex align-items-center gap-2 flex-shrink-0">
+                                <span class="type-badge me-2">@ArticoloSelezionato.Tipo</span>
+
+                                <div class="header-divider h-25 mx-2"></div>
+
+                                <div class="dropdown-actions d-flex gap-3">
+                                        <div class="header-btn-container" title="Reports">
+                                        <DxMenu CssClass="modern-menu" Title="">
+                                            <Items>
+                                                <DxMenuItem CssClass="border-0">
+                                                    <TextTemplate>
+                                                            <img src="images/print_32x323.png" class="menu-icon-img" alt="Reports" />
+                                                    </TextTemplate>
+                                                    <Items>
+                                                        <DxMenuItem Text="Stampa" IconCssClass="oi oi-print text-primary" />
+                                                        <DxMenuItem Text="Scheda Tecnica" IconCssClass="oi oi-file text-info" />
+                                                        <DxMenuItem Text="Esporta in Excel" IconCssClass="oi oi-spreadsheet text-success" Click="ExportToExcel" />
+                                                    </Items>
+                                                </DxMenuItem>
+                                            </Items>
+                                        </DxMenu>
+                                    </div>
+
+                                    <div class="header-btn-container" title="Azioni">
+                                        <DxMenu CssClass="modern-menu" Title="">
+                                            <Items>
+                                                <DxMenuItem CssClass="border-0">
+                                                    <TextTemplate>
+                                                        <img src="images/Funzioni32.png" class="menu-icon-img" alt="Azioni" />
+                                                    </TextTemplate>
+                                                    <Items>
+                                                        <DxMenuItem Text="Cambia Chiave" IconCssClass="oi oi-key text-secondary"  />
+                                                        <DxMenuItem Text="Genera EAN" IconCssClass="oi oi-barcode text-info"  />
+                                                        <DxMenuItem Text="DiBa" IconCssClass="oi oi-barcode text-info" />
+                                                        <DxMenuItem Text="Regole Misura" IconCssClass="oi oi-resize-both text-success"  />
+                                                        <DxMenuItem Text="Vedi Utilizzo" IconCssClass="oi oi-list-rich text-primary"  />
+                                                    </Items>
+                                                </DxMenuItem>
+                                            </Items>
+                                        </DxMenu>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                else
+                {
+                    <button type="button" class="btn btn-sm d-flex align-items-center gap-1 mb-2 align-self-start"
+                            style="background-color:#ff8c00;color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;opacity:0.85;"
+                            @onclick="ShowDetails">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
+                        </svg>
+                        Dettagli
+                    </button>
+                }
+                }
+                    <div class="detail-tabs-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
+                        <div class="art-tab-nav flex-shrink-0">
+                            <button class="@(ActiveTab == "general"   ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "general")">Generale</button>
+                            <button class="@(ActiveTab == "scheda"    ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "scheda")">Scheda Tecnica</button>
+                            <button class="@(ActiveTab == "diba" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "diba")">DiBaBOL</button>
+                            <button class="@(ActiveTab == "venduti"   ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "venduti")">Venduti ed EAN</button>
+                            <button class="@(ActiveTab == "care" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "care")">CareLabel</button>
+                            <button class="@(ActiveTab == "ordini"    ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "ordini")">Stato ordine</button>
+                            <button class="@(ActiveTab == "note"      ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "note")">Note Aggiuntive</button>
+                        </div>
+                        <div class="p-2" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;">
+                            @if (ActiveTab == "general")
+                            {
+                                <ArticoliGenerale ArticoloSelezionato="@ArticoloSelezionato"></ArticoliGenerale>
+                            }
+                            else if (ActiveTab == "scheda")
+                            {
+                                <ArticoliSchedaTecnica ArticoloSelezionato="@ArticoloSelezionato"></ArticoliSchedaTecnica>
+                            }
+                            else if (ActiveTab == "diba")
+                            {
+                                <ArticoliDiBaBOL ArticoloSelezionato="@ArticoloSelezionato"></ArticoliDiBaBOL>
+                            }
+                            else if (ActiveTab == "venduti")
+                            {
+                                <ArticoliVendutieEAN></ArticoliVendutieEAN>
+                            }
+                            else if (ActiveTab == "care")
+                            {
+                                <ArticoliCareLabel ArticoloSelezionato="@ArticoloSelezionato">
+                                </ArticoliCareLabel>
+                            }
+                            else if (ActiveTab == "ordini")
+                            {
+                                <ArticoliStatoOrdini ArticoloSelezionato="@ArticoloSelezionato"></ArticoliStatoOrdini>
+                            }
+                            else if (ActiveTab == "note")
+                            {
+                                <ArticoliNoteAggiuntive ArticoloSelezionato="@ArticoloSelezionato"></ArticoliNoteAggiuntive>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </DxSplitterPane>
+	    </Panes>
+</DxSplitter> 
 
 <CustomColumnChooser @ref="myColumnChooser"
                      dxGrid="MyGrid"
@@ -294,6 +473,10 @@
     private string _dialogTitle = "";
     private string _dialogMessage = "";
     private List<(string Label, string Value, ButtonRenderStyle RenderStyle)> _dialogButtons = new();
+
+    private string ActiveTab = "general";
+    private bool MostraDettagli = true;
+    private string? Base64;
 
     protected override async Task OnInitializedAsync()
     {
@@ -419,7 +602,7 @@
                 .Include(a => a.TabGender)
                 .Include(a => a.TabTipoMpScar)
                 .Include(a => a.BasiImmagini)
-                .Where(a => a.Stato == "A")
+                .Where(a => a.Stato != "C")
                 .Where(a => a.Tipo != null && TipiSelezionati.Contains(a.Tipo));
 
             if (BrandSelezionati.Any())
@@ -585,5 +768,15 @@
     public void Dispose()
     {
         context?.Dispose();
+    }
+
+    void ShowDetails()
+    {
+        MostraDettagli = true;
+    }
+
+    void HideDetails()
+    {
+        MostraDettagli = false;
     }
 }

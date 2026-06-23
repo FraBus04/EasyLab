@@ -1,0 +1,140 @@
+.carelabel-container {
+    width: 100%;
+}
+
+/* Toolbar */
+.carelabel-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.carelabel-toolbar-left {
+    display: flex;
+    gap: 10px;
+}
+
+.carelabel-toolbar-right {
+    display: flex;
+    gap: 10px;
+}
+
+/* Table */
+.carelabel-table-wrapper {
+    width: 100%;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    overflow: hidden;
+    background-color: #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.carelabel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    table-layout: fixed;
+}
+
+    .carelabel-table thead tr {
+        background-color: #f1f3f5;
+        border-bottom: 2px solid #dee2e6;
+    }
+
+    .carelabel-table th {
+        padding: 10px 16px;
+        text-align: left;
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+
+    .carelabel-table td {
+        padding: 8px 16px;
+        border-bottom: 1px solid #f0f0f0;
+        vertical-align: middle;
+        color: #212529;
+    }
+
+    .carelabel-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .carelabel-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+/* Column widths */
+.carelabel-col-pos {
+    width: 40%;
+}
+
+.carelabel-col-comp {
+    width: 48%;
+}
+
+.carelabel-col-actions {
+    width: 12%;
+    text-align: center;
+}
+
+.carelabel-cell-pos,
+.carelabel-cell-comp {
+    display: flex;
+    align-items: center;
+    min-height: 28px;
+}
+
+/* Badges */
+.carelabel-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    line-height: 1.4;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.carelabel-badge-pos {
+    background-color: #e8f4fd;
+    color: #1565c0;
+    border-left: 3px solid #1976d2;
+}
+
+.carelabel-badge-comp {
+    background-color: #fef3e2;
+    color: #e65100;
+    border-left: 3px solid #ff8c00;
+}
+
+/* Actions */
+.carelabel-actions {
+    display: flex;
+    gap: 2px;
+    justify-content: center;
+    align-items: center;
+}
+
+/* N/A */
+.carelabel-na {
+    color: #adb5bd;
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+.carelabel-empty {
+    text-align: center;
+    padding: 30px 16px;
+    background-color: #f8f9fa;
+    border: 1px dashed #ced4da;
+    border-radius: 6px;
+}

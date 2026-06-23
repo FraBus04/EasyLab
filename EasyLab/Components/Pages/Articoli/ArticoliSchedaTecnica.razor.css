@@ -1,0 +1,15 @@
+.row-table {
+    margin-top: 20px;
+    padding: 0 15px;
+}
+
+.link-richedit {
+    color: #006bb7;
+    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.link-richedit:hover {
+    color: #004a80;
+}

@@ -1,0 +1,16 @@
+@using EasyLab.Models
+
+@if (ArticoloSelezionato != null)
+{
+    <div class="p-3">
+        <DxMemo Enabled="false" Rows="6" Text="@(ArticoloSelezionato.Nota ?? "Nessuna nota presente.")" CssClass="w-100" />
+    </div>
+}
+else
+{
+    <p class="text-muted p-3">Nessun articolo selezionato.</p>
+}
+
+@code {
+    [Parameter] public BasiAll? ArticoloSelezionato { get; set; }
+}

@@ -1,0 +1,42 @@
+@using EasyLab.Models
+
+@if (ArticoloSelezionato != null)
+{
+    @if (SimboliLavaggio.Any())
+    {
+        <div class="d-flex flex-wrap gap-2 p-3">
+            @foreach (var simbolo in SimboliLavaggio)
+            {
+                <span class="badge bg-light text-dark border">@simbolo</span>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="text-muted p-3">Nessun simbolo di lavaggio impostato per questo articolo.</p>
+    }
+}
+else
+{
+    <p class="text-muted p-3">Nessun articolo selezionato.</p>
+}
+
+@code {
+    [Parameter] public BasiAll? ArticoloSelezionato { get; set; }
+
+    private List<string> SimboliLavaggio => ArticoloSelezionato == null ? new() : new[]
+    {
+        ArticoloSelezionato.TabSimboliLav1?.Descrizione,
+        ArticoloSelezionato.TabSimboliLav2?.Descrizione,
+        ArticoloSelezionato.TabSimboliLav3?.Descrizione,
+        ArticoloSelezionato.TabSimboliLav4?.Descrizione,
+        ArticoloSelezionato.TabSimboliLav5?.Descrizione,
+        ArticoloSelezionato.TabSimboliLav6?.Descrizione,
+        ArticoloSelezionato.TabSimboliLav11?.Descrizione,
+        ArticoloSelezionato.TabSimboliLav12?.Descrizione,
+        ArticoloSelezionato.TabSimboliLav13?.Descrizione,
+        ArticoloSelezionato.TabSimboliLav14?.Descrizione,
+        ArticoloSelezionato.TabSimboliLav15?.Descrizione,
+        ArticoloSelezionato.TabSimboliLav16?.Descrizione
+    }.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s!).ToList();
+}
