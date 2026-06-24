@@ -899,13 +899,23 @@ h1:focus {
         padding-right: 8px !important;
     }
 
-/* Column chooser DxWindow - must appear above page header (z-index: 2100).
-   DevExpress renders <dxbl-window> as a custom element (element selector, not class).
-   position:fixed breaks out of any ancestor stacking context. */
 dxbl-window,
 .dxbl-window {
     position: fixed !important;
     z-index: 5000 !important;
+}
+
+.dxbl-modal-back {
+    z-index: 5996 !important;
+}
+
+.dxbl-modal-root {
+    z-index: 5997 !important;
+}
+
+.scheda-tecnica-popup .dxbl-modal-body {
+    min-height: 0;
+    overflow: hidden;
 }
 
 .drop-zone {

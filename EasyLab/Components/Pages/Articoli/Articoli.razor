@@ -52,20 +52,14 @@
                               NullText="Tutte le stagioni"
                               SelectAllText="Tutte le stagioni" />
         </div>
-        <div>
-            <label class="form-label small mb-0 d-block">Tipo</label>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" id="tipoPR" checked="@TipiSelezionati.Contains("PR")" @onchange="@(e => OnTipoChecked("PR", e.Value))" />
-                <label class="form-check-label" for="tipoPR">Prodotti</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" id="tipoMP" checked="@TipiSelezionati.Contains("MP")" @onchange="@(e => OnTipoChecked("MP", e.Value))" />
-                <label class="form-check-label" for="tipoMP">Materiali</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="checkbox" id="tipoSM" checked="@TipiSelezionati.Contains("SM")" @onchange="@(e => OnTipoChecked("SM", e.Value))" />
-                <label class="form-check-label" for="tipoSM">Semilavorati</label>
-            </div>
+        <div style="min-width:220px;">
+            <label class="form-label small mb-0">Tipo</label>
+            <CheckboxDropdown TItem="string"
+                              Data="@TipiDisponibili"
+                              @bind-SelectedItems="TipiSelezionati"
+                              TextFieldSelector="@GetTipoLabel"
+                              NullText="Nessun tipo"
+                              SelectAllText="Tutti i tipi" />
         </div>
         <DxButton Text="Cerca" RenderStyle="ButtonRenderStyle.Primary" Click="Cerca" />
     </div>
@@ -449,7 +443,6 @@
 </div>
 
 @code {
-    private SeaseTstContext context = null!;
     private DxGrid MyGrid = default!;
     private List<BasiAll>? DataSource;
     private List<Contatti> Brands = new();
@@ -478,9 +471,9 @@
     private bool MostraDettagli = true;
     private string? Base64;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        context = await DbFactory.CreateDbContextAsync();
+        NavigationManager.LocationChanged += OnLocationChanged;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -491,6 +484,7 @@
             StateHasChanged();
             try
             {
+                using var context = await DbFactory.CreateDbContextAsync();
                 Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
                 Stagioni = await context.Stagionis.AsNoTracking().OrderByDescending(s => s.Id).ToListAsync();
                 BrandSelezionati = Brands.ToList();
@@ -506,6 +500,20 @@
         }
     }
 
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        // /Articoli, /Materiali e /Prodotti puntano allo stesso componente: Blazor lo riusa
+        // senza richiamare OnInitialized/OnAfterRender(firstRender), quindi il filtro Tipo
+        // va risincronizzato manualmente quando si passa da una scheda all'altra.
+        ApplyRouteFilters();
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+
     private void ApplyRouteFilters()
     {
         var uri = NavigationManager.Uri;
@@ -519,21 +527,17 @@
         }
     }
 
-    private void OnTipoChecked(string tipo, object? isChecked)
+    private static string GetTipoLabel(string tipo) => tipo switch
     {
-        var check = isChecked is bool b && b;
-        if (check && !TipiSelezionati.Contains(tipo))
-        {
-            TipiSelezionati.Add(tipo);
-        }
-        else if (!check)
-        {
-            TipiSelezionati.Remove(tipo);
-        }
-    }
+        "PR" => "Prodotti",
+        "MP" => "Materiali",
+        "SM" => "Semilavorati",
+        _ => tipo
+    };
 
     private async Task CaricaLookups()
     {
+        using var context = await DbFactory.CreateDbContextAsync();
         Lookups["Nazione"] = SafeDictionary(await context.TabNazionis.AsNoTracking().ToListAsync(),
             n => n.Id, n => n.Nazione ?? n.Cod ?? n.Id.ToString());
         Lookups["Modello"] = SafeDictionary(await context.BasiModellis.AsNoTracking().ToListAsync(),
@@ -562,8 +566,46 @@
         StateHasChanged();
         try
         {
+            using var context = await DbFactory.CreateDbContextAsync();
             var query = context.BasiAlls.AsNoTracking()
-                .AsSplitQuery()
+                .Where(a => a.Stato != "C")
+                .Where(a => a.Tipo != null && TipiSelezionati.Contains(a.Tipo));
+
+            if (BrandSelezionati.Any())
+            {
+                var brandIds = BrandSelezionati.Select(b => b.Id).ToList();
+                query = query.Where(a => brandIds.Contains(a.IdContatto));
+            }
+            if (StagioneSelezionati.Any())
+            {
+                var stagioneIds = StagioneSelezionati.Select(s => s.Id).ToList();
+                query = query.Where(a => a.IdStag != null && stagioneIds.Contains(a.IdStag.Value));
+            }
+
+            DataSource = await query.OrderBy(a => a.Cd).ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            await ShowDialog("Errore", $"Si è verificato un errore durante la ricerca: {ex.Message}", ("OK", "ok", ButtonRenderStyle.Primary));
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RigaSelezionataCambiata(GridFocusedRowChangedEventArgs e)
+    {
+        var riga = e.DataItem as BasiAll;
+        ArticoloSelezionato = riga;
+        StateHasChanged();
+        if (riga == null) return;
+
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var dettaglio = await context.BasiAlls.AsNoTracking()
                 .Include(a => a.SetTaglie)
                 .Include(a => a.SetTaglieDettBase)
                 .Include(a => a.SetTaglieDettDa)
@@ -602,33 +644,19 @@
                 .Include(a => a.TabGender)
                 .Include(a => a.TabTipoMpScar)
                 .Include(a => a.BasiImmagini)
-                .Where(a => a.Stato != "C")
-                .Where(a => a.Tipo != null && TipiSelezionati.Contains(a.Tipo));
+                .FirstOrDefaultAsync(a => a.Cd == riga.Cd);
 
-            if (BrandSelezionati.Any())
+            // L'utente potrebbe aver gia' selezionato un'altra riga mentre questa query era in volo.
+            if (dettaglio != null && ArticoloSelezionato?.Cd == riga.Cd)
             {
-                var brandIds = BrandSelezionati.Select(b => b.Id).ToList();
-                query = query.Where(a => brandIds.Contains(a.IdContatto));
+                ArticoloSelezionato = dettaglio;
+                StateHasChanged();
             }
-            if (StagioneSelezionati.Any())
-            {
-                var stagioneIds = StagioneSelezionati.Select(s => s.Id).ToList();
-                query = query.Where(a => a.IdStag != null && stagioneIds.Contains(a.IdStag.Value));
-            }
-
-            DataSource = await query.OrderBy(a => a.Cd).ToListAsync();
         }
-        finally
+        catch (Exception ex)
         {
-            loading = false;
-            StateHasChanged();
+            await ShowDialog("Errore", $"Si è verificato un errore caricando il dettaglio: {ex.Message}", ("OK", "ok", ButtonRenderStyle.Primary));
         }
-    }
-
-    private void RigaSelezionataCambiata(GridFocusedRowChangedEventArgs e)
-    {
-        ArticoloSelezionato = e.DataItem as BasiAll;
-        StateHasChanged();
     }
 
     private void OnBrandChanged(BasiAll model, int value)
@@ -686,6 +714,7 @@
         StateHasChanged();
         try
         {
+            using var context = await DbFactory.CreateDbContextAsync();
             if (e.IsNew)
             {
                 context.BasiAlls.Add(model);
@@ -698,6 +727,10 @@
             }
             await context.SaveChangesAsync();
             await Cerca();
+        }
+        catch (Exception ex)
+        {
+            await ShowDialog("Errore", $"Si è verificato un errore durante il salvataggio: {ex.Message}", ("OK", "ok", ButtonRenderStyle.Primary));
         }
         finally
         {
@@ -712,12 +745,17 @@
         StateHasChanged();
         try
         {
+            using var context = await DbFactory.CreateDbContextAsync();
             var model = (BasiAll)e.DataItem;
             e.Cancel = true;
             model.Stato = "C";
             context.Entry(model).State = EntityState.Modified;
             await context.SaveChangesAsync();
             await Cerca();
+        }
+        catch (Exception ex)
+        {
+            await ShowDialog("Errore", $"Si è verificato un errore durante l'eliminazione: {ex.Message}", ("OK", "ok", ButtonRenderStyle.Primary));
         }
         finally
         {
@@ -763,11 +801,6 @@
     {
         ListPaneCollapsed = true;
         DetailsPaneCollapsed = false;
-    }
-
-    public void Dispose()
-    {
-        context?.Dispose();
     }
 
     void ShowDetails()
