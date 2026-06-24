@@ -1,0 +1,319 @@
+@rendermode InteractiveServer
+
+
+
+<div class="grid-container" style="padding-bottom: 10px; padding-top: 10px;">
+    @if (loading)
+    {
+        <Loading></Loading>
+    }
+    <DxContextMenu @ref="GearContextMenu">
+        <Items>
+            <DxContextMenuItem Text="ColumnChooser" Click="@(() => MyGrid.ShowColumnChooser())" />
+        </Items>
+    </DxContextMenu>
+    <DxGrid @ref="MyGrid"
+            Data="@DataSource"
+            ShowGroupPanel="true"
+            ShowSearchBox="true"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            AllowSelectRowByClick="true"
+            PageSize="15"
+            KeyFieldName="@nameof(TabComposizione.Id)"
+            HighlightRowOnHover="true"
+            FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+            EditMode="GridEditMode.PopupEditForm"
+            PopupEditFormCssClass="custom-grid-popup"
+            CustomizeEditModel="OnCustomizeEditModel"
+            EditModelSaving="OnEditModelSaving">
+        <Columns>
+            <DxGridCommandColumn Width="120px">
+
+                <HeaderTemplate Context="hdr">
+                    <div class="d-flex align-items-center gap-1">
+                        <DxButton RenderStyle="ButtonRenderStyle.None"
+                                  Click="@(() => MyGrid.StartEditNewRowAsync())"
+                                  Tooltip="Nuovo">
+                            <img src="images/add2_16.png" class="Image-Command-Column" alt="Nuovo" />
+                        </DxButton>
+                        <button type="button" class="btn p-0 border-0 bg-transparent"
+                                @onclick="@(async (e) => await GearContextMenu.ShowAsync(e))"
+                                title="Opzioni">
+                            <img src="images/0115-cog.png" style="width:16px; height:16px;" alt="⚙" />
+                        </button>
+                    </div>
+                </HeaderTemplate>
+
+                <CellDisplayTemplate Context="gridRow">
+                    @{
+                        var riga = (TabComposizione)gridRow.DataItem;
+                    }
+                    <div class="d-flex">
+                        <DxButton RenderStyle="ButtonRenderStyle.None"
+                                  Click="@(() => MyGrid.StartEditRowAsync(gridRow.VisibleIndex))">
+                            <img src="images/modifytablestyle_16x16.png" class="Image-Command-Column" alt="Modifica" />
+                        </DxButton>
+                        <DxButton RenderStyle="ButtonRenderStyle.None"
+                                  Click="@(() => Delete(riga))">
+                            <img src="images/delete_16x16.png" class="Image-Command-Column" alt="Elimina" />
+                        </DxButton>
+                    </div>
+                </CellDisplayTemplate>
+            </DxGridCommandColumn>
+
+            <DxGridDataColumn FieldName="Composizione" Caption="Composizione" />
+            <DxGridDataColumn FieldName="CdImp" Caption="Codice" />
+            <DxGridDataColumn FieldName="Stato" Caption="Stato" />
+            <DxGridDataColumn FieldName="IdContatto" Caption="Brand" />
+        </Columns>
+        <ToolbarTemplate>
+            <DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Contained">
+                <Items>
+                    <DxToolbarItem Alignment="ToolbarItemAlignment.Right" Text="ColumnChooser" RenderStyle="ButtonRenderStyle.Secondary" IconCssClass="grid-icon-column-chooser" Click="ColumnChooserButton_Click" />
+                </Items>
+            </DxToolbar>
+        </ToolbarTemplate>
+        <EditFormTemplate Context="EditContext">
+            @{
+                var Composizione = (TabComposizione)EditContext.EditModel;
+            }
+            <DxFormLayout CssClass="w-100">
+                <DxFormLayoutItem Caption="Composizione" ColSpanMd="6">
+                    <DxTextBox Text="@Composizione.Composizione" Enabled="false" ValidationEnabled="false" />
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Codice" ColSpanMd="6">
+                    <DxTextBox @bind-Text="Composizione.CdImp" />
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Brand" ColSpanMd="6">
+                    <DxComboBox Data="@Brands" @bind-Value="Composizione.IdContatto" ValueFieldName="Id" TextFieldName="Societa1" />
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Nota" ColSpanMd="6">
+                    <DxTextBox @bind-Text="Composizione.Nota" />
+                </DxFormLayoutItem>
+
+                <DxFormLayoutItem ColSpanMd="12" Caption="Fibre" Context="fibreFormCtx">
+                    <div class="d-flex gap-2 align-items-end mb-2">
+                        <DxComboBox Data="@FibreDisponibili" @bind-Value="FibraDaAggiungere" ValueFieldName="Id" TextFieldName="Fibra" NullText="Seleziona fibra" CssClass="flex-grow-1" />
+                        <DxSpinEdit @bind-Value="PercentualeDaAggiungere" MinValue="1" MaxValue="100" />
+                        <DxButton Text="Aggiungi" Click="AggiungiFibra" />
+                    </div>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Fibra</th>
+                                <th>%</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var dettaglio in DettagliCorrente)
+                            {
+                                <tr>
+                                    <td>@GetFibraNome(dettaglio.IdFibra)</td>
+                                    <td>@dettaglio.Perc%</td>
+                                    <td>
+                                        <DxButton RenderStyle="ButtonRenderStyle.None" Click="@(() => RimuoviFibra(dettaglio))">
+                                            <img src="images/delete_16x16.png" class="Image-Command-Column" alt="Rimuovi" />
+                                        </DxButton>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <div class="@(TotalePercentuale == 100 ? "text-success" : "text-danger")">
+                        Totale: @TotalePercentuale% @(TotalePercentuale == 100 ? "✓" : "(deve essere 100)")
+                    </div>
+                </DxFormLayoutItem>
+            </DxFormLayout>
+        </EditFormTemplate>
+    </DxGrid>
+</div>
+
+@code {
+    private IEnumerable<TabComposizione>? DataSource;
+    private List<Contatti> Brands = new();
+    private List<TabFibre> Fibre = new();
+    private List<TabComposizioneDetail> TuttiIDettagli = new();
+    private List<TabComposizioneDetail> DettagliCorrente = new();
+
+    private int? FibraDaAggiungere;
+    private int PercentualeDaAggiungere = 1;
+    private TabComposizione? ModelInEdit;
+
+    private int TotalePercentuale => DettagliCorrente.Sum(d => d.Perc);
+    private IEnumerable<TabFibre> FibreDisponibili => Fibre.Where(f => !DettagliCorrente.Any(d => d.IdFibra == f.Id));
+
+    private DxGrid MyGrid = default!;
+    private DxContextMenu GearContextMenu = default!;
+    private bool loading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                await caricaLookup();
+                StateHasChanged();
+            }
+            finally
+            {
+                loading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task caricaLookup()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+        DataSource = await context.TabComposiziones.ToListAsync();
+        Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
+        Fibre = await context.TabFibres.AsNoTracking().OrderBy(f => f.Fibra).ToListAsync();
+        TuttiIDettagli = await context.TabComposizioneDetails.AsNoTracking().ToListAsync();
+    }
+
+    private string GetFibraNome(int idFibra)
+        => Fibre.FirstOrDefault(f => f.Id == idFibra)?.Fibra ?? "N/D";
+
+    private string GetFibraCod(int idFibra)
+        => Fibre.FirstOrDefault(f => f.Id == idFibra)?.Cod ?? "?";
+
+    private void RigeneraComposizione()
+    {
+        if (ModelInEdit == null) return;
+        ModelInEdit.Composizione = string.Join(" ", DettagliCorrente.Select(d => $"{GetFibraCod(d.IdFibra)} {d.Perc}%"));
+    }
+
+    void OnCustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        if (e.IsNew)
+        {
+            e.EditModel = new TabComposizione();
+            DettagliCorrente = new List<TabComposizioneDetail>();
+        }
+        else
+        {
+            var esistente = (TabComposizione)e.DataItem!;
+            DettagliCorrente = TuttiIDettagli
+                .Where(d => d.IdComp == esistente.Id)
+                .OrderBy(d => d.OrdPm)
+                .Select(d => new TabComposizioneDetail { Id = d.Id, IdComp = d.IdComp, IdFibra = d.IdFibra, Perc = d.Perc, OrdPm = d.OrdPm })
+                .ToList();
+        }
+
+        ModelInEdit = (TabComposizione)e.EditModel;
+        FibraDaAggiungere = null;
+        PercentualeDaAggiungere = 1;
+        RigeneraComposizione();
+    }
+
+    private void AggiungiFibra()
+    {
+        if (FibraDaAggiungere == null) return;
+        if (DettagliCorrente.Any(d => d.IdFibra == FibraDaAggiungere.Value)) return;
+
+        DettagliCorrente.Add(new TabComposizioneDetail
+        {
+            IdFibra = FibraDaAggiungere.Value,
+            Perc = PercentualeDaAggiungere,
+            OrdPm = DettagliCorrente.Count + 1
+        });
+
+        FibraDaAggiungere = null;
+        PercentualeDaAggiungere = 1;
+        RigeneraComposizione();
+    }
+
+    private void RimuoviFibra(TabComposizioneDetail dettaglio)
+    {
+        DettagliCorrente.Remove(dettaglio);
+        RigeneraComposizione();
+    }
+
+    private async Task Delete(TabComposizione riga)
+    {
+        bool confermato = await JS.InvokeAsync<bool>("confirm", $"Vuoi davvero eliminare la composizione \"{riga.Composizione}\"?");
+
+        if (confermato)
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+
+            var dettagli = await context.TabComposizioneDetails.Where(d => d.IdComp == riga.Id).ToListAsync();
+            context.TabComposizioneDetails.RemoveRange(dettagli);
+            context.TabComposiziones.Remove(riga);
+
+            await context.SaveChangesAsync();
+            await caricaLookup();
+        }
+    }
+
+    async Task OnEditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        var editModel = (TabComposizione)e.EditModel;
+        if (string.IsNullOrWhiteSpace(editModel.Composizione))
+        {
+            await JS.InvokeVoidAsync("alert", "La composizione è obbligatoria.");
+            e.Cancel = true;
+            return;
+        }
+
+        if (DettagliCorrente.Count == 0 || TotalePercentuale != 100)
+        {
+            await JS.InvokeVoidAsync("alert", $"La somma delle percentuali deve essere 100 (attuale: {TotalePercentuale}).");
+            e.Cancel = true;
+            return;
+        }
+
+        using var context = await DbFactory.CreateDbContextAsync();
+
+        try
+        {
+            int idComp;
+            if (e.IsNew)
+            {
+                context.TabComposiziones.Add(editModel);
+                await context.SaveChangesAsync();
+                idComp = editModel.Id;
+            }
+            else
+            {
+                var dataItem = (TabComposizione)e.DataItem;
+                e.CopyChangesToDataItem();
+                context.Entry(dataItem).State = EntityState.Modified;
+                await context.SaveChangesAsync();
+                idComp = dataItem.Id;
+
+                var dettagliEsistenti = await context.TabComposizioneDetails.Where(d => d.IdComp == idComp).ToListAsync();
+                context.TabComposizioneDetails.RemoveRange(dettagliEsistenti);
+                await context.SaveChangesAsync();
+            }
+
+            var ordine = 1;
+            foreach (var dettaglio in DettagliCorrente)
+            {
+                context.TabComposizioneDetails.Add(new TabComposizioneDetail
+                {
+                    IdComp = idComp,
+                    IdFibra = dettaglio.IdFibra,
+                    Perc = dettaglio.Perc,
+                    OrdPm = ordine++
+                });
+            }
+
+            await context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Errore durante il salvataggio: {ex.Message}");
+            e.Cancel = true;
+        }
+
+        await caricaLookup();
+    }
+
+    void ColumnChooserButton_Click()
+    {
+        MyGrid.ShowColumnChooser();
+    }
+}

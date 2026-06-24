@@ -1,42 +1,398 @@
+@rendermode InteractiveServer
+@using EasyLab.Components.Pages.Articoli.CareLabel
 @using EasyLab.Models
+
+
+@if (loading)
+{
+	<Loading></Loading>
+}
+
+<DxPopup @bind-Visible="Open"
+         HeaderText="@GetHeaderText()"
+         CloseButtonClick="ChiudiPopup"
+         CloseOnOutsideClick="true"
+         ShowFooter="false"
+         Width="@GetPopupWidth()"
+         Height="@GetPopupHeight()"
+         MaxWidth="@GetPopupMaxWidth()"
+         CssClass="gestione-tabelle-popup">
+    <BodyContentTemplate>
+        <div class="Popup-Gestione-Tabelle-Content" style="@GetPopupContentStyle()">
+            @switch (TabellaSelezionata)
+            {
+                case "Composizione":
+                    <CareLabelComposizioni></CareLabelComposizioni>
+                    break;
+
+                case "Posizione":
+                    <CareLabelPosizioni></CareLabelPosizioni>
+                    break;
+
+                case "Aggiungi Riga":
+                    <CareLabelAggiungiRiga
+                        ArticoloSelezionato="@ArticoloSelezionato"
+                        OnSalvataggioCompletato="ChiudiPopup">
+                    </CareLabelAggiungiRiga>
+                    break;
+
+                case "Modifica Riga":
+                    <CareLabelModificaRiga
+                        ArticoloSelezionato="@ArticoloSelezionato"
+                        ComposizioniSelezionate="@ComposizioniSelezionate"
+						PosizioniSelezionate="@PosizioniSelezionate"
+                        OnModificaCompletata="ChiudiPopup">
+                    </CareLabelModificaRiga>
+                    break;
+
+                case "":
+                    <span>Nulla Selezionato</span>
+                    break;
+
+                default:
+                    <span>Errore</span>
+                    break;
+            }
+        </div>
+    </BodyContentTemplate>
+</DxPopup>
 
 @if (ArticoloSelezionato != null)
 {
-    @if (SimboliLavaggio.Any())
-    {
-        <div class="d-flex flex-wrap gap-2 p-3">
-            @foreach (var simbolo in SimboliLavaggio)
-            {
-                <span class="badge bg-light text-dark border">@simbolo</span>
-            }
-        </div>
-    }
-    else
-    {
-        <p class="text-muted p-3">Nessun simbolo di lavaggio impostato per questo articolo.</p>
-    }
-}
-else
-{
-    <p class="text-muted p-3">Nessun articolo selezionato.</p>
+	<DxFormLayout>
+		<DxFormLayoutGroup ColSpanMd="12" Caption="CareLabel">
+			<DxFormLayoutItem Context="context2" ColSpanMd="12">
+				<div class="carelabel-container">
+					<div class="carelabel-toolbar">
+						<div class="carelabel-toolbar-left">
+							<DxButton Click="Posizione" Text="Posizione" RenderStyle="ButtonRenderStyle.Secondary" />
+							<DxButton Click="Composizione" Text="Composizione" RenderStyle="ButtonRenderStyle.Secondary" />
+						</div>
+						<div class="carelabel-toolbar-right">
+							<DxButton Text="Aggiungi Riga" Click="() => AggiungiRiga()" RenderStyle="ButtonRenderStyle.Primary" />
+						</div>
+					</div>
+
+					@if (ComposizioniSelezionate.Any())
+					{
+						<div class="carelabel-table-wrapper">
+							<table class="carelabel-table">
+								<thead>
+									<tr>
+										<th class="carelabel-col-pos">Posizione</th>
+										<th class="carelabel-col-comp">Composizione</th>
+										<th class="carelabel-col-actions"></th>
+									</tr>
+								</thead>
+								<tbody>
+									@foreach (TabComposizione Composizione in ComposizioniSelezionate)
+									{
+										<tr>
+											<td class="carelabel-col-pos">
+												<div class="carelabel-cell-pos">
+													@if (PosizioniSelezionate[ComposizioniSelezionate.IndexOf(Composizione)] != null)
+													{
+														<span class="carelabel-badge carelabel-badge-pos">@PosizioniSelezionate[ComposizioniSelezionate.IndexOf(Composizione)].Posizione)</span>
+													}
+													else
+													{
+														<span class="carelabel-na">NA</span>
+													}
+												</div>
+											</td>
+											<td class="carelabel-col-comp">
+												<div class="carelabel-cell-comp">
+													@if (Composizione != null)
+													{
+														<span class="carelabel-badge carelabel-badge-comp">@Composizione.Composizione</span>
+													}
+													else
+													{
+														<span class="carelabel-na">NA</span>
+													}
+												</div>
+											</td>
+											<td class="carelabel-col-actions">
+												<div class="carelabel-actions">
+													<DxButton Click="() => ModificaRiga(Composizione)" RenderStyle="ButtonRenderStyle.None">
+														<img src="images/modifytablestyle_16x16.png" class="Image-Command-Column" alt="Modifica" />
+													</DxButton>
+													<DxButton Click="() => EliminaRiga(Composizione)" RenderStyle="ButtonRenderStyle.None">
+														<img src="images/delete_16x16.png" class="Image-Command-Column" alt="Elimina" />
+													</DxButton>
+												</div>
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					}
+					else
+					{
+						<div class="carelabel-empty">
+							<span class="text-muted fst-italic">Nulla Selezionato</span>
+						</div>
+					}
+				</div>
+			</DxFormLayoutItem>
+		</DxFormLayoutGroup>
+
+		<DxFormLayoutGroup ColSpanMd="6" Caption="Label">
+		</DxFormLayoutGroup>
+
+		<DxFormLayoutGroup ColSpanMd="6" Caption="Altro">
+		</DxFormLayoutGroup>
+	</DxFormLayout>
 }
 
 @code {
-    [Parameter] public BasiAll? ArticoloSelezionato { get; set; }
 
-    private List<string> SimboliLavaggio => ArticoloSelezionato == null ? new() : new[]
-    {
-        ArticoloSelezionato.TabSimboliLav1?.Descrizione,
-        ArticoloSelezionato.TabSimboliLav2?.Descrizione,
-        ArticoloSelezionato.TabSimboliLav3?.Descrizione,
-        ArticoloSelezionato.TabSimboliLav4?.Descrizione,
-        ArticoloSelezionato.TabSimboliLav5?.Descrizione,
-        ArticoloSelezionato.TabSimboliLav6?.Descrizione,
-        ArticoloSelezionato.TabSimboliLav11?.Descrizione,
-        ArticoloSelezionato.TabSimboliLav12?.Descrizione,
-        ArticoloSelezionato.TabSimboliLav13?.Descrizione,
-        ArticoloSelezionato.TabSimboliLav14?.Descrizione,
-        ArticoloSelezionato.TabSimboliLav15?.Descrizione,
-        ArticoloSelezionato.TabSimboliLav16?.Descrizione
-    }.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s!).ToList();
+	[Parameter]
+	public BasiAll? ArticoloSelezionato { get; set; }
+
+	[Parameter]
+	public EventCallback AggiornaDati { get; set; }
+
+	public List<TabComposizione>? ComposizioniSelezionate = new List<TabComposizione>();
+
+	public List<TabComposizionePo>? PosizioniSelezionate = new List<TabComposizionePo>();
+
+	bool Open = false;
+	bool loading = false;
+	string TabellaSelezionata = "";
+
+	private string? ultimoArticoloCd;
+
+	protected override async Task OnParametersSetAsync()
+	{
+		if (ArticoloSelezionato != null && ArticoloSelezionato.Cd != ultimoArticoloCd)
+		{
+			ultimoArticoloCd = ArticoloSelezionato.Cd;
+			await CaricaComposizioni();
+		}
+	}
+
+	private async Task CaricaComposizioni()
+	{
+
+		using var context = await DbFactory.CreateDbContextAsync();
+		if (ArticoloSelezionato.IdComp1 > 0)
+		{
+			TabComposizione? composizione = await context.TabComposiziones
+														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdComp1);
+			if (composizione != null)
+			{
+				ComposizioniSelezionate.Add(composizione);
+			}
+		}
+
+		if (ArticoloSelezionato.IdComp2 > 0)
+		{
+			TabComposizione? composizione = await context.TabComposiziones
+														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdComp2);
+			if (composizione != null)
+			{
+				ComposizioniSelezionate.Add(composizione);
+			}
+		}
+
+		if (ArticoloSelezionato.IdComp3 > 0)
+		{
+			TabComposizione? composizione = await context.TabComposiziones
+														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdComp3);
+			if (composizione != null)
+			{
+				ComposizioniSelezionate.Add(composizione);
+			}
+		}
+
+		if (ArticoloSelezionato.IdComp4 > 0)
+		{
+			TabComposizione? composizione = await context.TabComposiziones
+														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdComp4);
+			if (composizione != null)
+			{
+				ComposizioniSelezionate.Add(composizione);
+			}
+		}
+
+		if (ArticoloSelezionato.IdComp5 > 0)
+		{
+			TabComposizione? composizione = await context.TabComposiziones
+														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdComp5);
+			if (composizione != null)
+			{
+				ComposizioniSelezionate.Add(composizione);
+			}
+		}
+
+		if (ArticoloSelezionato.IdPos1 > 0)
+		{
+			TabComposizionePo? posizione = await context.TabComposizionePos
+														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdPos1);
+			if (posizione != null)
+			{
+				PosizioniSelezionate.Add(posizione);
+			}
+		}
+
+		if (ArticoloSelezionato.IdPos2 > 0)
+		{
+			TabComposizionePo? posizione = await context.TabComposizionePos
+														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdPos2);
+			if (posizione != null)
+			{
+				PosizioniSelezionate.Add(posizione);
+			}
+		}
+
+		if (ArticoloSelezionato.IdPos3 > 0)
+		{
+			TabComposizionePo? posizione = await context.TabComposizionePos
+														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdPos3);
+			if (posizione != null)
+			{
+				PosizioniSelezionate.Add(posizione);
+			}
+		}
+
+		if (ArticoloSelezionato.IdPos4 > 0)
+		{
+			TabComposizionePo? posizione = await context.TabComposizionePos
+														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdPos4);
+			if (posizione != null)
+			{
+				PosizioniSelezionate.Add(posizione);
+			}
+		}
+
+		if (ArticoloSelezionato.IdPos5 > 0)
+		{
+			TabComposizionePo? posizione = await context.TabComposizionePos
+														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdPos5);
+			if (posizione != null)
+			{
+				PosizioniSelezionate.Add(posizione);
+			}
+		}
+
+	}
+
+	private void Posizione()
+	{
+		TabellaSelezionata = "Posizione";
+		Open = true;
+		StateHasChanged();
+	}
+
+	private void Composizione()
+	{
+		TabellaSelezionata = "Composizione";
+		Open = true;
+		StateHasChanged();
+	}
+
+	private async Task ChiudiPopup()
+	{
+		Open = false;
+		TabellaSelezionata = "";
+		await CaricaComposizioni();
+		await AggiornaDati.InvokeAsync();
+		StateHasChanged();
+	}
+
+	void AggiungiRiga()
+	{
+		TabellaSelezionata = "Aggiungi Riga";
+		Open = true;
+		StateHasChanged();
+	}
+
+	private async Task EliminaRiga(TabComposizione composizione)
+	{
+		// loading = true;
+		// StateHasChanged();
+		// await Task.Yield();
+
+		// try
+		// {
+		// 	using var context = await dbContextFactory.CreateDbContextAsync();
+
+		// 	var daRimuovere = await context.ArticoliComp
+		// 		.FirstOrDefaultAsync(x => x.Id == articoloComp.Id);
+
+		// 	if (daRimuovere != null)
+		// 	{
+		// 		context.ArticoliComp.Remove(daRimuovere);
+		// 		await context.SaveChangesAsync();
+		// 	}
+		// }
+		// catch (Exception s)
+		// {
+		// 	Log.Error($"Errore durante l'eliminazione: {s.Message}");
+		// 	if (s.InnerException != null) Log.Error($"Dettaglio: {s.InnerException.Message}");
+		// }
+
+		// await CaricaComposizioni();
+		// await AggiornaDati.InvokeAsync();
+		// loading = false;
+		// StateHasChanged();
+	}
+
+	void ModificaRiga(TabComposizione composizione)
+	{
+		// ComposizionePosizioneSelezionata = composizionePosizione;
+		// TabellaSelezionata = "Modifica Riga";
+		// Open = true;
+		// StateHasChanged();
+	}
+
+	private string GetHeaderText()
+	{
+		return TabellaSelezionata switch
+		{
+			"Composizione" => "Composition",
+			"Posizione" => "Position",
+			"Aggiungi Riga" => "AddRow",
+			"Modifica Riga" => "Edit",
+			_ => ""
+		};
+	}
+
+	private string GetPopupWidth()
+	{
+		return TabellaSelezionata switch
+		{
+			"Aggiungi Riga" or "Modifica Riga" => "500px",
+			_ => "90%"
+		};
+	}
+
+	private string GetPopupMaxWidth()
+	{
+		return TabellaSelezionata switch
+		{
+			"Aggiungi Riga" or "Modifica Riga" => "95vw",
+			_ => "90vw"
+		};
+	}
+
+	private string GetPopupHeight()
+	{
+		return TabellaSelezionata switch
+		{
+			"Aggiungi Riga" or "Modifica Riga" => "auto",
+			_ => "85vh"
+		};
+	}
+
+	private string GetPopupContentStyle()
+	{
+		return TabellaSelezionata switch
+		{
+			"Aggiungi Riga" or "Modifica Riga" => "overflow-x: hidden;",
+			_ => ""
+		};
+	}
 }

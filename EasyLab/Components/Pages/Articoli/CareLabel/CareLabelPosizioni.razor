@@ -1,0 +1,194 @@
+@rendermode InteractiveServer
+
+
+
+<div class="grid-container" style="padding-bottom: 10px; padding-top: 10px;">
+    @if (loading)
+    {
+        <Loading></Loading>
+    }
+    <DxContextMenu @ref="GearContextMenu">
+        <Items>
+            <DxContextMenuItem Text="ColumnChooser" Click="@(() => MyGrid.ShowColumnChooser())" />
+        </Items>
+    </DxContextMenu>
+    <DxGrid @ref="MyGrid"
+            Data="@DataSource"
+            ShowGroupPanel="true"
+            ShowSearchBox="true"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            AllowSelectRowByClick="true"
+            PageSize="15"
+            KeyFieldName="@nameof(TabComposizionePo.Id)"
+            HighlightRowOnHover="true"
+            FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+            EditMode="GridEditMode.PopupEditForm"
+            PopupEditFormCssClass="custom-grid-popup"
+            CustomizeEditModel="OnCustomizeEditModel"
+            EditModelSaving="OnEditModelSaving">
+        <Columns>
+            <DxGridCommandColumn Width="120px">
+
+                <HeaderTemplate Context="hdr">
+                    <div class="d-flex align-items-center gap-1">
+                        <DxButton RenderStyle="ButtonRenderStyle.None"
+                                  Click="@(() => MyGrid.StartEditNewRowAsync())"
+                                  Tooltip="Nuovo">
+                            <img src="images/add2_16.png" class="Image-Command-Column" alt="Nuovo" />
+                        </DxButton>
+                        <button type="button" class="btn p-0 border-0 bg-transparent"
+                                @onclick="@(async (e) => await GearContextMenu.ShowAsync(e))"
+                                title="Opzioni">
+                            <img src="images/0115-cog.png" style="width:16px; height:16px;" alt="⚙" />
+                        </button>
+                    </div>
+                </HeaderTemplate>
+
+                <CellDisplayTemplate Context="gridRow">
+                    @{
+                        var riga = (TabComposizionePo)gridRow.DataItem;
+                    }
+                    <div class="d-flex">
+                        <DxButton RenderStyle="ButtonRenderStyle.None"
+                                  Click="@(() => MyGrid.StartEditRowAsync(gridRow.VisibleIndex))">
+                            <img src="images/modifytablestyle_16x16.png" class="Image-Command-Column" alt="Modifica" />
+                        </DxButton>
+                        <DxButton RenderStyle="ButtonRenderStyle.None"
+                                  Click="@(() => Delete(riga))">
+                            <img src="images/delete_16x16.png" class="Image-Command-Column" alt="Elimina" />
+                        </DxButton>
+                    </div>
+                </CellDisplayTemplate>
+            </DxGridCommandColumn>
+
+            <DxGridDataColumn FieldName="Posizione" Caption="Posizione" />
+            <DxGridDataColumn FieldName="CdPos" Caption="Codice" />
+            <DxGridDataColumn FieldName="OrdPm" Caption="Ordine" />
+            <DxGridDataColumn FieldName="IdContatto" Caption="Brand" />
+        </Columns>
+        <ToolbarTemplate>
+            <DxToolbar ItemRenderStyleMode="ToolbarRenderStyleMode.Contained">
+                <Items>
+                    <DxToolbarItem Alignment="ToolbarItemAlignment.Right" Text="ColumnChooser" RenderStyle="ButtonRenderStyle.Secondary" IconCssClass="grid-icon-column-chooser" Click="ColumnChooserButton_Click" />
+                </Items>
+            </DxToolbar>
+        </ToolbarTemplate>
+        <EditFormTemplate Context="EditContext">
+            @{
+                var Posizione = (TabComposizionePo)EditContext.EditModel;
+            }
+            <DxFormLayout CssClass="w-100">
+                <DxFormLayoutItem Caption="Posizione" ColSpanMd="6">
+                    <DxTextBox @bind-Text="Posizione.Posizione" />
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Codice" ColSpanMd="6">
+                    <DxTextBox @bind-Text="Posizione.CdPos" />
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Ordine" ColSpanMd="6">
+                    <DxSpinEdit @bind-Value="Posizione.OrdPm" />
+                </DxFormLayoutItem>
+                <DxFormLayoutItem Caption="Brand" ColSpanMd="6">
+                    <DxComboBox Data="@Brands" @bind-Value="Posizione.IdContatto" ValueFieldName="Id" TextFieldName="Societa1" />
+                </DxFormLayoutItem>
+            </DxFormLayout>
+        </EditFormTemplate>
+    </DxGrid>
+</div>
+
+@code {
+    private IEnumerable<TabComposizionePo>? DataSource;
+    private List<Contatti> Brands = new();
+
+    private DxGrid MyGrid = default!;
+    private DxContextMenu GearContextMenu = default!;
+    private bool loading = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                await caricaLookup();
+                StateHasChanged();
+            }
+            finally
+            {
+                loading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task caricaLookup()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+        DataSource = await context.TabComposizionePos
+         .ToListAsync();
+        Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
+    }
+
+    void OnCustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        if (e.IsNew)
+        {
+            var nuovaPosizione = new TabComposizionePo();
+
+            e.EditModel = nuovaPosizione;
+        }
+    }
+
+    private async Task Delete(TabComposizionePo riga)
+    {
+        bool confermato = await JS.InvokeAsync<bool>("confirm", $"Vuoi davvero eliminare la posizione \"{riga.Posizione}\"?");
+
+        if (confermato)
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+
+            context.TabComposizionePos.Remove(riga);
+
+            await context.SaveChangesAsync();
+            await caricaLookup();
+        }
+    }
+
+    async Task OnEditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        var editModel = (TabComposizionePo)e.EditModel;
+        if (string.IsNullOrWhiteSpace(editModel.Posizione))
+        {
+            await JS.InvokeVoidAsync("alert", "La posizione è obbligatoria.");
+            e.Cancel = true;
+            return;
+        }
+
+        using var context = await DbFactory.CreateDbContextAsync();
+
+        try
+        {
+            if (e.IsNew)
+            {
+                context.TabComposizionePos.Add(editModel);
+            }
+            else
+            {
+                e.CopyChangesToDataItem();
+            }
+
+            await context.SaveChangesAsync();
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Errore durante il salvataggio: {ex.Message}");
+            e.Cancel = true;
+        }
+
+        await caricaLookup();
+    }
+
+    void ColumnChooserButton_Click()
+    {
+        MyGrid.ShowColumnChooser();
+    }
+}
