@@ -39,8 +39,8 @@
                 case "Modifica Riga":
                     <CareLabelModificaRiga
                         ArticoloSelezionato="@ArticoloSelezionato"
-                        ComposizioniSelezionate="@ComposizioniSelezionate"
-						PosizioniSelezionate="@PosizioniSelezionate"
+                        ComposizioneSelezionata="@ComposizioneInModifica"
+                        PosizioneSelezionata="@PosizioneInModifica"
                         OnModificaCompletata="ChiudiPopup">
                     </CareLabelModificaRiga>
                     break;
@@ -73,7 +73,7 @@
 						</div>
 					</div>
 
-					@if (ComposizioniSelezionate.Any())
+					@if (Righe.Any())
 					{
 						<div class="carelabel-table-wrapper">
 							<table class="carelabel-table">
@@ -85,14 +85,14 @@
 									</tr>
 								</thead>
 								<tbody>
-									@foreach (TabComposizione Composizione in ComposizioniSelezionate)
+									@foreach (var riga in Righe)
 									{
 										<tr>
 											<td class="carelabel-col-pos">
 												<div class="carelabel-cell-pos">
-													@if (PosizioniSelezionate[ComposizioniSelezionate.IndexOf(Composizione)] != null)
+													@if (riga.Posizione != null)
 													{
-														<span class="carelabel-badge carelabel-badge-pos">@PosizioniSelezionate[ComposizioniSelezionate.IndexOf(Composizione)].Posizione)</span>
+														<span class="carelabel-badge carelabel-badge-pos">@riga.Posizione.Posizione</span>
 													}
 													else
 													{
@@ -102,9 +102,9 @@
 											</td>
 											<td class="carelabel-col-comp">
 												<div class="carelabel-cell-comp">
-													@if (Composizione != null)
+													@if (riga.Composizione != null)
 													{
-														<span class="carelabel-badge carelabel-badge-comp">@Composizione.Composizione</span>
+														<span class="carelabel-badge carelabel-badge-comp">@riga.Composizione.Composizione</span>
 													}
 													else
 													{
@@ -114,10 +114,10 @@
 											</td>
 											<td class="carelabel-col-actions">
 												<div class="carelabel-actions">
-													<DxButton Click="() => ModificaRiga(Composizione)" RenderStyle="ButtonRenderStyle.None">
+													<DxButton Click="() => ModificaRiga(riga)" RenderStyle="ButtonRenderStyle.None">
 														<img src="images/modifytablestyle_16x16.png" class="Image-Command-Column" alt="Modifica" />
 													</DxButton>
-													<DxButton Click="() => EliminaRiga(Composizione)" RenderStyle="ButtonRenderStyle.None">
+													<DxButton Click="() => EliminaRiga(riga)" RenderStyle="ButtonRenderStyle.None">
 														<img src="images/delete_16x16.png" class="Image-Command-Column" alt="Elimina" />
 													</DxButton>
 												</div>
@@ -154,9 +154,12 @@
 	[Parameter]
 	public EventCallback AggiornaDati { get; set; }
 
-	public List<TabComposizione>? ComposizioniSelezionate = new List<TabComposizione>();
+	private record RigaCareLabel(int Slot, TabComposizione? Composizione, TabComposizionePo? Posizione);
 
-	public List<TabComposizionePo>? PosizioniSelezionate = new List<TabComposizionePo>();
+	private List<RigaCareLabel> Righe = new();
+
+	private TabComposizione? ComposizioneInModifica;
+	private TabComposizionePo? PosizioneInModifica;
 
 	bool Open = false;
 	bool loading = false;
@@ -173,110 +176,68 @@
 		}
 	}
 
+	private static int? GetIdComp(BasiAll a, int slot) => slot switch
+	{
+		1 => a.IdComp1,
+		2 => a.IdComp2,
+		3 => a.IdComp3,
+		4 => a.IdComp4,
+		5 => a.IdComp5,
+		_ => null
+	};
+
+	private static int? GetIdPos(BasiAll a, int slot) => slot switch
+	{
+		1 => a.IdPos1,
+		2 => a.IdPos2,
+		3 => a.IdPos3,
+		4 => a.IdPos4,
+		5 => a.IdPos5,
+		_ => null
+	};
+
+	private static bool SlotPieno(int? id) => id.HasValue && id.Value > 0;
+
+	private static void ClearSlot(BasiAll a, int slot)
+	{
+		switch (slot)
+		{
+			case 1: a.IdPos1 = null; a.IdComp1 = null; break;
+			case 2: a.IdPos2 = null; a.IdComp2 = null; break;
+			case 3: a.IdPos3 = null; a.IdComp3 = null; break;
+			case 4: a.IdPos4 = null; a.IdComp4 = null; break;
+			case 5: a.IdPos5 = null; a.IdComp5 = null; break;
+		}
+	}
+
 	private async Task CaricaComposizioni()
 	{
+		Righe.Clear();
+		if (ArticoloSelezionato == null) return;
 
 		using var context = await DbFactory.CreateDbContextAsync();
-		if (ArticoloSelezionato.IdComp1 > 0)
-		{
-			TabComposizione? composizione = await context.TabComposiziones
-														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdComp1);
-			if (composizione != null)
-			{
-				ComposizioniSelezionate.Add(composizione);
-			}
-		}
 
-		if (ArticoloSelezionato.IdComp2 > 0)
-		{
-			TabComposizione? composizione = await context.TabComposiziones
-														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdComp2);
-			if (composizione != null)
-			{
-				ComposizioniSelezionate.Add(composizione);
-			}
-		}
+		// ArticoloSelezionato e' la copia in memoria caricata quando la riga e' stata
+		// selezionata nella griglia: non si aggiorna da sola dopo un salvataggio fatto
+		// altrove, quindi va riletta dal DB per vedere subito le modifiche appena fatte.
+		var articoloAggiornato = await context.BasiAlls.AsNoTracking().FirstOrDefaultAsync(a => a.Cd == ArticoloSelezionato.Cd) ?? ArticoloSelezionato;
 
-		if (ArticoloSelezionato.IdComp3 > 0)
+		for (var slot = 1; slot <= 5; slot++)
 		{
-			TabComposizione? composizione = await context.TabComposiziones
-														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdComp3);
-			if (composizione != null)
-			{
-				ComposizioniSelezionate.Add(composizione);
-			}
-		}
+			var idComp = GetIdComp(articoloAggiornato, slot);
+			var idPos = GetIdPos(articoloAggiornato, slot);
 
-		if (ArticoloSelezionato.IdComp4 > 0)
-		{
-			TabComposizione? composizione = await context.TabComposiziones
-														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdComp4);
-			if (composizione != null)
-			{
-				ComposizioniSelezionate.Add(composizione);
-			}
-		}
+			if (!SlotPieno(idComp) && !SlotPieno(idPos)) continue;
 
-		if (ArticoloSelezionato.IdComp5 > 0)
-		{
-			TabComposizione? composizione = await context.TabComposiziones
-														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdComp5);
-			if (composizione != null)
-			{
-				ComposizioniSelezionate.Add(composizione);
-			}
-		}
+			TabComposizione? composizione = SlotPieno(idComp)
+				? await context.TabComposiziones.FirstOrDefaultAsync(x => x.Id == idComp)
+				: null;
+			TabComposizionePo? posizione = SlotPieno(idPos)
+				? await context.TabComposizionePos.FirstOrDefaultAsync(x => x.Id == idPos)
+				: null;
 
-		if (ArticoloSelezionato.IdPos1 > 0)
-		{
-			TabComposizionePo? posizione = await context.TabComposizionePos
-														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdPos1);
-			if (posizione != null)
-			{
-				PosizioniSelezionate.Add(posizione);
-			}
+			Righe.Add(new RigaCareLabel(slot, composizione, posizione));
 		}
-
-		if (ArticoloSelezionato.IdPos2 > 0)
-		{
-			TabComposizionePo? posizione = await context.TabComposizionePos
-														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdPos2);
-			if (posizione != null)
-			{
-				PosizioniSelezionate.Add(posizione);
-			}
-		}
-
-		if (ArticoloSelezionato.IdPos3 > 0)
-		{
-			TabComposizionePo? posizione = await context.TabComposizionePos
-														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdPos3);
-			if (posizione != null)
-			{
-				PosizioniSelezionate.Add(posizione);
-			}
-		}
-
-		if (ArticoloSelezionato.IdPos4 > 0)
-		{
-			TabComposizionePo? posizione = await context.TabComposizionePos
-														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdPos4);
-			if (posizione != null)
-			{
-				PosizioniSelezionate.Add(posizione);
-			}
-		}
-
-		if (ArticoloSelezionato.IdPos5 > 0)
-		{
-			TabComposizionePo? posizione = await context.TabComposizionePos
-														.FirstOrDefaultAsync(x => x.Id == ArticoloSelezionato.IdPos5);
-			if (posizione != null)
-			{
-				PosizioniSelezionate.Add(posizione);
-			}
-		}
-
 	}
 
 	private void Posizione()
@@ -309,43 +270,42 @@
 		StateHasChanged();
 	}
 
-	private async Task EliminaRiga(TabComposizione composizione)
+	private async Task EliminaRiga(RigaCareLabel riga)
 	{
-		// loading = true;
-		// StateHasChanged();
-		// await Task.Yield();
+		if (ArticoloSelezionato == null) return;
 
-		// try
-		// {
-		// 	using var context = await dbContextFactory.CreateDbContextAsync();
+		var confermato = await JS.InvokeAsync<bool>("confirm", "Vuoi davvero eliminare questa combinazione Posizione/Composizione?");
+		if (!confermato) return;
 
-		// 	var daRimuovere = await context.ArticoliComp
-		// 		.FirstOrDefaultAsync(x => x.Id == articoloComp.Id);
+		loading = true;
+		StateHasChanged();
+		try
+		{
+			using var context = await DbFactory.CreateDbContextAsync();
+			var articolo = await context.BasiAlls.FirstOrDefaultAsync(a => a.Cd == ArticoloSelezionato.Cd);
+			if (articolo != null)
+			{
+				ClearSlot(articolo, riga.Slot);
+				await context.SaveChangesAsync();
+			}
 
-		// 	if (daRimuovere != null)
-		// 	{
-		// 		context.ArticoliComp.Remove(daRimuovere);
-		// 		await context.SaveChangesAsync();
-		// 	}
-		// }
-		// catch (Exception s)
-		// {
-		// 	Log.Error($"Errore durante l'eliminazione: {s.Message}");
-		// 	if (s.InnerException != null) Log.Error($"Dettaglio: {s.InnerException.Message}");
-		// }
-
-		// await CaricaComposizioni();
-		// await AggiornaDati.InvokeAsync();
-		// loading = false;
-		// StateHasChanged();
+			await CaricaComposizioni();
+			await AggiornaDati.InvokeAsync();
+		}
+		finally
+		{
+			loading = false;
+			StateHasChanged();
+		}
 	}
 
-	void ModificaRiga(TabComposizione composizione)
+	void ModificaRiga(RigaCareLabel riga)
 	{
-		// ComposizionePosizioneSelezionata = composizionePosizione;
-		// TabellaSelezionata = "Modifica Riga";
-		// Open = true;
-		// StateHasChanged();
+		ComposizioneInModifica = riga.Composizione;
+		PosizioneInModifica = riga.Posizione;
+		TabellaSelezionata = "Modifica Riga";
+		Open = true;
+		StateHasChanged();
 	}
 
 	private string GetHeaderText()

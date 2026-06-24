@@ -1,0 +1,135 @@
+@rendermode InteractiveServer
+
+<div class="p-2">
+    @if (loading)
+    {
+        <Loading></Loading>
+    }
+    else if (ArticoloSelezionato == null)
+    {
+        <span>Nessun articolo selezionato.</span>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(Errore))
+        {
+            <div class="alert alert-danger">@Errore</div>
+        }
+        <DxFormLayout CssClass="w-100">
+            <DxFormLayoutItem Caption="Posizione" ColSpanMd="12">
+                <DxComboBox Data="@Posizioni" @bind-Value="PosizioneSelezionata" ValueFieldName="Id" TextFieldName="Posizione" NullText="Seleziona posizione" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Composizione" ColSpanMd="12">
+                <DxComboBox Data="@Composizioni" @bind-Value="ComposizioneSelezionata" ValueFieldName="Id" TextFieldName="Composizione" NullText="Seleziona composizione" />
+            </DxFormLayoutItem>
+        </DxFormLayout>
+        <div class="d-flex justify-content-end gap-2 mt-3">
+            <DxButton Text="Annulla" RenderStyle="ButtonRenderStyle.Secondary" Click="@(() => OnSalvataggioCompletato.InvokeAsync())" />
+            <DxButton Text="Salva" RenderStyle="ButtonRenderStyle.Primary" Click="Salva" />
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public BasiAll? ArticoloSelezionato { get; set; }
+    [Parameter] public EventCallback OnSalvataggioCompletato { get; set; }
+
+    private List<TabComposizionePo> Posizioni = new();
+    private List<TabComposizione> Composizioni = new();
+    private int? PosizioneSelezionata;
+    private int? ComposizioneSelezionata;
+    private bool loading = true;
+    private string? Errore;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                using var context = await DbFactory.CreateDbContextAsync();
+                Posizioni = await context.TabComposizionePos.AsNoTracking().OrderBy(p => p.Posizione).ToListAsync();
+                Composizioni = await context.TabComposiziones.AsNoTracking().OrderBy(c => c.Composizione).ToListAsync();
+            }
+            finally
+            {
+                loading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private static int? GetIdPos(BasiAll a, int n) => n switch
+    {
+        1 => a.IdPos1,
+        2 => a.IdPos2,
+        3 => a.IdPos3,
+        4 => a.IdPos4,
+        5 => a.IdPos5,
+        _ => null
+    };
+
+    private static int? GetIdComp(BasiAll a, int n) => n switch
+    {
+        1 => a.IdComp1,
+        2 => a.IdComp2,
+        3 => a.IdComp3,
+        4 => a.IdComp4,
+        5 => a.IdComp5,
+        _ => null
+    };
+
+    private static bool SlotPieno(int? id) => id.HasValue && id.Value > 0;
+
+    private static void SetSlot(BasiAll a, int n, int idPos, int idComp)
+    {
+        switch (n)
+        {
+            case 1: a.IdPos1 = idPos; a.IdComp1 = idComp; break;
+            case 2: a.IdPos2 = idPos; a.IdComp2 = idComp; break;
+            case 3: a.IdPos3 = idPos; a.IdComp3 = idComp; break;
+            case 4: a.IdPos4 = idPos; a.IdComp4 = idComp; break;
+            case 5: a.IdPos5 = idPos; a.IdComp5 = idComp; break;
+        }
+    }
+
+    private async Task Salva()
+    {
+        Errore = null;
+
+        if (ArticoloSelezionato == null || PosizioneSelezionata == null || ComposizioneSelezionata == null)
+        {
+            Errore = "Seleziona sia la posizione che la composizione.";
+            return;
+        }
+
+        using var context = await DbFactory.CreateDbContextAsync();
+        var articolo = await context.BasiAlls.FirstOrDefaultAsync(a => a.Cd == ArticoloSelezionato.Cd);
+        if (articolo == null)
+        {
+            Errore = "Articolo non trovato.";
+            return;
+        }
+
+        int? slotLibero = null;
+        for (var n = 1; n <= 5; n++)
+        {
+            if (!SlotPieno(GetIdPos(articolo, n)) && !SlotPieno(GetIdComp(articolo, n)))
+            {
+                slotLibero = n;
+                break;
+            }
+        }
+
+        if (slotLibero == null)
+        {
+            Errore = "L'articolo ha già 5 combinazioni Posizione/Composizione: non è possibile aggiungerne altre.";
+            return;
+        }
+
+        SetSlot(articolo, slotLibero.Value, PosizioneSelezionata.Value, ComposizioneSelezionata.Value);
+        await context.SaveChangesAsync();
+
+        await OnSalvataggioCompletato.InvokeAsync();
+    }
+}

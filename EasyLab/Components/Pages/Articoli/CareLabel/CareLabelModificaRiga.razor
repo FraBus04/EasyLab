@@ -1,0 +1,134 @@
+@rendermode InteractiveServer
+
+<div class="p-2">
+    @if (loading)
+    {
+        <Loading></Loading>
+    }
+    else if (ArticoloSelezionato == null || ComposizioneSelezionata == null)
+    {
+        <span>Nessuna riga selezionata.</span>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(Errore))
+        {
+            <div class="alert alert-danger">@Errore</div>
+        }
+        <DxFormLayout CssClass="w-100">
+            <DxFormLayoutItem Caption="Posizione" ColSpanMd="12">
+                <DxComboBox Data="@Posizioni" @bind-Value="PosizioneSelezionataId" ValueFieldName="Id" TextFieldName="Posizione" NullText="Seleziona posizione" />
+            </DxFormLayoutItem>
+            <DxFormLayoutItem Caption="Composizione" ColSpanMd="12">
+                <DxComboBox Data="@Composizioni" @bind-Value="ComposizioneSelezionataId" ValueFieldName="Id" TextFieldName="Composizione" NullText="Seleziona composizione" />
+            </DxFormLayoutItem>
+        </DxFormLayout>
+        <div class="d-flex justify-content-end gap-2 mt-3">
+            <DxButton Text="Annulla" RenderStyle="ButtonRenderStyle.Secondary" Click="@(() => OnModificaCompletata.InvokeAsync())" />
+            <DxButton Text="Salva" RenderStyle="ButtonRenderStyle.Primary" Click="Salva" />
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public BasiAll? ArticoloSelezionato { get; set; }
+    [Parameter] public TabComposizione? ComposizioneSelezionata { get; set; }
+    [Parameter] public TabComposizionePo? PosizioneSelezionata { get; set; }
+    [Parameter] public EventCallback OnModificaCompletata { get; set; }
+
+    private List<TabComposizionePo> Posizioni = new();
+    private List<TabComposizione> Composizioni = new();
+    private int? PosizioneSelezionataId;
+    private int? ComposizioneSelezionataId;
+    private bool loading = true;
+    private string? Errore;
+
+    protected override void OnParametersSet()
+    {
+        PosizioneSelezionataId = PosizioneSelezionata?.Id;
+        ComposizioneSelezionataId = ComposizioneSelezionata?.Id;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                using var context = await DbFactory.CreateDbContextAsync();
+                Posizioni = await context.TabComposizionePos.AsNoTracking().OrderBy(p => p.Posizione).ToListAsync();
+                Composizioni = await context.TabComposiziones.AsNoTracking().OrderBy(c => c.Composizione).ToListAsync();
+            }
+            finally
+            {
+                loading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private static int? GetIdComp(BasiAll a, int n) => n switch
+    {
+        1 => a.IdComp1,
+        2 => a.IdComp2,
+        3 => a.IdComp3,
+        4 => a.IdComp4,
+        5 => a.IdComp5,
+        _ => null
+    };
+
+    private static void SetSlot(BasiAll a, int n, int idPos, int idComp)
+    {
+        switch (n)
+        {
+            case 1: a.IdPos1 = idPos; a.IdComp1 = idComp; break;
+            case 2: a.IdPos2 = idPos; a.IdComp2 = idComp; break;
+            case 3: a.IdPos3 = idPos; a.IdComp3 = idComp; break;
+            case 4: a.IdPos4 = idPos; a.IdComp4 = idComp; break;
+            case 5: a.IdPos5 = idPos; a.IdComp5 = idComp; break;
+        }
+    }
+
+    private int? TrovaSlotCorrente(BasiAll articolo)
+    {
+        for (var n = 1; n <= 5; n++)
+        {
+            if (GetIdComp(articolo, n) == ComposizioneSelezionata!.Id)
+            {
+                return n;
+            }
+        }
+        return null;
+    }
+
+    private async Task Salva()
+    {
+        Errore = null;
+
+        if (ArticoloSelezionato == null || ComposizioneSelezionata == null || PosizioneSelezionataId == null || ComposizioneSelezionataId == null)
+        {
+            Errore = "Seleziona sia la posizione che la composizione.";
+            return;
+        }
+
+        using var context = await DbFactory.CreateDbContextAsync();
+        var articolo = await context.BasiAlls.FirstOrDefaultAsync(a => a.Cd == ArticoloSelezionato.Cd);
+        if (articolo == null)
+        {
+            Errore = "Articolo non trovato.";
+            return;
+        }
+
+        var slot = TrovaSlotCorrente(articolo);
+        if (slot == null)
+        {
+            Errore = "Non trovo più questa combinazione sull'articolo: probabilmente è già stata modificata altrove.";
+            return;
+        }
+
+        SetSlot(articolo, slot.Value, PosizioneSelezionataId.Value, ComposizioneSelezionataId.Value);
+        await context.SaveChangesAsync();
+
+        await OnModificaCompletata.InvokeAsync();
+    }
+}
