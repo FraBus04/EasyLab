@@ -1,0 +1,1650 @@
+﻿@page "/DiBa/{Cd}"
+@using System.Text.Json
+@rendermode InteractiveServer
+@inject NavigationManager NavManager
+@* TABELLAID = 3 *@
+
+<style>
+    body {
+        overflow-x: hidden;
+    }
+</style>
+@* Unico modo che ho trovato per togliere lo scorrimento laterale della pagina *@
+
+<div class="grid-container">
+    @if (loading)
+    {
+        <Loading></Loading>
+    }
+
+    <DxPopup @bind-Visible="Open"
+             HeaderText="@(Argomento == "Duplica" ? "Duplica" : (Argomento == "Elimina" ? "Elimina" : "Modifica"))"
+             CloseButtonClick="ChiudiPopup"
+             CloseOnOutsideClick="true"
+             ShowFooter="false"
+             Width="@(Argomento == "Duplica" || Argomento == "Elimina" ? "380px" : "90%")"
+             MaxWidth="@(Argomento == "Duplica" || Argomento == "Elimina" ? "380px" : "90vw")"
+             Height="auto"
+             CssClass="gestione-tabelle-popup">
+        <BodyContentTemplate>
+            <div class="Popup-Gestione-Tabelle-Content" style="overflow-x: auto;">
+                @if (Argomento == "Duplica")
+                {
+                    <div class="d-flex flex-column gap-3 p-1">
+                        <div class="d-flex flex-column gap-1">
+                            <span class="text-muted fw-semibold" style="font-size:0.8rem;">Versione Sorgente</span>
+                            <DxComboBox Data="@VersioniItems.Where(x => x.Value > -1 && x.Value < 1)"
+                                        Value="@VersioneSelezionataDuplica"
+                                        ValueChanged="@((int? v) => OnVersioneChangedDuplica(v))"
+                                        ValueFieldName="Value"
+                                        TextFieldName="Text"
+                                        Enabled="true"
+                                        style="width: 100%;" />
+                        </div>
+                        <button type="button" class="btn text-white w-100" style="background-color: #ff8c00;" @onclick="ConfermaDuplica">
+                            Duplica Versione
+                        </button>
+                    </div>
+                }
+                else if (Argomento == "Elimina")
+                {
+                    <div class="d-flex flex-column gap-3 p-1">
+                        <div class="d-flex flex-column gap-1">
+                            <span class="text-muted fw-semibold" style="font-size:0.8rem;">Versione Sorgente</span>
+                            <DxComboBox Data="@VersioniItems.Where(x => x.Value > 0)"
+                                        Value="@VersioneSelezionataElimina"
+                                        ValueChanged="@((int? v) => OnVersioneChangedElimina(v))"
+                                        ValueFieldName="Value"
+                                        TextFieldName="Text"
+                                        Enabled="true"
+                                        style="width: 100%;" />
+                        </div>
+                        <button type="button" class="btn text-white w-100" style="background-color: #ff8c00;" @onclick="@(() => { if (VersioneSelezionataElimina.HasValue && VersioneSelezionataElimina >= 0) ConfermaEliminaVersioneVisible = true; })">
+                            Elimina Versione
+                        </button>
+                    </div>
+                }
+            </div>
+        </BodyContentTemplate>
+    </DxPopup>
+
+
+<DxPopup @bind-Visible="ConfermaEliminaRigaVisible"
+         HeaderText="Elimina Riga"
+         CloseOnOutsideClick="true"
+         ShowFooter="false"
+         Width="320px"
+         Height="auto"
+         CssClass="gestione-tabelle-popup">
+    <BodyContentTemplate>
+        <div class="d-flex flex-column gap-3 p-1">
+            <span class="text-muted fw-semibold" style="font-size:0.9rem;">Conferma Elimina Riga</span>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn text-white flex-grow-1" style="background-color: #ff8c00;" @onclick="ConfermaEliminaRiga">Elimina</button>
+                <button type="button" class="btn btn-secondary flex-grow-1" @onclick="@(() => ConfermaEliminaRigaVisible = false)">Annulla</button>
+            </div>
+        </div>
+    </BodyContentTemplate>
+</DxPopup>
+
+<DxPopup @bind-Visible="ConfermaEliminaVersioneVisible"
+         HeaderText="Conferma Elimina Versione"
+         CloseOnOutsideClick="true"
+         ShowFooter="false"
+         Width="340px"
+         Height="auto"
+         CssClass="gestione-tabelle-popup">
+    <BodyContentTemplate>
+        <div class="d-flex flex-column gap-3 p-1">
+            <span class="text-muted fw-semibold" style="font-size:0.9rem;">@(string.Format("Conferma Elimina Versione", VersioneSelezionataElimina))</span>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn text-white flex-grow-1" style="background-color: #ff8c00;" @onclick="ConfermaEliminaVersioneDefinitivo">Elimina</button>
+                <button type="button" class="btn btn-secondary flex-grow-1" @onclick="@(() => ConfermaEliminaVersioneVisible = false)">Annulla</button>
+            </div>
+        </div>
+    </BodyContentTemplate>
+</DxPopup>
+
+    <DxContextMenu @ref="GearContextMenu">
+        <Items>
+            <DxContextMenuItem Text="ColumnChooser" Click="@(() => ShowCustomColumnChooser())" />
+        </Items>
+    </DxContextMenu>
+
+    <div style="padding-right: 50px;">
+        @if (MostraPulsanti)
+        {
+            @if (ArticoloSelezionato != null)
+            {
+                <div class="modern-article-header p-3 rounded shadow-sm d-flex align-items-center flex-shrink-0 gap-2" style="overflow-x: auto;">
+
+                    <button type="button" class="btn btn-sm d-flex align-items-center justify-content-center flex-shrink-0"
+                            style="width:28px;height:28px;background:transparent;color:#ff8c00;border:1px solid #ff8c00;border-radius:50%;padding:0;"
+                            title="Nascondi Dettagli"
+                            @onclick="@(() => HideButtons())">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z" />
+                        </svg>
+                    </button>
+
+                    <div class="header-divider"></div>
+
+                    @if (!string.IsNullOrEmpty(Base64Articolo))
+                    {
+                        <img src="data:image/png;base64,@Base64Articolo" style="height:40px; cursor: pointer;" title="🔍" />
+                        <div class="header-divider"></div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Base64))
+                    {
+                        <img src="data:image/png;base64,@Base64" style="height:40px; cursor: pointer;" title="🔍" />
+                        <div class="header-divider"></div>
+                    }
+
+                    <div class="header-section header-section-fixed">
+                        <div class="d-flex flex-column">
+                            <span class="header-label text-uppercase fw-bold">Stagione</span>
+                            <span class="header-value">@ArticoloSelezionato.Stag</span>
+                        </div>
+                    </div>
+
+                    <div class="header-divider"></div>
+
+                    <div class="header-section header-section-fixed">
+                        <div class="d-flex flex-column">
+                            <span class="header-label text-uppercase fw-bold">Codice Articolo</span>
+                            <span class="header-value">@ArticoloSelezionato.Cd</span>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(ArticoloSelezionato.Parte))
+                    {
+                        <div class="header-divider"></div>
+                        <div class="header-section header-section-fixed">
+                            <div class="d-flex flex-column">
+                                <span class="header-label text-uppercase fw-bold">Codice Parte</span>
+                                <span class="header-value">@ArticoloSelezionato.Parte</span>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(ArticoloSelezionato.Tp))
+                    {
+                        <div class="header-divider"></div>
+                        <div class="header-section header-section-fixed">
+                            <div class="d-flex flex-column">
+                                <span class="header-label text-uppercase fw-bold">Tipo Modello</span>
+                                <span class="header-value">@ArticoloSelezionato.Tp</span>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="header-divider"></div>
+
+                    <div class="header-section header-section-fixed">
+                        <div class="d-flex flex-column flex-column-no-min">
+                            <span class="header-label text-uppercase fw-bold">Nome</span>
+                            <span class="header-value" title="@ArticoloSelezionato.Nota">@ArticoloSelezionato.Nota</span>
+                        </div>
+                    </div>
+
+                    <div class="header-divider"></div>
+
+                    <span class="type-badge flex-shrink-0">@ArticoloSelezionato.Tipo</span>
+
+                    <div class="header-divider"></div>
+
+                    <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                        <button type="button"
+                                class="btn btn-sm @(MostraColori ? "btn-toggle-active" : "btn-outline-secondary")"
+                                @onclick="@(() => OnCheckedChanged2(!MostraColori))">
+                            <img src="images/32_Colori20.png" style="width:14px;height:14px;" class="me-1" />
+                            Colori
+                        </button>
+                        <button type="button"
+                                class="btn btn-sm @(MostraTaglie ? "btn-toggle-active" : "btn-outline-secondary")"
+                                @onclick="@(() => OnCheckedChanged1(!MostraTaglie))">
+                            <img src="images/0046-Scheda Tecnica32.png" style="width:14px;height:14px;" class="me-1" />
+                            Taglie
+                        </button>
+                        <button type="button"
+                                class="btn btn-sm @(MostraConsumi ? "btn-toggle-active" : "btn-outline-secondary")"
+                                @onclick="@(() => OnCheckedChanged3(!MostraConsumi))">
+                            <img src="images/Centimetro Sarto3.png" style="width:14px;height:14px;" class="me-1" />
+                            Consumi
+                        </button>
+                        <button type="button" class="btn d-flex align-items-center text-white" style="height: 32px; background-color: #ff8c00;" @onclick="SalvaParametri">
+                            <img class="Img-Search me-1" src="\images\Param32.png" alt="Salva Parametri" style="width:16px; height:16px; filter: brightness(0) invert(1);" />
+                            Salva Parametri
+                        </button>
+
+                        <div class="header-btn-container" title="Report">
+                            <DxMenu CssClass="modern-menu" Title="">
+                                <Items>
+                                    <DxMenuItem CssClass="border-0">
+                                        <TextTemplate><img src="images/print_32x323.png" class="menu-icon-img" alt="Report" /></TextTemplate>
+                                        <Items>
+                                            <DxMenuItem Text="Stampa" IconCssClass="oi oi-print text-primary" />
+                                            <DxMenuItem Text="Esporta Excel" IconCssClass="oi oi-spreadsheet text-success" Click="ExportToExcel" />
+                                        </Items>
+                                    </DxMenuItem>
+                                </Items>
+                            </DxMenu>
+                        </div>
+
+                        <div class="header-divider"></div>
+
+                        <DxComboBox @key="@_versioneComboKey"
+                                    Data="@VersioniItems"
+                                    Value="@VersioneSelezionata"
+                                    ValueChanged="@((int? v) => OnVersioneChanged(v))"
+                                    ValueFieldName="Value"
+                                    TextFieldName="Text"
+                                    Enabled="true"
+                                    style="width: 120px;" />
+
+                        <button type="button" class="btn d-flex align-items-center text-white" style="height: 32px; background-color: #ff8c00;" @onclick="DuplicaVersione">
+                            <img class="Img-Search me-1" src="\images\copy_32x321.png" alt="Duplica Versione" style="width:16px; height:16px; filter: brightness(0) invert(1);" />
+                            Duplica Versione
+                        </button>
+
+                        <button type="button" class="btn d-flex align-items-center text-white" style="height: 32px; background-color: #ff8c00;" @onclick="DeleteVersione">
+                            <img class="Img-Search me-1" src="\images\groupfieldscollection_32x32.png" alt="Elimina Versione" style="width:16px; height:16px; filter: brightness(0) invert(1);" />
+                            Elimina Versione
+                        </button>
+
+                    </div>
+
+                </div>
+            }
+        }
+        else
+        {
+            <button type="button" class="btn btn-sm d-flex align-items-center gap-1 mb-2"
+                    style="background-color:#ff8c00;color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;opacity:0.85;"
+                    @onclick="ShowButtons">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
+                </svg>
+                Dettagli
+            </button>
+        }
+    </div>
+    <div style="padding-bottom: 40px; padding-top: 10px; padding-right: 50px;">
+        <DxGrid @ref="MyGrid"
+                Data="@DataSource"
+                ShowGroupPanel="true"
+                ShowSearchBox="true"
+                
+                ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                PageSize="15"
+                KeyFieldName="@nameof(Bom3Reticolo.Id)"
+                HighlightRowOnHover="true"
+                FilterMenuButtonDisplayMode="GridFilterMenuButtonDisplayMode.Always"
+                PopupEditFormCssClass="custom-grid-popup"
+                EditMode="GridEditMode.PopupEditForm"
+                CustomizeEditModel="OnCustomizeEditModel"
+                EditModelSaving="OnEditModelSaving"
+                CustomizeElement="OnCustomizeElement">
+            <Columns>
+                <DxGridBandColumn Caption="" FixedPosition="GridColumnFixedPosition.Left">
+                    <Columns>
+                        <DxGridCommandColumn Width="120px" MinWidth="120">
+                            <HeaderTemplate Context="hdr">
+                                <div class="d-flex align-items-center gap-1">
+                                    @if (VersioneSelezionata == 0)
+                                    {
+                                        <DxButton RenderStyle="ButtonRenderStyle.None"
+                                                  Click="@(() => MyGrid.StartEditNewRowAsync())"
+                                                  Tooltip="Nuovo">
+                                            <img src="images/add2_16.png" class="Image-Command-Column" alt="Nuovo" />
+                                        </DxButton>
+                                    }
+                                    <button type="button" class="btn p-0 border-0 bg-transparent"
+                                            @onclick="@(async (e) => await GearContextMenu.ShowAsync(e))"
+                                            title="Opzioni">
+                                        <img src="images/0115-cog.png" style="width:16px; height:16px;" alt="?" />
+                                    </button>
+                                </div>
+                            </HeaderTemplate>
+                            <CellDisplayTemplate Context="gridRow">
+                                @{
+                                    var riga = (Bom3Reticolo)gridRow.DataItem;
+                                }
+                                @if (VersioneSelezionata == 0)
+                                {
+                                    <div class="d-flex gap-1 align-items-center">
+                                        <button type="button" class="btn btn-sm p-0 border-0"
+                                                style="width:20px;height:20px;line-height:1;background:transparent;color:#ff8c00;font-size:12px;"
+                                                title="Sposta Su"
+                                                @onclick="@(() => DOWN(riga))">▲</button>
+                                        <button type="button" class="btn btn-sm p-0 border-0"
+                                                style="width:20px;height:20px;line-height:1;background:transparent;color:#ff8c00;font-size:12px;"
+                                                title="Sposta Giù"
+                                                @onclick="@(() => UP(riga))">▼</button>
+                                        <DxButton RenderStyle="ButtonRenderStyle.None"
+                                                  Click="@(() => MyGrid.StartEditRowAsync(gridRow.VisibleIndex))"
+                                                  Tooltip="Modifica">
+                                            <img src="images/modifytablestyle_16x16.png" class="Image-Command-Column" alt="Modifica" />
+                                        </DxButton>
+                                        <DxButton RenderStyle="ButtonRenderStyle.None"
+                                                  Click="@(() => { RigaDaEliminare = riga; ConfermaEliminaRigaVisible = true; })"
+                                                  Tooltip="Elimina">
+                                            <img src="images/delete_16x16.png" class="Image-Command-Column" alt="Elimina" />
+                                        </DxButton>
+                                    </div>
+                                }
+                            </CellDisplayTemplate>
+                        </DxGridCommandColumn>
+
+                        <DxGridDataColumn FieldName="Seq" Caption="Seq" Width="60px" />
+
+                        <DxGridDataColumn Caption="Componente" MinWidth="100">
+                            <CellDisplayTemplate Context="ctx">
+                                @{
+                                    var riga = (Bom3Reticolo)ctx.DataItem;
+                                }
+                                <span style="cursor:pointer;color:#ff8c00;" @onclick="@(e => OpenDiBaArticolo(riga, e))">@riga.BCdAll</span>
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+
+                        <DxGridDataColumn Caption="Quantità / UM" MinWidth="110">
+                            <CellDisplayTemplate Context="ctx">
+                                @{
+                                    var riga = (Bom3Reticolo)ctx.DataItem;
+                                }
+                                @if (VersioneSelezionata == 0)
+                                {
+                                    <div class="d-flex align-items-center gap-1">
+                                        <DxSpinEdit Value="@((float)riga.Cons)"
+                                                    ValueChanged="@((float v) => OnQtaChanged(riga, v))"
+                                                    ShowSpinButtons="false"
+                                                    Format="0.###"
+                                                    MinValue="0"
+                                                    Style="width:70px;" />
+                                        <span class="text-muted" style="font-size:0.8rem;">@riga.Um</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span>@riga.Cons <span class="text-muted" style="font-size:0.8rem;">@riga.Um</span></span>
+                                }
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+
+                        <DxGridDataColumn Caption="Fabb." Width="55px">
+                            <CellDisplayTemplate Context="ctx">
+                                @{
+                                    var riga = (Bom3Reticolo)ctx.DataItem;
+                                }
+                                <DxCheckBox Checked="@riga.CkFabb"
+                                            CheckedChanged="@((bool v) => OnCheckboxChangedCkFab(riga, v))"
+                                            Enabled="@(VersioneSelezionata == 0)" />
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+                    </Columns>
+                </DxGridBandColumn>
+
+                <DxGridBandColumn Caption="Dettagli">
+                    <Columns>
+                        <DxGridDataColumn Caption="Costo" Width="55px">
+                            <CellDisplayTemplate Context="ctx">
+                                @{
+                                    var riga = (Bom3Reticolo)ctx.DataItem;
+                                }
+                                <DxCheckBox Checked="@riga.CkMp"
+                                            CheckedChanged="@((bool v) => OnCheckboxChangedCkCost(riga, v))"
+                                            Enabled="@(VersioneSelezionata == 0)" />
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+
+                        <DxGridDataColumn Caption="Comp." Width="55px">
+                            <CellDisplayTemplate Context="ctx">
+                                @{
+                                    var riga = (Bom3Reticolo)ctx.DataItem;
+                                }
+                                <DxCheckBox Checked="@riga.CkMrp"
+                                            CheckedChanged="@((bool v) => OnCheckboxChangedCkComp(riga, v))"
+                                            Enabled="@(VersioneSelezionata == 0)" />
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+
+                        <DxGridDataColumn Caption="Contr." Width="55px">
+                            <CellDisplayTemplate Context="ctx">
+                                @{
+                                    var riga = (Bom3Reticolo)ctx.DataItem;
+                                }
+                                <DxCheckBox Checked="@riga.CkContr"
+                                            CheckedChanged="@((bool v) => OnCheckboxChanged(riga, v))"
+                                            Enabled="@(VersioneSelezionata == 0)" />
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+
+                        <DxGridDataColumn Caption="Col. Unico" Width="70px">
+                            <CellDisplayTemplate Context="ctx">
+                                @{
+                                    var riga = (Bom3Reticolo)ctx.DataItem;
+                                }
+                                <DxCheckBox Checked="@riga.CkColUnico" Enabled="false" />
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+
+                        <DxGridDataColumn Caption="Posizione" MinWidth="90">
+                            <CellDisplayTemplate Context="ctx">
+                                @{
+                                    var riga = (Bom3Reticolo)ctx.DataItem;
+                                    var pos = Posizioni.FirstOrDefault(p => p.Id == riga.IdPos);
+                                }
+                                <span>@pos?.CdPos</span>
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+
+                        <DxGridDataColumn Caption="TP2" MinWidth="80">
+                            <CellDisplayTemplate Context="ctx">
+                                @{
+                                    var riga = (Bom3Reticolo)ctx.DataItem;
+                                }
+                                <span>@riga.Tp2</span>
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+
+                        <DxGridDataColumn Caption="TP3" MinWidth="80">
+                            <CellDisplayTemplate Context="ctx">
+                                @{
+                                    var riga = (Bom3Reticolo)ctx.DataItem;
+                                }
+                                <span>@riga.Tp3</span>
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+
+                        <DxGridDataColumn Caption="Note" MinWidth="100">
+                            <CellDisplayTemplate Context="ctx">
+                                @{
+                                    var riga = (Bom3Reticolo)ctx.DataItem;
+                                }
+                                <span>@riga.Note</span>
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+
+                    </Columns>
+                </DxGridBandColumn>
+
+                @if (MostraTaglie)
+                {
+                    <DxGridBandColumn Caption="Taglie">
+                        <Columns>
+                            @foreach (var misuraCd in (DiBaMisure?.Select(m => m.ACdAllmis).Distinct().OrderBy(x => x) ?? Enumerable.Empty<string>()))
+                            {
+                                var mis = misuraCd;
+                                <DxGridDataColumn Caption="@mis" MinWidth="80">
+                                    <CellDisplayTemplate Context="ctx">
+                                        @{
+                                            var riga = (Bom3Reticolo)ctx.DataItem;
+                                            var mapp = DiBaMisure?.FirstOrDefault(m => m.IdRigaReticolo == riga.Id && m.ACdAllmis == mis);
+                                        }
+                                        <span>@(mapp?.BCdAllmis ?? "—")</span>
+                                    </CellDisplayTemplate>
+                                </DxGridDataColumn>
+                            }
+                        </Columns>
+                    </DxGridBandColumn>
+                }
+                else if (MostraConsumi)
+                {
+                    <DxGridBandColumn Caption="Consumi">
+                        <Columns>
+                            @foreach (var misuraCd in (DiBaMisure?.Select(m => m.ACdAllmis).Distinct().OrderBy(x => x) ?? Enumerable.Empty<string>()))
+                            {
+                                var mis = misuraCd;
+                                @if (VersioneSelezionata == 0)
+                                {
+                                    <DxGridDataColumn Caption="@mis" MinWidth="100">
+                                        <CellDisplayTemplate Context="ctx">
+                                            @{
+                                                var riga = (Bom3Reticolo)ctx.DataItem;
+                                                var mapp = DiBaMisure?.FirstOrDefault(m => m.IdRigaReticolo == riga.Id && m.ACdAllmis == mis);
+                                                var tuttiMis = DiBaMisure?.Select(m => m.ACdAllmis).Distinct().OrderBy(x => x).ToList() ?? new();
+                                                var colIndex = tuttiMis.IndexOf(mis);
+                                                var tabIdx = ctx.VisibleIndex * (tuttiMis.Count > 0 ? tuttiMis.Count : 1) + colIndex + 1;
+                                            }
+                                            @if (mapp != null)
+                                            {
+                                                <DxSpinEdit Value="@((float)(mapp.Cons ?? 0))"
+                                                            ValueChanged="@((float newValue) => OnQtaConsumoChanged(mapp, newValue))"
+                                                            ShowSpinButtons="false"
+                                                            Format="0.###"
+                                                            MinValue="0"
+                                                            TabIndex="@tabIdx"
+                                                            Style="width:80px;" />
+                                            }
+                                            else
+                                            {
+                                                <span>N/A</span>
+                                            }
+                                        </CellDisplayTemplate>
+                                    </DxGridDataColumn>
+                                }
+                                else
+                                {
+                                    <DxGridDataColumn Caption="@mis" MinWidth="100">
+                                        <CellDisplayTemplate Context="ctx">
+                                            @{
+                                                var riga = (Bom3Reticolo)ctx.DataItem;
+                                                var mapp = DiBaMisure?.FirstOrDefault(m => m.IdRigaReticolo == riga.Id && m.ACdAllmis == mis);
+                                            }
+                                            @if (mapp != null)
+                                            {
+                                                <span>@mapp.Cons</span>
+                                            }
+                                            else
+                                            {
+                                                <span>N/A</span>
+                                            }
+                                        </CellDisplayTemplate>
+                                    </DxGridDataColumn>
+                                }
+                            }
+                        </Columns>
+                    </DxGridBandColumn>
+                }
+
+                @if (MostraColori)
+                {
+                    <DxGridBandColumn Caption="Colori">
+                        <Columns>
+                            @foreach (var coloreCd in (DiBaColori?.Select(c => c.ACdAllcol).Distinct().OrderBy(x => x) ?? Enumerable.Empty<string>()))
+                            {
+                                var col = coloreCd;
+                                <DxGridDataColumn Caption="@col" MinWidth="80">
+                                    <CellDisplayTemplate Context="ctx">
+                                        @{
+                                            var riga = (Bom3Reticolo)ctx.DataItem;
+                                            var mapp = DiBaColori?.FirstOrDefault(c => c.IdRigaReticolo == riga.Id && c.ACdAllcol == col);
+                                            var cod = mapp?.BCdAllcol;
+                                        }
+                                        @if (!string.IsNullOrEmpty(cod) && cod != "?" && cod != "-")
+                                        {
+                                            <span>@cod</span>
+                                        }
+                                        else
+                                        {
+                                            <span>—</span>
+                                        }
+                                    </CellDisplayTemplate>
+                                </DxGridDataColumn>
+                            }
+                        </Columns>
+                    </DxGridBandColumn>
+                }
+
+            </Columns>
+
+            <EditFormTemplate Context="EditContext">
+                @{
+                    var riga = (Bom3Reticolo)EditContext.EditModel;
+                }
+                <DxFormLayout CssClass="w-100">
+                    <DxFormLayoutItem Caption="Componente" ColSpanMd="6">
+                        <DxDropDownBox Value="@_codiceComponenteSelezionato"
+                                       NullText="Seleziona componente"
+                                       ValidationEnabled="false"
+                                       DropDownWidthMode="DropDownWidthMode.ContentOrEditorWidth"
+                                       DropDownVisible="@_dropdownOpen"
+                                       DropDownVisibleChanged="@(async (bool v) => { _dropdownOpen = v; if (v) { await Task.Delay(100); if (_searchBox is not null) await _searchBox.FocusAsync(); } else { _filtroComponente = null; } })">
+                            <EditBoxDisplayTemplate Context="editCtx">
+                                <span>@_codiceComponenteSelezionato</span>
+                            </EditBoxDisplayTemplate>
+                            <DropDownBodyTemplate Context="dropCtx">
+                                <div style="width:620px;">
+                                    <div class="p-2">
+                                        <DxTextBox @ref="@_searchBox"
+                                                   @bind-Text="@_filtroComponente"
+                                                   NullText="Cerca"
+                                                   ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                                    </div>
+                                    <DxGrid @ref="_lookupGrid"
+                                            Data="@ComponentiFiltrati"
+                                            RowClick="@(async e => await OnComponenteSelezionato(riga, _lookupGrid.GetDataItem(e.VisibleIndex)))"
+                                            PageSize="1000"
+                                            PagerVisible="false"
+                                            style="height:260px;cursor:pointer;">
+                                        <Columns>
+                                            <DxGridDataColumn FieldName="Cd" Caption="Codice" Width="150px" />
+                                            <DxGridDataColumn FieldName="Nota" Caption="Descrizione" />
+                                            <DxGridDataColumn FieldName="Contatto" Caption="Fornitore" />
+                                        </Columns>
+                                    </DxGrid>
+                                </div>
+                            </DropDownBodyTemplate>
+                        </DxDropDownBox>
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Seq" ColSpanMd="3">
+                        <DxSpinEdit @bind-Value="@riga.Seq" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Quantità / UM" ColSpanMd="6">
+                        <div class="d-flex align-items-center gap-2">
+                            <DxSpinEdit @bind-Value="@riga.Cons" ShowSpinButtons="false" Format="0.###" Style="width:120px;" />
+                            <span class="text-muted">@riga.Um</span>
+                        </div>
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Posizione" ColSpanMd="3">
+                        <DxComboBox Data="@Posizioni"
+                                    @bind-Value="@riga.IdPos"
+                                    TextFieldName="CdPos"
+                                    ValueFieldName="Id"
+                                    FilteringMode="DataGridFilteringMode.Contains"
+                                    NullText="Seleziona posizione"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto">
+                            <ItemTemplate Context="posCtx">
+                                @{
+                                    var pos = (TabComposizionePo)posCtx;
+                                }
+                                <div class="d-flex gap-2 align-items-center">
+                                    <span class="badge" style="background-color:#ff8c00;min-width:50px;">@pos.CdPos</span>
+                                    <span class="text-muted">@pos.Posizione</span>
+                                </div>
+                            </ItemTemplate>
+                        </DxComboBox>
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="TP2" ColSpanMd="3">
+                        <DxComboBox Data="@ListaTP2"
+                                    @bind-Value="@riga.Tp2"
+                                    TextFieldName="Cod"
+                                    ValueFieldName="Cod"
+                                    FilteringMode="DataGridFilteringMode.Contains"
+                                    NullText="—"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto">
+                            <ItemTemplate Context="tp2Ctx">
+                                @{
+                                    var tp2 = (TabBomTp2)tp2Ctx;
+                                }
+                                <div class="d-flex gap-2 align-items-center">
+                                    <span class="badge" style="background-color:#ff8c00;min-width:50px;">@tp2.Cod</span>
+                                    <span class="text-muted">@tp2.Descr</span>
+                                </div>
+                            </ItemTemplate>
+                        </DxComboBox>
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="TP3" ColSpanMd="3">
+                        <DxComboBox Data="@ListaTP3"
+                                    @bind-Value="@riga.Tp3"
+                                    TextFieldName="Cod"
+                                    ValueFieldName="Cod"
+                                    FilteringMode="DataGridFilteringMode.Contains"
+                                    NullText="—"
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto">
+                            <ItemTemplate Context="tp3Ctx">
+                                @{
+                                    var tp3 = (TabBomTp3)tp3Ctx;
+                                }
+                                <div class="d-flex gap-2 align-items-center">
+                                    <span class="badge" style="background-color:#ff8c00;min-width:50px;">@tp3.Cod</span>
+                                    <span class="text-muted">@tp3.Descr</span>
+                                </div>
+                            </ItemTemplate>
+                        </DxComboBox>
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Fabb." ColSpanMd="2">
+                        <DxCheckBox @bind-Checked="@riga.CkFabb" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Costo" ColSpanMd="2">
+                        <DxCheckBox @bind-Checked="@riga.CkMp" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Comp." ColSpanMd="2">
+                        <DxCheckBox @bind-Checked="@riga.CkMrp" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Col. Unico" ColSpanMd="3">
+                        <DxCheckBox @bind-Checked="@riga.CkColUnico" />
+                    </DxFormLayoutItem>
+
+                    <DxFormLayoutItem Caption="Contr." ColSpanMd="3">
+                        <DxCheckBox @bind-Checked="@riga.CkContr" />
+                    </DxFormLayoutItem>
+
+                </DxFormLayout>
+            </EditFormTemplate>
+        </DxGrid>
+    </div>
+</div>
+<CustomColumnChooser @ref=myColumnChooser dxGrid="MyGrid" SelectedColumns="MyGrid?.GetVisibleColumns().OrderBy(asd=> asd.Caption).Where(dd=> dd is DxGridDataColumn).ToList()" StaticColumns="MyGrid?.GetVisibleColumns().OrderBy(asd=> asd.Caption).Where(dd=> dd is DxGridCommandColumn).ToList()" Columns="MyGrid?.GetColumns().OrderBy(asd=> asd.Caption).Where(dd=> dd is DxGridDataColumn).ToList()"></CustomColumnChooser>
+
+<DxPopup @bind-Visible="_dialogVisible" CloseOnOutsideClick="false" ShowCloseButton="false" ShowFooter="true" HeaderText="@_dialogTitle" Width="460px" Height="auto">
+    <BodyContentTemplate>
+        <div style="white-space: pre-line; padding: 4px 0;">@_dialogMessage</div>
+    </BodyContentTemplate>
+    <FooterContentTemplate>
+        @foreach (var btn in _dialogButtons)
+        {
+            var b = btn;
+            <DxButton Text="@b.Label" RenderStyle="@b.RenderStyle" Click="() => OnDialogButtonClick(b.Value)" />
+        }
+    </FooterContentTemplate>
+</DxPopup>
+
+@code {
+    [Parameter]
+    public string? Cd { get; set; }
+
+    public BasiAll? ArticoloSelezionato { get; set; }
+
+    private IEnumerable<Bom3Reticolo>? DataSource;
+    private List<Bom3DetailCol>? DiBaColori;
+    private List<Bom3DetailMi>? DiBaMisure;
+    private List<BasiAll> ArticoliDisponibili = new();
+    private List<TabUm> UnitaMisure = new();
+    private List<TabComposizionePo> Posizioni = new();
+    private List<TabBomTp2> ListaTP2 = new();
+    private List<TabBomTp3> ListaTP3 = new();
+    private List<BasiAllcolori> ColoriArtBPerEdit = new();
+    private List<BasiAllmisure> MisureArtBPerEdit = new();
+    private List<Bom3DetailCol> EditColori = new();
+    private List<Bom3DetailMi> EditMisure = new();
+    private Dictionary<int, string?> MisureBaseArtB = new();
+
+    DxGrid MyGrid { get; set; }
+    CustomColumnChooser? myColumnChooser { get; set; }
+    private DxGrid _lookupGrid = default!;
+    private string? _codiceComponenteSelezionato;
+    private bool _dropdownOpen;
+    private DxTextBox? _searchBox;
+    private string? _filtroComponente;
+    private IEnumerable<BasiAll> ComponentiFiltrati => string.IsNullOrWhiteSpace(_filtroComponente)
+        ? ArticoliDisponibili
+        : ArticoliDisponibili.Where(a =>
+            (a.Cd?.Contains(_filtroComponente, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (a.Nota?.Contains(_filtroComponente, StringComparison.OrdinalIgnoreCase) ?? false)); //||
+    //(a.Contatto?.Societa1?.Contains(_filtroComponente, StringComparison.OrdinalIgnoreCase) ?? false)); Da sistemare
+    private DxContextMenu GearContextMenu = default!;
+
+    private bool _dialogVisible = false;
+    private string _dialogTitle = "";
+    private string _dialogMessage = "";
+    private List<(string Label, string Value, ButtonRenderStyle RenderStyle)> _dialogButtons = new();
+    private TaskCompletionSource<string>? _dialogTcs;
+
+    private Task<string> ShowDialog(string title, string message, params (string Label, string Value, ButtonRenderStyle RenderStyle)[] buttons)
+    {
+        _dialogTitle = title;
+        _dialogMessage = message;
+        _dialogButtons = buttons.ToList();
+        _dialogTcs = new TaskCompletionSource<string>();
+        _dialogVisible = true;
+        StateHasChanged();
+        return _dialogTcs.Task;
+    }
+
+    private void OnDialogButtonClick(string value)
+    {
+        _dialogVisible = false;
+        _dialogTcs?.SetResult(value);
+    }
+
+    private async Task ExportToExcel()
+    {
+        var rowCount = MyGrid?.GetVisibleRowCount() ?? 0;
+        if (rowCount == 0) return;
+        var r = await ShowDialog(
+            "Esporta in Excel",
+            "Conferma esporta in Excel",
+            ("Conferma", "ok", ButtonRenderStyle.Primary),
+            ("Annulla", "cancel", ButtonRenderStyle.Secondary));
+        if (r != "ok") return;
+        var fileName = $"DiBa_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+        await MyGrid!.ExportToXlsxAsync(fileName, new GridXlExportOptions());
+    }
+
+    private bool loading = true;
+    private bool MostraCancellati = false;
+    private bool MostraTaglie = true;
+    private bool MostraColori = true;
+    private bool MostraPulsanti = true;
+    private bool MostraConsumi = false;
+    private bool Open = false;
+    private string? Argomento = "";
+    private string Base64;
+    private string Base64Articolo;
+    private Bom3Reticolo? RigaSelezionata;
+    private int? VersioneSelezionata = 0;
+    private int? VersioneSelezionataDuplica = 0;
+    private int? VersioneSelezionataElimina;
+    private bool ConfermaEliminaRigaVisible = false;
+    private Bom3Reticolo? RigaDaEliminare;
+    private bool ConfermaEliminaVersioneVisible = false;
+    private int _versioneComboKey = 0;
+    private List<int>? Versioni;
+
+    public class VersioneItem
+    {
+        public int? Value { get; set; }
+        public string Text { get; set; }
+    }
+
+    private List<VersioneItem> VersioniItems { get; set; } = new();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+
+            }
+            catch (Exception e)
+            {
+
+            }
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            await caricaLookup();
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task caricaLookup()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+
+        try
+        {
+            ArticoloSelezionato = await context.BasiAlls
+                .FirstOrDefaultAsync(x => x.Cd == Cd);
+
+            ArticoliDisponibili = await context.BasiAlls.AsNoTracking()
+                .Where(x=> x.Cd != ArticoloSelezionato!.Cd && x.Tipo == "MP")
+                .ToListAsync();
+
+            UnitaMisure = await context.TabUms.AsNoTracking()
+                .ToListAsync();
+
+            Posizioni = await context.TabComposizionePos.AsNoTracking()
+                .ToListAsync();
+
+            ListaTP2 = await context.TabBomTp2s.AsNoTracking()
+                .OrderBy(x => x.OrdPm)
+                .ToListAsync();
+
+            ListaTP3 = await context.TabBomTp3s.AsNoTracking()
+                .OrderBy(x => x.OrdPm)
+                .ToListAsync();
+
+            DiBaColori = await context.Bom3DetailCols.AsNoTracking()
+                .Where(x => x.ACdAll == ArticoloSelezionato.Cd)
+                .ToListAsync();
+
+            DiBaMisure = await context.Bom3DetailMis.AsNoTracking()
+                .Where(x => x.ACdAll == ArticoloSelezionato.Cd)
+                .ToListAsync();
+
+            if (ArticoloSelezionato != null)
+            {
+                var q = context.Bom3Reticolos
+                    .Where(x => x.ACdAll == ArticoloSelezionato.Cd);
+
+                if (VersioneSelezionata.HasValue)
+                    q = q.Where(x => x.Ver == VersioneSelezionata.Value);
+
+                DataSource = await q.OrderBy(x => x.Seq).ToListAsync();
+            }
+            var artBIds = DataSource?
+                .Select(r => r.BCdAll!)
+                .Distinct()
+                .ToList() ?? new();
+
+            MisureBaseArtB = await context.BasiAllmisures
+                .Where(x => artBIds.Contains(x.Cd))
+                .ToDictionaryAsync(x => x.IdContatto, x => x.CdAll);
+
+            var verDb = await context.Bom3Reticolos
+                .Where(x => x.ACdAll == ArticoloSelezionato!.Cd)
+                .Select(x => x.Ver)
+                .Distinct()
+                .OrderBy(v => v)
+                .ToListAsync();
+
+            Versioni = verDb.ToList();
+
+            if (!Versioni.Contains(0))
+                Versioni.Insert(0, 0);
+
+            if (VersioneSelezionata.HasValue && VersioneSelezionata > 0
+                && !verDb.Contains(VersioneSelezionata.Value)
+                && (verDb.Count == 0 || VersioneSelezionata > verDb.Max()))
+                Versioni.Add(VersioneSelezionata.Value);
+
+            bool versioneValida = VersioneSelezionata.HasValue
+                && Versioni.Contains(VersioneSelezionata.Value);
+            if (!versioneValida)
+                VersioneSelezionata = 0;
+
+            VersioniItems = Versioni.Select(v => new VersioneItem
+            {
+                Value = v,
+                Text = string.Format("Versioni", v)
+            }).ToList();
+        }
+        catch (Exception e)
+        {
+
+        }
+    }
+
+    void OnCustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        if (e.IsNew)
+        {
+            var nextSeq = DataSource?.Any() == true ? DataSource.Max(x => x.Seq) + 1 : 1;
+            var art = ArticoloSelezionato!;
+
+            e.EditModel = new Bom3Reticolo
+            {
+
+            };
+        }
+        else
+        {
+
+        }
+    }
+
+    async Task OnEditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        loading = true;
+        StateHasChanged();
+
+        var editModel = (Bom3Reticolo)e.EditModel;
+        using var context = await DbFactory.CreateDbContextAsync();
+
+        try
+        {
+            try
+            {
+                if (e.IsNew)
+                {
+                    if (DataSource.Any(x => x.Seq == editModel.Seq))
+                    {
+                        e.Cancel = true;
+                        return;
+                    }
+                    context!.Bom3Reticolos.Add(editModel);
+                }
+                else
+                {
+                    e.CopyChangesToDataItem();
+                }
+
+                await context!.SaveChangesAsync();
+                int reticoloId = editModel.Id;
+
+                string? artColIdB_override = null;
+                if (e.IsNew && editModel.BCdAll != string.Empty)
+                {
+                    var coloriReali = ColoriArtBPerEdit.ToList();
+                    if ((editModel.CkColUnico && coloriReali.Any()) || coloriReali.Count == 1)
+                        artColIdB_override = coloriReali[0].Cd;
+                }
+
+                var coloriEsistenti = await context.Bom3DetailCols.Where(c => c.Id == reticoloId).ToListAsync();
+                context.Bom3DetailCols.RemoveRange(coloriEsistenti);
+                foreach (var col in EditColori.Where(c => c.BCdAll != string.Empty))
+                {
+                    context.Bom3DetailCols.Add(new Bom3DetailCol
+                    {
+                        IdRigaReticolo = reticoloId,
+                        ACdAll = col.ACdAll,
+                        BCdAllcol = artColIdB_override ?? col.BCdAllcol
+                    });
+                }
+
+                var misureEsistenti = await context.Bom3DetailMis.Where(m => m.Id == reticoloId).ToListAsync();
+                context.Bom3DetailMis.RemoveRange(misureEsistenti);
+                foreach (var mis in EditMisure.Where(m => m.BCdAll != string.Empty))
+                {
+                    context.Bom3DetailMis.Add(new Bom3DetailMi
+                    {
+                        IdRigaReticolo = reticoloId,
+                        ACdAll = mis.ACdAll,
+                        BCdAllmis = mis.BCdAllmis
+                    });
+                }
+
+                await context!.SaveChangesAsync();
+            }
+            catch (Exception s)
+            {
+
+            }
+
+            await caricaLookup();
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CaricaDatiComponente(string? artCd)
+    {
+        if (artCd == string.Empty || artCd == null)
+        {
+            ColoriArtBPerEdit = new();
+            MisureArtBPerEdit = new();
+            return;
+        }
+        using var context = await DbFactory.CreateDbContextAsync();
+        var artB = await context.BasiAlls
+            .FirstOrDefaultAsync(a => a.Cd == artCd);
+
+        ColoriArtBPerEdit = await context.BasiAllcoloris.Where(x => x.Cd == artB.Cd).ToListAsync();
+ 
+        MisureArtBPerEdit = await context.BasiAllmisures.Where(x => x.Cd == artB.Cd).ToListAsync();
+    }
+
+    private async Task OnArtBChanged(Bom3Reticolo riga, string? newArtCd)
+    {
+        riga.ACdAll = newArtCd;
+        await CaricaDatiComponente(newArtCd);
+        StateHasChanged();
+    }
+
+    private async Task OnComponenteSelezionato(Bom3Reticolo riga, object? item)
+    {
+        if (item is BasiAll art)
+        {
+            _codiceComponenteSelezionato = art.Cd;
+            riga.Um = art.Um;
+            riga.CkFabb = (art.CkFabb == 1);
+            _dropdownOpen = false;
+            await OnArtBChanged(riga, art.Cd);
+            await ApplicaRegoleMisure(art.Cd);
+            StateHasChanged();
+        }
+    }
+     
+    private async Task ApplicaRegoleMisure(string? artBCd)
+    {
+        if (string.IsNullOrEmpty(artBCd)) return;
+        await Task.CompletedTask;
+    }
+
+    async Task Delete(Bom3Reticolo riga)
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+
+        var colori = await context.Bom3DetailCols
+            .Where(c => c.IdRigaReticolo == riga.Id)
+            .ToListAsync();
+        var misure = await context.Bom3DetailMis
+            .Where(m => m.IdRigaReticolo == riga.Id)
+            .ToListAsync();
+
+        context.Bom3DetailCols.RemoveRange(colori);
+        context.Bom3DetailMis.RemoveRange(misure);
+        context.Bom3Reticolos.Remove(riga);
+
+        await context.SaveChangesAsync();
+        await caricaLookup();
+    }
+
+    private async Task ConfermaEliminaRiga()
+    {
+        loading = true;
+        StateHasChanged();
+
+        try
+        {
+            ConfermaEliminaRigaVisible = false;
+            if (RigaDaEliminare == null) return;
+            await Delete(RigaDaEliminare);
+            RigaDaEliminare = null;
+        }
+        catch
+        {
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfermaEliminaVersioneDefinitivo()
+    {
+        ConfermaEliminaVersioneVisible = false;
+        await ConfermaElimina();
+    }
+
+    async Task OnRestore(Bom3Reticolo riga)
+    {
+        await caricaLookup();
+    }
+
+    void OnCustomizeElement(GridCustomizeElementEventArgs e)
+    {
+        if (e.ElementType == GridElementType.DataRow)
+        {
+            var riga = e.Grid.GetDataItem(e.VisibleIndex) as Bom3Reticolo;
+        }
+        else if (e.ElementType == GridElementType.DataCell)
+        {
+            var caption = (e.Column as DxGridDataColumn)?.Caption;
+        }
+    }
+
+    async Task OnCheckboxChanged(Bom3Reticolo riga, bool newValue)
+    {
+        riga.CkContr = newValue;
+        riga.DataUpd = DateTime.Now;
+        using var context = await DbFactory.CreateDbContextAsync();
+        context.Update(riga);
+        await context.SaveChangesAsync();
+    }
+
+    async Task OnCheckboxChangedCkFab(Bom3Reticolo riga, bool newValue)
+    {
+        riga.CkFabb = newValue;
+        riga.DataUpd = DateTime.Now;
+        using var context = await DbFactory.CreateDbContextAsync();
+        context.Update(riga);
+        await context.SaveChangesAsync();
+    }
+
+    async Task OnCheckboxChangedCkCost(Bom3Reticolo riga, bool newValue)
+    {
+        riga.CkMp = newValue;
+        riga.DataUpd = DateTime.Now;
+        using var context = await DbFactory.CreateDbContextAsync();
+        context.Update(riga);
+        await context.SaveChangesAsync();
+    }
+
+    async Task OnCheckboxChangedCkComp(Bom3Reticolo riga, bool newValue)
+    {
+        riga.CkMrp = newValue;
+        riga.DataUpd = DateTime.Now;
+        using var context = await DbFactory.CreateDbContextAsync();
+        context.Update(riga);
+        await context.SaveChangesAsync();
+    }
+
+    async Task OnQtaChanged(Bom3Reticolo riga, float newValue)
+    {
+        var rounded = Math.Round(newValue, 3);
+        riga.Cons = rounded;
+        riga.DataUpd = DateTime.Now;
+
+        using var context = await DbFactory.CreateDbContextAsync();
+        context.Update(riga);
+
+        var misure = await context.Bom3DetailMis
+            .Where(m => m.IdRigaReticolo == riga.Id)
+            .ToListAsync();
+        foreach (var m in misure)
+        {
+            m.Cons = rounded;
+            m.DataUpd = DateTime.Now;
+        }
+
+        await context.SaveChangesAsync();
+
+        if (DiBaMisure != null)
+            foreach (var m in DiBaMisure.Where(m => m.IdRigaReticolo == riga.Id))
+                m.Cons = rounded;
+    }
+
+    async Task OnPosizioneChanged(Bom3Reticolo riga, int? newValue)
+    {
+        riga.IdPos = newValue;
+        riga.DataUpd = DateTime.Now;
+        using var context = await DbFactory.CreateDbContextAsync();
+        context.Update(riga);
+        await context.SaveChangesAsync();
+        await caricaLookup();
+    }
+
+    async Task OnTP2Changed(Bom3Reticolo riga, string? newValue)
+    {
+        riga.Tp2 = newValue ?? "";
+        riga.DataUpd = DateTime.Now;
+        using var context = await DbFactory.CreateDbContextAsync();
+        context.Update(riga);
+        await context.SaveChangesAsync();
+        await caricaLookup();
+    }
+
+    async Task OnTP3Changed(Bom3Reticolo riga, string? newValue)
+    {
+        riga.Tp3 = newValue ?? "";
+        riga.DataUpd = DateTime.Now;
+        using var context = await DbFactory.CreateDbContextAsync();
+        context.Update(riga);
+        await context.SaveChangesAsync();
+        await caricaLookup();
+    }
+
+    async Task OnDescrChanged(Bom3Reticolo riga, string newValue)
+    {
+        riga.Note = newValue;
+        riga.DataUpd = DateTime.Now;
+        using var context = await DbFactory.CreateDbContextAsync();
+        context.Update(riga);
+        await context.SaveChangesAsync();
+    }
+
+    async Task OnQtaConsumoChanged(Bom3DetailMi riga, float newValue)
+    {
+        riga.Cons = newValue;
+        using var ctx = await DbFactory.CreateDbContextAsync();
+        var misura = await ctx.Bom3DetailMis.FindAsync(riga.Id);
+        if (misura != null)
+        {
+            misura.Cons = newValue;
+            misura.DataUpd = DateTime.Now;
+            await ctx.SaveChangesAsync();
+        }
+    }
+
+    async Task OnDescr2Changed(Bom3Reticolo riga, string newValue)
+    {
+        riga.Note = newValue;
+        riga.DataUpd = DateTime.Now;
+        using var context = await DbFactory.CreateDbContextAsync();
+        context.Update(riga);
+        await context.SaveChangesAsync();
+    }
+
+    public void ShowCustomColumnChooser()
+    {
+        myColumnChooser.Visible = !myColumnChooser.Visible;
+    }
+
+    async Task OnCheckedChanged(bool value)
+    {
+        MostraCancellati = value;
+        await caricaLookup();
+        StateHasChanged();
+    }
+
+    void ApriRigaColori(object item)
+    {
+        RigaSelezionata = item as Bom3Reticolo;
+        Argomento = "Colori";
+        Open = true;
+        StateHasChanged();
+    }
+
+    void ApriRigaTaglie(object item)
+    {
+        RigaSelezionata = item as Bom3Reticolo;
+        Argomento = "Taglie";
+        Open = true;
+        StateHasChanged();
+    }
+
+    private void ChiudiPopup()
+    {
+        Open = false;
+        StateHasChanged();
+    }
+
+    private async Task OnMappingColoreModificato()
+    {
+        await caricaLookup();
+        MyGrid.Reload();
+    }
+
+    private async Task UP(Bom3Reticolo riga)
+    {
+        if (DataSource != null && DataSource.Max(x => x.Seq) != riga.Seq)
+        {
+            loading = true;
+            Bom3Reticolo? DaCambiare = DataSource.FirstOrDefault(x => x.Seq == (riga.Seq + 1));
+
+            using var context = await DbFactory.CreateDbContextAsync();
+            context.Update(riga);
+            if (DaCambiare != null)
+            {
+                DaCambiare.Seq--;
+                context.Update(DaCambiare);
+            }
+            riga.Seq++;
+            await context.SaveChangesAsync();
+            await caricaLookup();
+            loading = false;
+        }
+    }
+
+    private async Task DOWN(Bom3Reticolo riga)
+    {
+        if (DataSource != null && riga.Seq > 1)
+        {
+            loading = true;
+            Bom3Reticolo? DaCambiare = DataSource.FirstOrDefault(x => x.Seq == (riga.Seq - 1));
+
+            using var context = await DbFactory.CreateDbContextAsync();
+            context.Update(riga);
+            if (DaCambiare != null)
+            {
+                DaCambiare.Seq++;
+                context.Update(DaCambiare);
+            }
+            riga.Seq--;
+            await context.SaveChangesAsync();
+            await caricaLookup();
+            loading = false;
+        }
+    }
+
+    async Task OnCheckedChanged1(bool value)
+    {
+        if (value)
+        {
+            MostraConsumi = false;
+        }
+        MostraTaglie = value;
+
+        await caricaLookup();
+        StateHasChanged();
+    }
+
+    async Task OnCheckedChanged2(bool value)
+    {
+        MostraColori = value;
+
+        await caricaLookup();
+        StateHasChanged();
+    }
+
+    async Task OnCheckedChanged3(bool value)
+    {
+        if (value)
+        {
+            MostraTaglie = false;
+        }
+        MostraConsumi = value;
+
+        await caricaLookup();
+        StateHasChanged();
+    }
+
+    private async Task SalvaParametri()
+    {
+        loading = true;
+        StateHasChanged();
+
+        try
+        {
+            MyGrid.SaveLayout();
+            await Task.CompletedTask;
+        }
+        catch (Exception)
+        {
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HideButtons()
+    {
+        MostraPulsanti = false;
+    }
+
+    private void ShowButtons()
+    {
+        MostraPulsanti = true;
+    }
+
+    private async Task OpenDiBaArticolo(Bom3Reticolo DiBaReticolo, MouseEventArgs e)
+    {
+        var url = $"/DiBa/{DiBaReticolo.BCdAll}";
+        if (e.ShiftKey)
+        {
+            NavManager.NavigateTo(url);
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("open", url, "_blank");
+        }
+    }
+
+    private async Task OnVersioneChanged(int? val)
+    {
+        VersioneSelezionata = val;
+        loading = true;
+        StateHasChanged();
+
+        try
+        {
+            await caricaLookup();
+        }
+        catch
+        {
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void DuplicaVersione()
+    {
+        Argomento = "Duplica";
+        Open = true;
+        StateHasChanged();
+    }
+
+    private void OnVersioneChangedDuplica(int? val)
+    {
+        VersioneSelezionataDuplica = val;
+    }
+
+    private void OnVersioneChangedElimina(int? val)
+    {
+        if (val == -1)
+        {
+            return;
+        }
+        else
+        {
+            VersioneSelezionataElimina = val;
+        }
+    }
+
+    private async Task ConfermaDuplica()
+    {
+        if (VersioneSelezionataDuplica == null) return;
+
+        loading = true;
+        StateHasChanged();
+
+        try
+        {
+            using var ctx = await DbFactory.CreateDbContextAsync();
+
+            var righeSorgente = await ctx.Bom3Reticolos
+                .Where(x => x.ACdAll == ArticoloSelezionato!.Cd && x.Ver == VersioneSelezionataDuplica)
+                .OrderBy(x => x.Seq)
+                .ToListAsync();
+
+            var idSorgente = righeSorgente.Select(r => r.Id).ToList();
+
+            var coloriSorgente = await ctx.Bom3DetailCols
+                .Where(c => idSorgente.Contains(c.IdRigaReticolo))
+                .ToListAsync();
+
+            var misureSorgente = await ctx.Bom3DetailMis
+                .Where(m => idSorgente.Contains(m.IdRigaReticolo))
+                .ToListAsync();
+
+            int nuovaVersione = Versioni.Where(v => v >= 0).DefaultIfEmpty(0).Max() + 1;
+            VersioneSelezionata = nuovaVersione;
+
+            var mapping = new List<(Bom3Reticolo Nuova, int VecchioId)>();
+            foreach (var riga in righeSorgente)
+            {
+                var nuova = new Bom3Reticolo
+                {
+                    ATipo = riga.ATipo,
+                    AIdContatto = riga.AIdContatto,
+                    AIdStag = riga.AIdStag,
+                    ACdAll = riga.ACdAll,
+                    ACkSemilav = riga.ACkSemilav,
+                    Ver = nuovaVersione,
+                    IdFase = riga.IdFase,
+                    Seq = riga.Seq,
+                    BTipo = riga.BTipo,
+                    BCdAll = riga.BCdAll,
+                    BCkSemilav = riga.BCkSemilav,
+                    Um = riga.Um,
+                    CkMp = riga.CkMp,
+                    CkMrp = riga.CkMrp,
+                    CkFabb = riga.CkFabb,
+                    CkMatMis = riga.CkMatMis,
+                    CkColUnico = riga.CkColUnico,
+                    CkContr = riga.CkContr,
+                    Posizione = riga.Posizione,
+                    Note = riga.Note,
+                    Tp = riga.Tp,
+                    Tp2 = riga.Tp2,
+                    Tp3 = riga.Tp3,
+                    IdPack = riga.IdPack,
+                    IdMatColPack = riga.IdMatColPack,
+                    IdPos = riga.IdPos,
+                    CdRegolaCons = riga.CdRegolaCons,
+                    IdRegMis = riga.IdRegMis,
+                    Cons = riga.Cons,
+                    ACdAllmis = riga.ACdAllmis,
+                    BCdAllmis = riga.BCdAllmis,
+                    DataIns = DateTime.Now,
+                    DataUpd = DateTime.Now,
+                };
+                ctx.Bom3Reticolos.Add(nuova);
+                mapping.Add((nuova, riga.Id));
+            }
+
+            await ctx.SaveChangesAsync();
+
+            foreach (var (nuova, vecchioId) in mapping)
+            {
+                foreach (var col in coloriSorgente.Where(c => c.IdRigaReticolo == vecchioId))
+                {
+                    ctx.Bom3DetailCols.Add(new Bom3DetailCol
+                    {
+                        IdRigaReticolo = nuova.Id,
+                        AIdContatto = col.AIdContatto,
+                        AIdStag = col.AIdStag,
+                        ACdAll = col.ACdAll,
+                        ACdAllcol = col.ACdAllcol,
+                        Ver = nuovaVersione,
+                        BCdAll = col.BCdAll,
+                        BCdAllcol = col.BCdAllcol,
+                        DataIns = DateTime.Now,
+                    });
+                }
+                foreach (var mis in misureSorgente.Where(m => m.IdRigaReticolo == vecchioId))
+                {
+                    ctx.Bom3DetailMis.Add(new Bom3DetailMi
+                    {
+                        IdRigaReticolo = nuova.Id,
+                        AIdContatto = mis.AIdContatto,
+                        AIdStag = mis.AIdStag,
+                        ACdAll = mis.ACdAll,
+                        ACdAllmis = mis.ACdAllmis,
+                        Ver = nuovaVersione,
+                        BCdAll = mis.BCdAll,
+                        BCdAllmis = mis.BCdAllmis,
+                        Cons = mis.Cons,
+                        DataIns = DateTime.Now,
+                    });
+                }
+            }
+
+            await ctx.SaveChangesAsync();
+            await caricaLookup();
+        }
+        catch (Exception)
+        {
+        }
+        finally
+        {
+            Open = false;
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void DeleteVersione()
+    {
+        Argomento = "Elimina";
+        Open = true;
+        StateHasChanged();
+    }
+
+    private async Task ConfermaElimina()
+    {
+        if (VersioneSelezionataElimina == null) return;
+
+        loading = true;
+        StateHasChanged();
+
+        try
+        {
+            using var ctx = await DbFactory.CreateDbContextAsync();
+
+            var righeSorgente = await ctx.Bom3Reticolos
+                .Where(x => x.ACdAll == ArticoloSelezionato!.Cd && x.Ver == VersioneSelezionataElimina)
+                .OrderBy(x => x.Seq)
+                .ToListAsync();
+
+            var idSorgente = righeSorgente.Select(r => r.Id).ToList();
+
+            var coloriSorgente = await ctx.Bom3DetailCols
+                .Where(c => idSorgente.Contains(c.IdRigaReticolo))
+                .ToListAsync();
+
+            var misureSorgente = await ctx.Bom3DetailMis
+                .Where(m => idSorgente.Contains(m.IdRigaReticolo))
+                .ToListAsync();
+
+            ctx.Bom3DetailCols.RemoveRange(coloriSorgente);
+            ctx.Bom3DetailMis.RemoveRange(misureSorgente);
+            ctx.Bom3Reticolos.RemoveRange(righeSorgente);
+
+            await ctx.SaveChangesAsync();
+            VersioneSelezionata = 0;
+            await caricaLookup();
+        }
+        catch (Exception)
+        {
+        }
+        finally
+        {
+            Open = false;
+            loading = false;
+            StateHasChanged();
+        }
+    }
+}

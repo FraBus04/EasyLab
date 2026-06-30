@@ -1,6 +1,8 @@
 @page "/Articoli"
 @page "/Materiali"
 @page "/Prodotti"
+@inject NavigationManager NavManager
+@inject IJSRuntime JSRuntime
 @using EasyLab.Models
 @using EasyLab.Components.Utils
 @using Microsoft.EntityFrameworkCore
@@ -28,6 +30,7 @@
         <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ShowSplitView">Split</button>
         <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ShowDetailsOnly">Dettaglio</button>
         <button type="button" class="btn btn-sm btn-outline-primary" @onclick="ExportToExcel">Esporta Excel</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" @onclick="DiBa">DiBa</button>
     </div>
 </div>
 
@@ -811,5 +814,20 @@
     void HideDetails()
     {
         MostraDettagli = false;
+    }
+
+    private async Task DiBa(MouseEventArgs e)
+    {
+        if(ArticoloSelezionato != null)
+        {
+            if (e.ShiftKey)
+            {
+                await JSRuntime.InvokeVoidAsync("open", $"/DiBa/{ArticoloSelezionato.Cd}", "_blank");
+            }
+            else
+            {
+                NavManager.NavigateTo($"/DiBa/{ArticoloSelezionato.Cd}");
+            }
+        }  
     }
 }

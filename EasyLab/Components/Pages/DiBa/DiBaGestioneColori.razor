@@ -1,0 +1,236 @@
+@* @if (loading)
+{
+    <Loading></Loading>
+}
+else if (Reticolo != null)
+{
+    <DxCheckBox Checked="@ColoreUnico"
+                CheckedChanged="@((bool newValue) => OnCheckboxChanged(newValue))" >
+                @L["UniqueColor"]</DxCheckBox>
+    <DxGrid @ref="MyGrid"
+            Data="@(new List<DiBa_Reticolo> { Reticolo })"
+            KeyFieldName="@nameof(DiBa_Reticolo.Id)"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            HighlightRowOnHover="true">
+        <Columns>
+            <DxGridDataColumn FieldName="Art_B.CodArticolo" Caption="@L["ComponentCode"]" />
+            <DxGridDataColumn FieldName="Art_B.Descr" Caption="@L["Description"]" />
+            @if (ColoreUnico)
+            {
+                var primoColore = ColoriArticoloA.FirstOrDefault();
+                @if (primoColore != null)
+                {
+                    <DxGridDataColumn Caption="@L["UniqueColor"]" MinWidth="140">
+                        <CellDisplayTemplate Context="ctx1">
+                            @{
+                                var mapp = _coloriReticolo.FirstOrDefault();
+                            }
+                            <DxComboBox Data="@ColoriArticoloB"
+                                        Value="@mapp?.ArtColId_B"
+                                        ValueChanged="@((int? v) => SalvaMappaturaColore(primoColore.Id, v))"
+                                        TextFieldName="Cod"
+                                        ValueFieldName="Id"
+                                        NullText="—"
+                                        FilteringMode="DataGridFilteringMode.Contains"
+                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                        </CellDisplayTemplate>
+                    </DxGridDataColumn>
+                }
+            }
+            else
+            {
+                @foreach (var col in ColoriArticoloA)
+                {
+                    <DxGridDataColumn Caption="@col.Cod" MinWidth="140">
+                        <CellDisplayTemplate Context="ctx">
+                            @{
+                                var mapp = _coloriReticolo.FirstOrDefault(c => c.ArtColId_A == col.Id);
+                            }
+                            <DxComboBox Data="@ColoriArticoloB"
+                                        Value="@mapp?.ArtColId_B"
+                                        ValueChanged="@((int? v) => SalvaMappaturaColore(col.Id, v))"
+                                        TextFieldName="Cod"
+                                        ValueFieldName="Id"
+                                        NullText="—"
+                                        FilteringMode="DataGridFilteringMode.Contains"
+                                        ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                        </CellDisplayTemplate>
+                    </DxGridDataColumn>
+                }
+            }          
+        </Columns>
+    </DxGrid>
+}
+else
+{
+    <p>@L["NoRowSelected"]</p>
+}
+
+@code {
+
+    [Parameter] public DiBa_Reticolo? Reticolo { get; set; }
+    [Parameter] public List<ArticoloColore> ColoriArticoloA { get; set; } = new();
+    [Parameter] public EventCallback OnModifica { get; set; }
+
+    DxGrid? MyGrid { get; set; }
+    private bool loading = true;
+
+    private bool ColoreUnico = false;
+    private int? _previousReticoloId;
+
+    private record ColoreItem(int Id, string Cod);
+    private List<ColoreItem> ColoriArticoloB = new();
+    private List<DiBa_Colore> _coloriReticolo = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Reticolo != null && Reticolo.Id != _previousReticoloId)
+        {
+            _previousReticoloId = Reticolo.Id;
+            loading = true;
+            try
+            {
+                await CaricaDati();
+            }
+            finally
+            {
+                loading = false;
+            }
+        }
+    }
+
+    private async Task CaricaDati()
+    {
+        using var ctx = await dbContextFactory.CreateDbContextAsync();
+
+        var coloriUniversali = await ctx.ArticoliColore
+            .AsNoTracking()
+            .Where(x => x.Id < 0)
+            .Select(x => new ColoreItem(x.Id, x.Cod))
+            .ToListAsync();
+
+        var artBColors = new List<ColoreItem>();
+        if (Reticolo!.ArtId_B.HasValue)
+        {
+            var artB = await ctx.Articoli
+                .Include(a => a.ColoriArticolo)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.Id == Reticolo.ArtId_B);
+            artBColors = artB?.ColoriArticolo?
+                .Where(x => !x.Cancellato)
+                .Select(x => new ColoreItem(x.Id, x.Cod))
+                .OrderBy(x => x.Cod)
+                .ToList() ?? new();
+        }
+
+        ColoriArticoloB = artBColors
+            .Concat(coloriUniversali)
+            .DistinctBy(x => x.Id)
+            .ToList();
+
+        _coloriReticolo = await ctx.DiBa_Colori
+            .Include(x => x.ArtCol_B)
+            .Where(c => c.ReticoloId == Reticolo!.Id)
+            .ToListAsync();
+
+        ColoreUnico = _coloriReticolo.Any(c => c.CkColoreUnico);
+    }
+
+    private async Task SalvaMappaturaColore(int artColIdA, int? artColIdB)
+    {
+        using var ctx = await dbContextFactory.CreateDbContextAsync();
+
+        if (ColoreUnico)
+        {
+            var tuttiEsistenti = await ctx.DiBa_Colori
+                .Where(c => c.ReticoloId == Reticolo!.Id)
+                .ToListAsync();
+            ctx.DiBa_Colori.RemoveRange(tuttiEsistenti);
+
+            if (artColIdB.HasValue)
+            {
+                foreach (var colA in ColoriArticoloA)
+                {
+                    ctx.DiBa_Colori.Add(new DiBa_Colore
+                    {
+                        ReticoloId = Reticolo!.Id,
+                        ArtColId_A = colA.Id,
+                        ArtColId_B = artColIdB,
+                        CkColoreUnico = true
+                    });
+                }
+            }
+        }
+        else
+        {
+            var existing = await ctx.DiBa_Colori
+             .FirstOrDefaultAsync(c => c.ReticoloId == Reticolo!.Id && c.ArtColId_A == artColIdA);
+
+            if (artColIdB.HasValue)
+            {
+                if (existing == null)
+                    ctx.DiBa_Colori.Add(new DiBa_Colore { ReticoloId = Reticolo!.Id, ArtColId_A = artColIdA, ArtColId_B = artColIdB, CkColoreUnico = false });
+                else
+                {
+                    existing.ArtColId_B = artColIdB;
+                    existing.CkColoreUnico = false;
+                }
+            }
+            else if (existing != null)
+            {
+                ctx.DiBa_Colori.Remove(existing);
+            }
+        }
+        
+
+        await ctx.SaveChangesAsync();
+        await CaricaDati();
+        await OnModifica.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private async Task OnCheckboxChanged(bool newValue)
+    {
+        ColoreUnico = newValue;
+
+        using var ctx = await dbContextFactory.CreateDbContextAsync();
+        var esistenti = await ctx.DiBa_Colori
+            .Where(c => c.ReticoloId == Reticolo!.Id)
+            .ToListAsync();
+
+        if (newValue)
+        {
+            var primoColA = ColoriArticoloA.FirstOrDefault();
+            var primoColoreB = primoColA != null
+                ? esistenti.FirstOrDefault(e => e.ArtColId_A == primoColA.Id)?.ArtColId_B
+                : esistenti.FirstOrDefault()?.ArtColId_B;
+            ctx.DiBa_Colori.RemoveRange(esistenti);
+
+            if (primoColoreB.HasValue)
+            {
+                foreach (var colA in ColoriArticoloA)
+                {
+                    ctx.DiBa_Colori.Add(new DiBa_Colore
+                    {
+                        ReticoloId = Reticolo!.Id,
+                        ArtColId_A = colA.Id,
+                        ArtColId_B = primoColoreB,
+                        CkColoreUnico = true
+                    });
+                }
+            }
+        }
+        else
+        {
+            foreach (var row in esistenti)
+                row.CkColoreUnico = false;
+        }
+
+        await ctx.SaveChangesAsync();
+        await CaricaDati();
+        ColoreUnico = newValue; // CaricaDati lo resetterebbe a false se non ci sono righe
+        await OnModifica.InvokeAsync();
+        StateHasChanged();
+    }
+}
+ *@
