@@ -3043,6 +3043,11 @@ public partial class SeaseTstContext : DbContext
                 .HasMaxLength(2)
                 .IsFixedLength()
                 .HasColumnName("TIPO");
+
+            entity.HasData(
+                new BasiAllcolori { Cd = "-1", ParteCol = "Da Definire", ParteColDesc = "Da Definire", IdMat = 0, IdMatCol = 0, IdModCol = 0, Enab = true },
+                new BasiAllcolori { Cd = "-2", ParteCol = "No Colore",   ParteColDesc = "No Colore",   IdMat = 0, IdMatCol = 0, IdModCol = 0, Enab = true }
+            );
         });
 
         modelBuilder.Entity<BasiAllmisure>(entity =>
@@ -3070,6 +3075,11 @@ public partial class SeaseTstContext : DbContext
             entity.Property(e => e.Parte).HasMaxLength(66);
             entity.Property(e => e.ParteMis).HasMaxLength(10);
             entity.Property(e => e.ParteMisDesc).HasMaxLength(30);
+
+            entity.HasData(
+                new BasiAllmisure { Cd = "-1", ParteMis = "Da Definire", ParteMisDesc = "Da Definire", IdContatto = 0, IdMat = 0 },
+                new BasiAllmisure { Cd = "-2", ParteMis = "No Taglia",   ParteMisDesc = "No Taglia",   IdContatto = 0, IdMat = 0 }
+            );
         });
 
         modelBuilder.Entity<BasiAllsku>(entity =>

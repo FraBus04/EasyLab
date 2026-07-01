@@ -75,10 +75,15 @@ else
             .OrderBy(x => x.IdSetOrd).ThenBy(x => x.Cd)
             .ToListAsync();
 
-        MisureArticoloB = await ctx.BasiAllmisures.AsNoTracking()
+        var misureB = await ctx.BasiAllmisures.AsNoTracking()
             .Where(x => x.CdAll == Reticolo!.BCdAll)
             .OrderBy(x => x.IdSetOrd).ThenBy(x => x.Cd)
             .ToListAsync();
+        MisureArticoloB = misureB.Concat(new[]
+        {
+            new BasiAllmisure { Cd = "-1", ParteMis = "Da Definire", ParteMisDesc = "Da Definire", IdContatto = 0, IdMat = 0 },
+            new BasiAllmisure { Cd = "-2", ParteMis = "No Taglia",   ParteMisDesc = "No Taglia",   IdContatto = 0, IdMat = 0 },
+        }).ToList();
 
         _misureReticolo = await ctx.Bom3DetailMis.AsNoTracking()
             .Where(m => m.IdRigaReticolo == Reticolo!.Id)

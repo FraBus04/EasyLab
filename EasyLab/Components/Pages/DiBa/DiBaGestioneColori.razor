@@ -94,10 +94,15 @@ else
             .OrderBy(x => x.OrdPm)
             .ToListAsync();
 
-        ColoriArticoloB = await ctx.BasiAllcoloris.AsNoTracking()
+        var coloriB = await ctx.BasiAllcoloris.AsNoTracking()
             .Where(x => x.CdAll == Reticolo!.BCdAll)
             .OrderBy(x => x.OrdPm)
             .ToListAsync();
+        ColoriArticoloB = coloriB.Concat(new[]
+        {
+            new BasiAllcolori { Cd = "-1", ParteCol = "Da Definire", ParteColDesc = "Da Definire", IdMat = 0, IdMatCol = 0, IdModCol = 0, Enab = true },
+            new BasiAllcolori { Cd = "-2", ParteCol = "No Colore",   ParteColDesc = "No Colore",   IdMat = 0, IdMatCol = 0, IdModCol = 0, Enab = true },
+        }).ToList();
 
         _coloriReticolo = await ctx.Bom3DetailCols.AsNoTracking()
             .Where(c => c.IdRigaReticolo == Reticolo!.Id)
