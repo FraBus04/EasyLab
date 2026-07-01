@@ -105,6 +105,31 @@
     </BodyContentTemplate>
 </DxPopup>
 
+
+<DxPopup @bind-Visible="_coloriPopupVisible"
+         HeaderText="Gestione Colori"
+         CloseOnOutsideClick="true"
+         ShowFooter="false"
+         Width="auto"
+         Height="auto"
+         CssClass="gestione-tabelle-popup">
+    <BodyContentTemplate>
+        <DiBaGestioneColori Reticolo="@_rigaColoriSelezionata" OnModifica="@caricaLookup" />
+    </BodyContentTemplate>
+</DxPopup>
+
+<DxPopup @bind-Visible="_tagliePopupVisible"
+         HeaderText="Gestione Taglie"
+         CloseOnOutsideClick="true"
+         ShowFooter="false"
+         Width="auto"
+         Height="auto"
+         CssClass="gestione-tabelle-popup">
+    <BodyContentTemplate>
+        <DiBaGestioneTaglie Reticolo="@_rigaTaglieSelezionata" OnModifica="@caricaLookup" />
+    </BodyContentTemplate>
+</DxPopup>
+
     <DxContextMenu @ref="GearContextMenu">
         <Items>
             <DxContextMenuItem Text="ColumnChooser" Click="@(() => ShowCustomColumnChooser())" />
@@ -289,7 +314,7 @@
             <Columns>
                 <DxGridBandColumn Caption="" FixedPosition="GridColumnFixedPosition.Left">
                     <Columns>
-                        <DxGridCommandColumn Width="120px" MinWidth="120">
+                        <DxGridCommandColumn Width="120px">
                             <HeaderTemplate Context="hdr">
                                 <div class="d-flex align-items-center gap-1">
                                     @if (VersioneSelezionata == 0)
@@ -339,7 +364,7 @@
 
                         <DxGridDataColumn FieldName="Seq" Caption="Seq" Width="60px" />
 
-                        <DxGridDataColumn Caption="Componente" MinWidth="100">
+                        <DxGridDataColumn Caption="Componente" Width="100px">
                             <CellDisplayTemplate Context="ctx">
                                 @{
                                     var riga = (Bom3Reticolo)ctx.DataItem;
@@ -348,7 +373,20 @@
                             </CellDisplayTemplate>
                         </DxGridDataColumn>
 
-                        <DxGridDataColumn Caption="Quantità / UM" MinWidth="110">
+                        <DxGridDataColumn Caption="TP" Width="60px">
+                            <CellDisplayTemplate Context="ctx">
+                                @{ var rigaTp = (Bom3Reticolo)ctx.DataItem; var compTp = ComponentiDict.GetValueOrDefault(rigaTp.BCdAll ?? ""); }
+                                <span>@compTp?.Tp</span>
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+                        <DxGridDataColumn Caption="Nome" Width="150px">
+                            <CellDisplayTemplate Context="ctx">
+                                @{ var rigaNome = (Bom3Reticolo)ctx.DataItem; var compNome = ComponentiDict.GetValueOrDefault(rigaNome.BCdAll ?? ""); }
+                                <span title="@compNome?.ParteDesc">@compNome?.ParteDesc</span>
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+
+                        <DxGridDataColumn Caption="Quantità / UM" Width="120px">
                             <CellDisplayTemplate Context="ctx">
                                 @{
                                     var riga = (Bom3Reticolo)ctx.DataItem;
@@ -380,6 +418,27 @@
                                 <DxCheckBox Checked="@riga.CkFabb"
                                             CheckedChanged="@((bool v) => OnCheckboxChangedCkFab(riga, v))"
                                             Enabled="@(VersioneSelezionata == 0)" />
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+                        <DxGridDataColumn Caption="Colori" Width="50px">
+                            <CellDisplayTemplate Context="ctx">
+                                @{ var riga = (Bom3Reticolo)ctx.DataItem; }
+                                <DxButton Click="@(() => ApriRigaColori(riga))"
+                                          RenderStyle="ButtonRenderStyle.None"
+                                          Tooltip="Colori">
+                                    <img src="images/32_Colori20.png" style="width:16px;height:16px;" alt="Colori" />
+                                </DxButton>
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+                        <DxGridDataColumn Caption="Taglie" Width="50px">
+                            <CellDisplayTemplate Context="ctx">
+                                @{ var riga = (Bom3Reticolo)ctx.DataItem; }
+                                <DxButton Click="@(() => ApriRigaTaglie(riga))"
+                                          RenderStyle="ButtonRenderStyle.None"
+                                          Tooltip="Taglie"
+                                          Enabled="@(ArticoliConTaglie.Contains(riga.BCdAll ?? ""))">
+                                    <img src="images/0046-Scheda Tecnica32.png" style="width:16px;height:16px;" alt="Taglie" />
+                                </DxButton>
                             </CellDisplayTemplate>
                         </DxGridDataColumn>
                     </Columns>
@@ -429,7 +488,7 @@
                             </CellDisplayTemplate>
                         </DxGridDataColumn>
 
-                        <DxGridDataColumn Caption="Posizione" MinWidth="90">
+                        <DxGridDataColumn Caption="Posizione">
                             <CellDisplayTemplate Context="ctx">
                                 @{
                                     var riga = (Bom3Reticolo)ctx.DataItem;
@@ -439,7 +498,7 @@
                             </CellDisplayTemplate>
                         </DxGridDataColumn>
 
-                        <DxGridDataColumn Caption="TP2" MinWidth="80">
+                        <DxGridDataColumn Caption="TP2">
                             <CellDisplayTemplate Context="ctx">
                                 @{
                                     var riga = (Bom3Reticolo)ctx.DataItem;
@@ -448,7 +507,7 @@
                             </CellDisplayTemplate>
                         </DxGridDataColumn>
 
-                        <DxGridDataColumn Caption="TP3" MinWidth="80">
+                        <DxGridDataColumn Caption="TP3">
                             <CellDisplayTemplate Context="ctx">
                                 @{
                                     var riga = (Bom3Reticolo)ctx.DataItem;
@@ -457,7 +516,7 @@
                             </CellDisplayTemplate>
                         </DxGridDataColumn>
 
-                        <DxGridDataColumn Caption="Note" MinWidth="100">
+                        <DxGridDataColumn Caption="Note">
                             <CellDisplayTemplate Context="ctx">
                                 @{
                                     var riga = (Bom3Reticolo)ctx.DataItem;
@@ -476,13 +535,19 @@
                             @foreach (var misuraCd in (DiBaMisure?.Select(m => m.ACdAllmis).Distinct().OrderBy(x => x) ?? Enumerable.Empty<string>()))
                             {
                                 var mis = misuraCd;
-                                <DxGridDataColumn Caption="@mis" MinWidth="80">
+                                var misCaption = MisureLookup.TryGetValue(mis, out var pm) ? pm ?? mis : mis;
+                                <DxGridDataColumn Caption="@misCaption" Width="120px">
                                     <CellDisplayTemplate Context="ctx">
                                         @{
                                             var riga = (Bom3Reticolo)ctx.DataItem;
                                             var mapp = DiBaMisure?.FirstOrDefault(m => m.IdRigaReticolo == riga.Id && m.ACdAllmis == mis);
+                                            string misVal;
+                                            if (mapp == null || string.IsNullOrEmpty(mapp.BCdAllmis))
+                                                misVal = "—";
+                                            else
+                                                misVal = MisureLookup.TryGetValue(mapp.BCdAllmis, out var pmB) && pmB != null ? pmB : "N/A";
                                         }
-                                        <span>@(mapp?.BCdAllmis ?? "—")</span>
+                                        <span>@misVal</span>
                                     </CellDisplayTemplate>
                                 </DxGridDataColumn>
                             }
@@ -496,9 +561,10 @@
                             @foreach (var misuraCd in (DiBaMisure?.Select(m => m.ACdAllmis).Distinct().OrderBy(x => x) ?? Enumerable.Empty<string>()))
                             {
                                 var mis = misuraCd;
+                                var misCaption = MisureLookup.TryGetValue(mis, out var pm) ? pm ?? mis : mis;
                                 @if (VersioneSelezionata == 0)
                                 {
-                                    <DxGridDataColumn Caption="@mis" MinWidth="100">
+                                    <DxGridDataColumn Caption="@misCaption" Width="120px">
                                         <CellDisplayTemplate Context="ctx">
                                             @{
                                                 var riga = (Bom3Reticolo)ctx.DataItem;
@@ -526,7 +592,7 @@
                                 }
                                 else
                                 {
-                                    <DxGridDataColumn Caption="@mis" MinWidth="100">
+                                    <DxGridDataColumn Caption="@misCaption" Width="120px">
                                         <CellDisplayTemplate Context="ctx">
                                             @{
                                                 var riga = (Bom3Reticolo)ctx.DataItem;
@@ -555,16 +621,21 @@
                             @foreach (var coloreCd in (DiBaColori?.Select(c => c.ACdAllcol).Distinct().OrderBy(x => x) ?? Enumerable.Empty<string>()))
                             {
                                 var col = coloreCd;
-                                <DxGridDataColumn Caption="@col" MinWidth="80">
+                                var colCaption = ColoriLookup.TryGetValue(col, out var pcA) ? pcA ?? col : col;
+                                <DxGridDataColumn Caption="@colCaption">
                                     <CellDisplayTemplate Context="ctx">
                                         @{
                                             var riga = (Bom3Reticolo)ctx.DataItem;
                                             var mapp = DiBaColori?.FirstOrDefault(c => c.IdRigaReticolo == riga.Id && c.ACdAllcol == col);
-                                            var cod = mapp?.BCdAllcol;
+                                            string? colVal;
+                                            if (mapp == null || string.IsNullOrEmpty(mapp.BCdAllcol))
+                                                colVal = null;
+                                            else
+                                                colVal = ColoriLookup.TryGetValue(mapp.BCdAllcol, out var pcB) ? pcB ?? mapp.BCdAllcol : mapp.BCdAllcol;
                                         }
-                                        @if (!string.IsNullOrEmpty(cod) && cod != "?" && cod != "-")
+                                        @if (!string.IsNullOrEmpty(colVal) && colVal != "?" && colVal != "-")
                                         {
-                                            <span>@cod</span>
+                                            <span>@colVal</span>
                                         }
                                         else
                                         {
@@ -740,6 +811,10 @@
     private List<Bom3DetailCol>? DiBaColori;
     private List<Bom3DetailMi>? DiBaMisure;
     private List<BasiAll> ArticoliDisponibili = new();
+    private Dictionary<string, BasiAll> ComponentiDict = new();
+    private Dictionary<string, string?> MisureLookup = new();
+    private HashSet<string> ArticoliConTaglie = new();
+    private Dictionary<string, string?> ColoriLookup = new();
     private List<TabUm> UnitaMisure = new();
     private List<TabComposizionePo> Posizioni = new();
     private List<TabBomTp2> ListaTP2 = new();
@@ -819,6 +894,10 @@
     private bool ConfermaEliminaRigaVisible = false;
     private Bom3Reticolo? RigaDaEliminare;
     private bool ConfermaEliminaVersioneVisible = false;
+    private bool _coloriPopupVisible = false;
+    private bool _tagliePopupVisible = false;
+    private Bom3Reticolo? _rigaColoriSelezionata;
+    private Bom3Reticolo? _rigaTaglieSelezionata;
     private int _versioneComboKey = 0;
     private List<int>? Versioni;
 
@@ -872,6 +951,15 @@
                 .Where(x=> x.Cd != ArticoloSelezionato!.Cd && x.Tipo == "MP")
                 .ToListAsync();
 
+            ComponentiDict = ArticoliDisponibili.ToDictionary(a => a.Cd, a => a);
+
+            var artBCds = DataSource?.Select(r => r.BCdAll!).Where(x => !string.IsNullOrEmpty(x)).Distinct().ToList() ?? new();
+            ArticoliConTaglie = (await context.BasiAllmisures.AsNoTracking()
+                .Where(x => artBCds.Contains(x.CdAll!))
+                .Select(x => x.CdAll!)
+                .Distinct()
+                .ToListAsync()).ToHashSet();
+
             UnitaMisure = await context.TabUms.AsNoTracking()
                 .ToListAsync();
 
@@ -890,9 +978,25 @@
                 .Where(x => x.ACdAll == ArticoloSelezionato.Cd)
                 .ToListAsync();
 
+            var cdColori = DiBaColori.Select(c => c.ACdAllcol)
+                .Concat(DiBaColori.Select(c => c.BCdAllcol))
+                .Where(x => !string.IsNullOrEmpty(x))
+                .Distinct().ToList();
+            ColoriLookup = await context.BasiAllcoloris.AsNoTracking()
+                .Where(x => cdColori.Contains(x.Cd))
+                .ToDictionaryAsync(x => x.Cd, x => x.ParteCol);
+
             DiBaMisure = await context.Bom3DetailMis.AsNoTracking()
                 .Where(x => x.ACdAll == ArticoloSelezionato.Cd)
                 .ToListAsync();
+
+            var cdMisure = DiBaMisure.Select(m => m.ACdAllmis)
+                .Concat(DiBaMisure.Select(m => m.BCdAllmis))
+                .Where(x => !string.IsNullOrEmpty(x))
+                .Distinct().ToList();
+            MisureLookup = await context.BasiAllmisures.AsNoTracking()
+                .Where(x => cdMisure.Contains(x.Cd))
+                .ToDictionaryAsync(x => x.Cd, x => x.ParteMis);
 
             if (ArticoloSelezionato != null)
             {
@@ -1284,19 +1388,17 @@
         StateHasChanged();
     }
 
-    void ApriRigaColori(object item)
+    void ApriRigaColori(Bom3Reticolo riga)
     {
-        RigaSelezionata = item as Bom3Reticolo;
-        Argomento = "Colori";
-        Open = true;
+        _rigaColoriSelezionata = riga;
+        _coloriPopupVisible = true;
         StateHasChanged();
     }
 
-    void ApriRigaTaglie(object item)
+    void ApriRigaTaglie(Bom3Reticolo riga)
     {
-        RigaSelezionata = item as Bom3Reticolo;
-        Argomento = "Taglie";
-        Open = true;
+        _rigaTaglieSelezionata = riga;
+        _tagliePopupVisible = true;
         StateHasChanged();
     }
 

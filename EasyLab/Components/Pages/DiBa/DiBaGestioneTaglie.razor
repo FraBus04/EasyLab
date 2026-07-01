@@ -1,75 +1,53 @@
-@* @if (loading)
+@if (loading)
 {
     <Loading></Loading>
 }
 else if (Reticolo != null)
 {
-    <div style="display: flex; justify-content: flex-start; margin-bottom: 6px;">
-        <DxButton Click="TaglieBase"
-                  Text="@L["AllAsBase"]"
-                  RenderStyle="ButtonRenderStyle.Secondary"
-                  IconCssClass="oi oi-resize-both"
-                  SizeMode="SizeMode.Small" />
-    </div>
-    <DxGrid @ref="MyGrid"
-            Data="@(new List<DiBa_Reticolo> { Reticolo })"
-            KeyFieldName="@nameof(DiBa_Reticolo.Id)"
-            ColumnResizeMode="GridColumnResizeMode.NextColumn"
-            HighlightRowOnHover="true">
-        <Columns>
-            <DxGridDataColumn FieldName="Art_B.CodArticolo" Caption="@L["ComponentCode"]" />
-            <DxGridDataColumn FieldName="Art_B.Descr" Caption="@L["Description"]" />
-            <DxGridDataColumn Caption="@L["BaseSize"]" MinWidth="160">
-                <CellDisplayTemplate Context="ctx">
-                    <DxComboBox Data="@MisureArticoloB"
-                                Value="@(MisureArticoloB.FirstOrDefault(x => x.TagliaBase)?.Id)"
-                                ValueChanged="@((int? v) => ImpostaTagliaBase(v))"
-                                TextFieldName="Cod"
-                                ValueFieldName="Id"
-                                NullText="—"
-                                FilteringMode="DataGridFilteringMode.Contains"
-                                ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                </CellDisplayTemplate>
-            </DxGridDataColumn>
-            @foreach (var misura in Misure ?? Enumerable.Empty<ArticoloMisura>())
-            {
-                var mis = misura;
-                <DxGridDataColumn Caption="@(mis.Enab ? mis.Cod : $"({mis.Cod})")" MinWidth="160">
-                    <CellDisplayTemplate Context="ctx">
-                        @{
-                            var riga = (DiBa_Reticolo)ctx.DataItem;
-                            var mapp = DiBaMisure?.FirstOrDefault(m => m.ReticoloId == riga.Id && m.ArtMisId_A == mis.Id);
-                        }
+    <div class="d-flex flex-column gap-3">
+        @if (!MisureArticoloA.Any())
+        {
+            <p class="text-muted">Nessuna misura configurata per l'articolo.</p>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-3">
+                @foreach (var misA in MisureArticoloA)
+                {
+                    var ma = misA;
+                    var mapp = _misureReticolo.FirstOrDefault(m => m.ACdAllmis == ma.Cd);
+                    <div class="d-flex flex-column gap-1">
+                        <span class="badge" style="background-color:#ff8c00; font-size:0.75rem;">@(ma.ParteMis ?? ma.Cd)</span>
                         <DxComboBox Data="@MisureArticoloB"
-                                    Value="@mapp?.ArtMisId_B"
-                                    ValueChanged="@((int? v) => SalvaMappaturaTaglie(mis.Id, v, mapp?.Qta ?? 0f))"
-                                    TextFieldName="Cod"
-                                    ValueFieldName="Id"
+                                    Value="@mapp?.BCdAllmis"
+                                    ValueChanged="@((string? v) => SalvaMappaturaTaglie(ma.Cd, v))"
+                                    TextFieldName="ParteMis"
+                                    ValueFieldName="Cd"
                                     NullText="—"
                                     FilteringMode="DataGridFilteringMode.Contains"
-                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
-                    </CellDisplayTemplate>
-                </DxGridDataColumn>
-            }
-        </Columns>
-    </DxGrid>
+                                    ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto"
+                                    style="width:160px;" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
 }
 else
 {
-    <p>@L["NoRowSelected"]</p>
+    <p class="text-muted">Nessuna riga selezionata.</p>
 }
 
 @code {
-
-    [Parameter] public DiBa_Reticolo? Reticolo { get; set; }
+    [Parameter] public Bom3Reticolo? Reticolo { get; set; }
     [Parameter] public EventCallback OnModifica { get; set; }
-    [Parameter] public List<ArticoloMisura>? Misure { get; set; }
 
-    DxGrid? MyGrid { get; set; }
     private bool loading = true;
     private int? _previousReticoloId;
-    private List<DiBa_Misura>? DiBaMisure;
-    private List<ArticoloMisura> MisureArticoloB = new();
+
+    private List<BasiAllmisure> MisureArticoloA = new();
+    private List<BasiAllmisure> MisureArticoloB = new();
+    private List<Bom3DetailMi> _misureReticolo = new();
 
     protected override async Task OnParametersSetAsync()
     {
@@ -90,99 +68,56 @@ else
 
     private async Task CaricaDati()
     {
-        using var ctx = await dbContextFactory.CreateDbContextAsync();
+        using var ctx = await DbFactory.CreateDbContextAsync();
 
-        if (Reticolo!.ArtId_B.HasValue)
-        {
-            var artB = await ctx.Articoli
-                .Include(a => a.MisureArticolo)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(a => a.Id == Reticolo.ArtId_B);
-            MisureArticoloB = artB?.MisureArticolo?
-                .Where(x => !x.Cancellato)
-                .OrderBy(x => x.OrdPM)
-                .ToList() ?? new();
-        }
-        else
-        {
-            MisureArticoloB = new();
-        }
+        MisureArticoloA = await ctx.BasiAllmisures.AsNoTracking()
+            .Where(x => x.CdAll == Reticolo!.ACdAll)
+            .OrderBy(x => x.IdSetOrd).ThenBy(x => x.Cd)
+            .ToListAsync();
 
-        DiBaMisure = await ctx.DiBa_Misure
-            .Include(x => x.ArtMis_B)
-            .Where(m => m.ReticoloId == Reticolo!.Id)
+        MisureArticoloB = await ctx.BasiAllmisures.AsNoTracking()
+            .Where(x => x.CdAll == Reticolo!.BCdAll)
+            .OrderBy(x => x.IdSetOrd).ThenBy(x => x.Cd)
+            .ToListAsync();
+
+        _misureReticolo = await ctx.Bom3DetailMis.AsNoTracking()
+            .Where(m => m.IdRigaReticolo == Reticolo!.Id)
             .ToListAsync();
     }
 
-    private async Task SalvaMappaturaTaglie(int artMisIdA, int? artMisIdB, float qta)
+    private async Task SalvaMappaturaTaglie(string cdAllmisA, string? cdAllmisB)
     {
-        using var ctx = await dbContextFactory.CreateDbContextAsync();
+        using var ctx = await DbFactory.CreateDbContextAsync();
 
-        var existing = await ctx.DiBa_Misure
-            .FirstOrDefaultAsync(m => m.ReticoloId == Reticolo!.Id && m.ArtMisId_A == artMisIdA);
+        var existing = await ctx.Bom3DetailMis
+            .FirstOrDefaultAsync(m => m.IdRigaReticolo == Reticolo!.Id && m.ACdAllmis == cdAllmisA);
 
-        if (artMisIdB.HasValue)
+        if (!string.IsNullOrEmpty(cdAllmisB))
         {
             if (existing == null)
-                ctx.DiBa_Misure.Add(new DiBa_Misura { ReticoloId = Reticolo!.Id, ArtMisId_A = artMisIdA, ArtMisId_B = artMisIdB, Qta = qta });
+                ctx.Bom3DetailMis.Add(new Bom3DetailMi
+                {
+                    IdRigaReticolo = Reticolo!.Id,
+                    AIdContatto = Reticolo.AIdContatto,
+                    AIdStag = Reticolo.AIdStag,
+                    ACdAll = Reticolo.ACdAll,
+                    ACdAllmis = cdAllmisA,
+                    Ver = Reticolo.Ver,
+                    BCdAll = Reticolo.BCdAll ?? "",
+                    BCdAllmis = cdAllmisB,
+                    Cons = Reticolo.Cons,
+                    DataIns = DateTime.Now,
+                    DataUpd = DateTime.Now,
+                });
             else
             {
-                existing.ArtMisId_B = artMisIdB;
-                existing.Qta = qta;
+                existing.BCdAllmis = cdAllmisB;
+                existing.DataUpd = DateTime.Now;
             }
         }
         else if (existing != null)
         {
-            ctx.DiBa_Misure.Remove(existing);
-        }
-
-        await ctx.SaveChangesAsync();
-        await CaricaDati();
-        await OnModifica.InvokeAsync();
-        StateHasChanged();
-    }
-
-    private async Task ImpostaTagliaBase(int? misuraBaseId)
-    {
-        if (!misuraBaseId.HasValue || !Reticolo!.ArtId_B.HasValue) return;
-
-        using var ctx = await dbContextFactory.CreateDbContextAsync();
-        var misure = await ctx.ArticoliMisura
-            .Where(m => m.ArticoloId == Reticolo.ArtId_B && !m.Cancellato)
-            .ToListAsync();
-
-        foreach (var m in misure)
-            m.TagliaBase = m.Id == misuraBaseId;
-
-        await ctx.SaveChangesAsync();
-        await CaricaDati();
-        await OnModifica.InvokeAsync();
-        StateHasChanged();
-    }
-
-    private async Task TaglieBase()
-    {
-        var misuraBase = MisureArticoloB.FirstOrDefault(x => x.TagliaBase);
-        if (misuraBase == null)
-        {
-            await JSRuntime.InvokeVoidAsync("alert", L["NoBaseSizeConfigured"].Value);
-            return;
-        }
-
-        using var ctx = await dbContextFactory.CreateDbContextAsync();
-
-        var tutteMisure = Misure?.ToList() ?? new();
-        var esistenti = await ctx.DiBa_Misure
-            .Where(m => m.ReticoloId == Reticolo!.Id)
-            .ToListAsync();
-
-        foreach (var mis in tutteMisure)
-        {
-            var existing = esistenti.FirstOrDefault(e => e.ArtMisId_A == mis.Id);
-            if (existing == null)
-                ctx.DiBa_Misure.Add(new DiBa_Misura { ReticoloId = Reticolo!.Id, ArtMisId_A = mis.Id, ArtMisId_B = misuraBase.Id, Qta = 0 });
-            else
-                existing.ArtMisId_B = misuraBase.Id;
+            ctx.Bom3DetailMis.Remove(existing);
         }
 
         await ctx.SaveChangesAsync();
@@ -191,4 +126,3 @@ else
         StateHasChanged();
     }
 }
- *@
