@@ -48,10 +48,10 @@
         </div>
         <div style="min-width:220px;">
             <label class="form-label small mb-0">Stagione</label>
-            <CheckboxDropdown TItem="Stagioni"
+            <CheckboxDropdown TItem="TabStagioni"
                               Data="@Stagioni"
                               @bind-SelectedItems="StagioneSelezionati"
-                              TextFieldSelector="@(s => s.Cod ?? string.Empty)"
+                              TextFieldSelector="@(s => s.Cod)"
                               NullText="Tutte le stagioni"
                               SelectAllText="Tutte le stagioni" />
         </div>
@@ -449,11 +449,11 @@
     private DxGrid MyGrid = default!;
     private List<BasiAll>? DataSource;
     private List<Contatti> Brands = new();
-    private List<Stagioni> Stagioni = new();
+    private List<TabStagioni> Stagioni = new();
     private BasiAll? ArticoloSelezionato;
 
     private List<Contatti> BrandSelezionati = new();
-    private List<Stagioni> StagioneSelezionati = new();
+    private List<TabStagioni> StagioneSelezionati = new();
     private List<string> TipiSelezionati = new() { "PR", "MP", "SM" };
     private static readonly List<string> TipiDisponibili = new() { "PR", "MP", "SM" };
 
@@ -489,7 +489,7 @@
             {
                 using var context = await DbFactory.CreateDbContextAsync();
                 Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
-                Stagioni = await context.Stagionis.AsNoTracking().OrderByDescending(s => s.Id).ToListAsync();
+                Stagioni = await context.TabStagionis.AsNoTracking().Where(x => x.Stato == "A").OrderByDescending(s => s.OrdPm).ToListAsync();
                 BrandSelezionati = Brands.ToList();
                 StagioneSelezionati = Stagioni.ToList();
                 await CaricaLookups();
