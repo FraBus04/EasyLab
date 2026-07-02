@@ -26,16 +26,12 @@
 			</button>
 			<span>DiBa</span>
 		</div> *@
-        <AuthorizeView Roles="Admin">
-            <Authorized>
-                <div @onclick="Utenti">
-                    <button>
-                        <img src="/images/UteSWG.svg" alt="Utenti" />
-                    </button>
-                    <span>Gestione Utenti</span>
-                </div>
-            </Authorized>
-        </AuthorizeView>
+        <div @onclick="Utenti">
+            <button>
+                <img src="/images/UteSWG.svg" alt="Utenti" />
+            </button>
+            <span>Gestione Utenti</span>
+        </div>
         <form method="post" action="/auth/logout" class="Header-Logout">
             <AntiforgeryToken />
             <button type="submit" title="Logout">

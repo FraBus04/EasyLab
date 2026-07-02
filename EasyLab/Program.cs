@@ -96,11 +96,48 @@ app.MapPost("/auth/login", async (
 
 // Stesso discorso del login: il sign-out deve avvenire su una risposta HTTP vera
 // per poter cancellare il cookie di autenticazione.
-app.MapPost("/auth/logout", async (SignInManager<ApplicationUser> signInManager) =>
+// Esposto sia in POST (bottone Logout nell'header) sia in GET (redirect da un componente
+// Blazor interattivo, es. dopo che l'admin cambia la propria password: non può fare un
+// vero form-post da lì, ma una navigazione con forceLoad sì).
+async Task<IResult> EseguiLogout(SignInManager<ApplicationUser> signInManager, string? returnUrl)
 {
     await signInManager.SignOutAsync();
-    return Results.LocalRedirect("/login");
-});
+    return Results.LocalRedirect(string.IsNullOrEmpty(returnUrl) ? "/login" : returnUrl);
+}
+app.MapPost("/auth/logout", (SignInManager<ApplicationUser> signInManager, [FromForm] string? returnUrl) => EseguiLogout(signInManager, returnUrl));
+app.MapGet("/auth/logout", (SignInManager<ApplicationUser> signInManager, string? returnUrl) => EseguiLogout(signInManager, returnUrl));
+
+// Cambio password self-service (utenti non-Admin, dalla pagina /Utenti).
+// Dopo il cambio si forza il logout: l'utente deve rientrare con la nuova password,
+// invece di continuare la sessione corrente.
+app.MapPost("/auth/change-password", async (
+    HttpContext httpContext,
+    UserManager<ApplicationUser> userManager,
+    SignInManager<ApplicationUser> signInManager,
+    [FromForm] string currentPassword,
+    [FromForm] string newPassword,
+    [FromForm] string confirmPassword) =>
+{
+    var user = await userManager.GetUserAsync(httpContext.User);
+    if (user == null)
+    {
+        return Results.LocalRedirect("/login");
+    }
+
+    if (newPassword != confirmPassword)
+    {
+        return Results.LocalRedirect("/Utenti?pwderror=mismatch");
+    }
+
+    var result = await userManager.ChangePasswordAsync(user, currentPassword, newPassword);
+    if (!result.Succeeded)
+    {
+        return Results.LocalRedirect("/Utenti?pwderror=1");
+    }
+
+    await signInManager.SignOutAsync();
+    return Results.LocalRedirect("/login?pwdchanged=1");
+}).RequireAuthorization();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
@@ -110,7 +147,7 @@ using (var scope = app.Services.CreateScope())
 {
     var myRoleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-    var roles = new[] { "Admin", "LocalAdmin", "Standard", "Modelist" };
+    var roles = new[] { "SuperAdmin", "Admin", "Standard", "Modellista", "Laboratorio", "CQ", "Ufficio" };
 
     foreach (var role in roles)
     {
@@ -120,11 +157,12 @@ using (var scope = app.Services.CreateScope())
         }
     }
 
-    // Primo utente Admin: serve per poter accedere e usare la pagina Gestione Utenti,
+    // Primo utente SuperAdmin: serve per poter accedere e usare la pagina Gestione Utenti
+    // senza restrizioni (SuperAdmin vede tutte le compagnie, Admin solo la propria),
     // che altrimenti nessuno potrebbe raggiungere per crearne uno tramite l'interfaccia.
     // DA RIMUOVERE (o cambiare credenziali) quando si passa in produzione.
     var myUserManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-    if (await myUserManager.FindByNameAsync("1") is null)
+    if (await myUserManager.FindByNameAsync("Admin") is null)
     {
         var primoAdmin = new ApplicationUser
         {
@@ -135,7 +173,7 @@ using (var scope = app.Services.CreateScope())
         var creazione = await myUserManager.CreateAsync(primoAdmin, "Admin1?");
         if (creazione.Succeeded)
         {
-            await myUserManager.AddToRoleAsync(primoAdmin, "Admin");
+            await myUserManager.AddToRoleAsync(primoAdmin, "SuperAdmin");
         }
     }
 }

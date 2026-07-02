@@ -33,6 +33,10 @@
             {
                 <div class="error-message">Username o password non validi.</div>
             }
+            @if (MostraPasswordCambiata)
+            {
+                <div class="success-message">Password aggiornata. Accedi con la nuova password.</div>
+            }
 
             <div class="login-actions">
                 <button type="submit" class="btn-login">Accedi</button>
@@ -50,7 +54,11 @@
     [SupplyParameterFromQuery(Name = "error")]
     private string? ErroreQuery { get; set; }
 
+    [SupplyParameterFromQuery(Name = "pwdchanged")]
+    private string? PasswordCambiataQuery { get; set; }
+
     private bool MostraErrore => !string.IsNullOrEmpty(ErroreQuery);
+    private bool MostraPasswordCambiata => !string.IsNullOrEmpty(PasswordCambiataQuery);
 
     protected override async Task OnInitializedAsync()
     {

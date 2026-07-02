@@ -102,6 +102,16 @@
     color: #fff;
 }
 
+.success-message {
+    padding: 12px;
+    background: rgba(46, 204, 113, 0.2);
+    border-left: 4px solid #2ecc71;
+    border-radius: 4px;
+    margin-bottom: 24px;
+    font-size: 0.875rem;
+    color: #fff;
+}
+
 .login-actions {
     display: flex;
     flex-direction: column;

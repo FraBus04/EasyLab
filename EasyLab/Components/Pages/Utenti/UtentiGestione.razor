@@ -1,32 +1,35 @@
 @page "/Utenti"
 @rendermode InteractiveServer
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize]
 
 <PageTitle>Gestione Utenti</PageTitle>
-
-<div class="page-header d-flex align-items-center gap-3 mb-3">
-    <div class="page-header-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6" />
-        </svg>
-    </div>
-    <div>
-        <h3 class="page-header-title mb-0">Gestione Utenti</h3>
-        <div class="page-header-subtitle">Crea, modifica e gestisci gli accessi degli utenti EasyLab</div>
-    </div>
-</div>
 
 @if (loading)
 {
     <Loading></Loading>
 }
 
-@if (!string.IsNullOrEmpty(ErroreMessaggio))
-{
-    <div class="alert alert-danger">@ErroreMessaggio</div>
-}
+<AuthorizeView Roles="Admin,SuperAdmin">
+    <Authorized Context="authContext">
+    <div class="page-header d-flex align-items-center gap-3 mb-3">
+        <div class="page-header-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6" />
+            </svg>
+        </div>
+        <div>
+            <h3 class="page-header-title mb-0">Gestione Utenti</h3>
+            <div class="page-header-subtitle">Crea, modifica e gestisci gli accessi degli utenti EasyLab</div>
+        </div>
+    </div>
 
-<DxSplitter Height="calc(100vh - 220px)">
+
+        @if (!string.IsNullOrEmpty(ErroreMessaggio))
+        {
+            <div class="alert alert-danger">@ErroreMessaggio</div>
+        }
+
+        <DxSplitter Height="calc(100vh - 220px)">
     <Panes>
         <DxSplitterPane Size="30%" MinSize="280px">
             <DxGrid @ref="MyGrid"
@@ -118,8 +121,8 @@
                             <DxSpinEdit @bind-Value="model.idLaboratorio" />
                         </DxFormLayoutItem>
                         <DxFormLayoutItem Caption="Id Compagnia" ColSpanMd="4">
-                        <DxSpinEdit @bind-Value="model.idCompagnia" />
-                    </DxFormLayoutItem>
+                            <DxSpinEdit @bind-Value="model.idCompagnia" ReadOnly="@(!isSuperAdmin)" />
+                        </DxFormLayoutItem>
                 </DxFormLayout>
             </EditFormTemplate>
             </DxGrid>
@@ -129,12 +132,17 @@
                 <div class="utenti-tab-nav flex-shrink-0">
                     <button class="@(ActiveTab == "dettagli" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveTab = "dettagli")">Dettagli</button>
                     <button class="@(ActiveTab == "permessi" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveTab = "permessi")">Permessi</button>
+                    <button class="@(ActiveTab == "password" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveTab = "password")">Password</button>
                     <button class="@(ActiveTab == "database" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveTab = "database")">Database</button>
                 </div>
                 <div class="p-3" style="flex: 1; min-height: 0; overflow-y: auto;">
                     @if (ActiveTab == "permessi")
                     {
                         <UtentiPermessi Utente="@UtenteSelezionato" />
+                    }
+                    else if (ActiveTab == "password")
+                    {
+                        <UtentiPassword Utente="@UtenteSelezionato" />
                     }
                     else if (ActiveTab == "database")
                     {
@@ -149,14 +157,24 @@
         </DxSplitterPane>
     </Panes>
 </DxSplitter>
+    </Authorized>
+    <NotAuthorized>
+        <UtentiCambioPassword />
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
     private DxGrid MyGrid = default!;
     private List<ApplicationUser>? DataSource;
     private ApplicationUser? UtenteSelezionato;
     private string ActiveTab = "dettagli";
     private bool loading = true;
     private string? ErroreMessaggio;
+    private bool isSuperAdmin;
+    private int idCompagniaCorrente;
 
     private void RigaSelezionataCambiata(GridFocusedRowChangedEventArgs e)
     {
@@ -165,25 +183,38 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && AuthStateTask != null)
         {
-            await CaricaDati();
+            loading = true;
+            StateHasChanged();
+            var authState = await AuthStateTask;
+            if (authState.User.IsInRole("SuperAdmin") || authState.User.IsInRole("Admin"))
+            {
+                isSuperAdmin = authState.User.IsInRole("SuperAdmin");
+                if (!isSuperAdmin)
+                {
+                    var utenteCorrente = await UserManager.GetUserAsync(authState.User);
+                    idCompagniaCorrente = utenteCorrente?.idCompagnia ?? 0;
+                }
+
+                await CaricaDati();
+            }
+            loading = false;
+            StateHasChanged();
         }
     }
 
     private async Task CaricaDati()
     {
-        loading = true;
-        StateHasChanged();
-        try
+        var query = DbContext.Users.AsNoTracking();
+
+        // SuperAdmin vede tutte le compagnie, Admin solo la propria.
+        if (!isSuperAdmin)
         {
-            DataSource = await DbContext.Users.AsNoTracking().ToListAsync();
+            query = query.Where(u => u.idCompagnia == idCompagniaCorrente);
         }
-        finally
-        {
-            loading = false;
-            StateHasChanged();
-        }
+
+        DataSource = await query.ToListAsync();
     }
 
     private void OnCustomizeEditModel(GridCustomizeEditModelEventArgs e)
@@ -198,7 +229,7 @@
                 LockoutEnabled = true,
                 idEasyPLM = 0,
                 idLaboratorio = 0,
-                idCompagnia = 0
+                idCompagnia = isSuperAdmin ? 0 : idCompagniaCorrente
             };
         }
     }
@@ -229,6 +260,11 @@
             IdentityResult result;
             if (e.IsNew)
             {
+                if (!isSuperAdmin)
+                {
+                    model.idCompagnia = idCompagniaCorrente;
+                }
+
                 result = await UserManager.CreateAsync(model, model.Password!);
             }
             else
@@ -241,8 +277,6 @@
                     return;
                 }
 
-                // Utenti creati prima dell'introduzione di UserManager (o inseriti manualmente su DB)
-                // possono avere SecurityStamp nullo: UserManager lo richiede per qualsiasi update.
                 if (string.IsNullOrEmpty(utente.SecurityStamp))
                 {
                     await UserManager.UpdateSecurityStampAsync(utente);
@@ -258,7 +292,7 @@
                 utente.LockoutEnd = model.LockoutEnd;
                 utente.idEasyPLM = model.idEasyPLM;
                 utente.idLaboratorio = model.idLaboratorio;
-                utente.idCompagnia = model.idCompagnia;
+                utente.idCompagnia = isSuperAdmin ? model.idCompagnia : idCompagniaCorrente;
 
                 result = await UserManager.UpdateAsync(utente);
 
