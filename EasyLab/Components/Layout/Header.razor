@@ -1,10 +1,6 @@
 ﻿@inject NavigationManager NavManager
 @inject IJSRuntime JSRuntime
-@using EasyLab.Servizi
 @using Microsoft.Extensions.Localization
-@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
-@inject StateKeeperService StateKeeper
-@inject ProtectedSessionStorage SessionStorage
 @rendermode InteractiveServer
 
 <header class="Header">
@@ -30,38 +26,30 @@
 			</button>
 			<span>DiBa</span>
 		</div> *@
-		<div class="dropdown">
-			<button>
-				<img src="/images/UteSWG.svg" alt="Gestione Utenti" />
-			</button>
-            <span>Gestione Utenti</span>
-			<div class="dropdown-content">
-				<button @onclick="Logout">
-					<img src="/images/bouser_32x32.png" alt="Logout" />
-                    <span>@string.Format("Logout", StateKeeper.CurrentUsername)</span>
-				</button>
-				<button @onclick="CreaUtente">
-					<img src="/images/Add32.png" alt="Creazione utenti" />
-                    <span>Creazione utenti</span>
-				</button>
-				<button @onclick="ModificaUtente">
-					<img src="/images/ide_32x32.png" alt="Modifica utenti" />
-                    <span>Modifica utenti</span>
-				</button>
-			</div>
-		</div>
+        <AuthorizeView Roles="Admin">
+            <Authorized>
+                <div @onclick="Utenti">
+                    <button>
+                        <img src="/images/UteSWG.svg" alt="Utenti" />
+                    </button>
+                    <span>Gestione Utenti</span>
+                </div>
+            </Authorized>
+        </AuthorizeView>
+        <form method="post" action="/auth/logout" class="Header-Logout">
+            <AntiforgeryToken />
+            <button type="submit" title="Logout">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M6 3.5a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 0-1 0v2A1.5 1.5 0 0 0 6.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-8A1.5 1.5 0 0 0 5 3.5v2a.5.5 0 0 0 1 0v-2z" />
+                    <path fill-rule="evenodd" d="M11.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H1.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z" />
+                </svg>
+            </button>
+            <span>Logout</span>
+        </form>
 	</div>
 </header>
 
 @code {
-    private async Task Logout(MouseEventArgs e)
-    {
-        StateKeeper.CurrentUsername = null;
-        StateKeeper.NotifyStateChanged();
-        await SessionStorage.DeleteAsync("currentUsername");
-        NavManager.NavigateTo("/login");
-    }
-
     private async Task CreaUtente(MouseEventArgs e)
     {
         if (e.ShiftKey)
@@ -143,6 +131,18 @@
         else
         {
             NavManager.NavigateTo("/Prodotti");
+        }
+    }
+
+    private async Task Utenti(MouseEventArgs e)
+    {
+        if (e.ShiftKey)
+        {
+            await JSRuntime.InvokeVoidAsync("open", "/Utenti", "_blank");
+        }
+        else
+        {
+            NavManager.NavigateTo("/Utenti");
         }
     }
 }

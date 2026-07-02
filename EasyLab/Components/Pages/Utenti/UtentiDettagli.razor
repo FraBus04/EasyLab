@@ -1,0 +1,105 @@
+@if (Utente == null)
+{
+    <div class="d-flex align-items-center justify-content-center text-muted" style="height: 200px;">
+        <p class="mb-0">Seleziona un utente dall'elenco per vederne i dettagli.</p>
+    </div>
+}
+else
+{
+    <div class="utente-card">
+        <div class="d-flex align-items-center gap-3">
+            <div class="utente-avatar">@Iniziali</div>
+            <div class="flex-grow-1" style="min-width:0;">
+                <div class="fw-bold fs-5 text-truncate">@(string.IsNullOrWhiteSpace(Utente.UserName) ? "(senza nome)" : Utente.UserName)</div>
+                <div class="text-muted text-truncate">@(Utente.Email ?? "—")</div>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <span class="utente-badge @(Utente.EmailConfirmed ? "utente-badge-success" : "utente-badge-secondary")">
+                @(Utente.EmailConfirmed ? "Email confermata" : "Email non confermata")
+            </span>
+            <span class="utente-badge @(Utente.PhoneNumberConfirmed ? "utente-badge-success" : "utente-badge-secondary")">
+                @(Utente.PhoneNumberConfirmed ? "Telefono confermato" : "Telefono non confermato")
+            </span>
+            <span class="utente-badge @(Utente.TwoFactorEnabled ? "utente-badge-success" : "utente-badge-secondary")">
+                Due fattori @(Utente.TwoFactorEnabled ? "attivo" : "disattivo")
+            </span>
+            @if (Bloccato)
+            {
+                <span class="utente-badge utente-badge-danger">Bloccato fino al @Utente.LockoutEnd!.Value.LocalDateTime.ToString("g")</span>
+            }
+            else if (Utente.LockoutEnabled)
+            {
+                <span class="utente-badge utente-badge-warning">Blocco abilitato</span>
+            }
+        </div>
+
+        <div class="detail-section">
+            <div class="detail-section-title">Contatti</div>
+            <div class="detail-grid">
+                <div>
+                    <div class="detail-label">Username</div>
+                    <div class="detail-value">@Utente.UserName</div>
+                </div>
+                <div>
+                    <div class="detail-label">Email</div>
+                    <div class="detail-value">@(Utente.Email ?? "—")</div>
+                </div>
+                <div>
+                    <div class="detail-label">Telefono</div>
+                    <div class="detail-value">@(Utente.PhoneNumber ?? "—")</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <div class="detail-section-title">Sicurezza</div>
+            <div class="detail-grid">
+                <div>
+                    <div class="detail-label">Tentativi falliti</div>
+                    <div class="detail-value">@Utente.AccessFailedCount</div>
+                </div>
+                <div>
+                    <div class="detail-label">Blocco fino a</div>
+                    <div class="detail-value">@(Utente.LockoutEnd?.LocalDateTime.ToString("g") ?? "—")</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <div class="detail-section-title">Riferimenti EasyPLM</div>
+            <div class="detail-grid">
+                <div>
+                    <div class="detail-label">Id EasyPLM</div>
+                    <div class="detail-value">@Utente.idEasyPLM</div>
+                </div>
+                <div>
+                    <div class="detail-label">Id Laboratorio</div>
+                    <div class="detail-value">@Utente.idLaboratorio</div>
+                </div>
+                <div>
+                    <div class="detail-label">Id Compagnia</div>
+                    <div class="detail-value">@Utente.idCompagnia</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="detail-section">
+            <div class="detail-section-title">Sistema</div>
+            <div class="detail-grid">
+                <div>
+                    <div class="detail-label">Id</div>
+                    <div class="detail-value detail-value-muted">@Utente.Id</div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public ApplicationUser? Utente { get; set; }
+
+    private string Iniziali => string.IsNullOrWhiteSpace(Utente?.UserName) ? "?" : Utente!.UserName![0].ToString().ToUpper();
+    private bool Bloccato => Utente?.LockoutEnd != null && Utente.LockoutEnd.Value > DateTimeOffset.Now;
+}

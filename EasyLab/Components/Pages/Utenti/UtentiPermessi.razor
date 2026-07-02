@@ -1,0 +1,166 @@
+@inject RoleManager<IdentityRole> RoleManager
+
+@if (Utente == null)
+{
+    <div class="d-flex align-items-center justify-content-center text-muted" style="height: 200px;">
+        <p class="mb-0">Seleziona un utente dall'elenco per gestirne i permessi.</p>
+    </div>
+}
+else
+{
+    <div class="utente-card">
+        <div class="fw-bold fs-5">Permessi di @Utente.UserName</div>
+
+        @if (loading)
+        {
+            <Loading></Loading>
+        }
+        else
+        {
+            <div class="detail-section">
+                <div class="detail-section-title">Ruoli</div>
+                <div class="d-flex align-items-end gap-2" style="max-width: 420px;">
+                    <div class="flex-grow-1">
+                        <CheckboxDropdown TItem="string"
+                                          Data="@RuoliDisponibili"
+                                          @bind-SelectedItems="RuoliSelezionati"
+                                          TextFieldSelector="@(r => r)"
+                                          NullText="Nessun ruolo"
+                                          SelectAllText="Tutti i ruoli" />
+                    </div>
+                    <DxButton Text="Salva"
+                              RenderStyle="ButtonRenderStyle.Primary"
+                              Enabled="@RuoliModificati"
+                              Click="SalvaRuoli" />
+                </div>
+                @if (!string.IsNullOrEmpty(Messaggio))
+                {
+                    <div class="mt-2 @(Errore ? "text-danger" : "text-success")" style="font-size:0.85rem;">@Messaggio</div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public ApplicationUser? Utente { get; set; }
+
+    private List<string> RuoliDisponibili = new();
+    private List<string> RuoliSelezionati = new();
+    private List<string> RuoliOriginali = new();
+    private string? _previousUtenteId;
+    private bool loading = true;
+    private string? Messaggio;
+    private bool Errore;
+
+    private bool RuoliModificati =>
+        !RuoliSelezionati.OrderBy(r => r).SequenceEqual(RuoliOriginali.OrderBy(r => r));
+
+    protected override async Task OnInitializedAsync()
+    {
+        RuoliDisponibili = await RoleManager.Roles
+            .Select(r => r.Name!)
+            .OrderBy(n => n)
+            .ToListAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Utente?.Id != _previousUtenteId)
+        {
+            _previousUtenteId = Utente?.Id;
+            await CaricaRuoli();
+        }
+    }
+
+    private async Task CaricaRuoli()
+    {
+        Messaggio = null;
+        if (Utente == null)
+        {
+            RuoliSelezionati = new();
+            RuoliOriginali = new();
+            return;
+        }
+
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            var ruoli = await UserManager.GetRolesAsync(Utente);
+            RuoliSelezionati = ruoli.ToList();
+            RuoliOriginali = ruoli.ToList();
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SalvaRuoli()
+    {
+        if (Utente == null) return;
+
+        Messaggio = null;
+        Errore = false;
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            var utente = await UserManager.FindByIdAsync(Utente.Id);
+            if (utente == null)
+            {
+                Messaggio = "Utente non trovato.";
+                Errore = true;
+                return;
+            }
+
+            // Utenti creati prima dell'introduzione di UserManager (o inseriti manualmente su DB)
+            // possono avere SecurityStamp nullo: UserManager lo richiede per qualsiasi update.
+            if (string.IsNullOrEmpty(utente.SecurityStamp))
+            {
+                await UserManager.UpdateSecurityStampAsync(utente);
+            }
+
+            var ruoliAttuali = await UserManager.GetRolesAsync(utente);
+            var daRimuovere = ruoliAttuali.Except(RuoliSelezionati).ToList();
+            var daAggiungere = RuoliSelezionati.Except(ruoliAttuali).ToList();
+
+            if (daRimuovere.Any())
+            {
+                var removeResult = await UserManager.RemoveFromRolesAsync(utente, daRimuovere);
+                if (!removeResult.Succeeded)
+                {
+                    Messaggio = string.Join(" ", removeResult.Errors.Select(err => err.Description));
+                    Errore = true;
+                    return;
+                }
+            }
+
+            if (daAggiungere.Any())
+            {
+                var addResult = await UserManager.AddToRolesAsync(utente, daAggiungere);
+                if (!addResult.Succeeded)
+                {
+                    Messaggio = string.Join(" ", addResult.Errors.Select(err => err.Description));
+                    Errore = true;
+                    return;
+                }
+            }
+
+            RuoliOriginali = RuoliSelezionati.ToList();
+            Messaggio = "Ruoli aggiornati correttamente.";
+        }
+        catch (Exception ex)
+        {
+            Messaggio = $"Si è verificato un errore durante il salvataggio: {ex.Message}";
+            Errore = true;
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+}

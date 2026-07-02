@@ -1,0 +1,318 @@
+@page "/Utenti"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Gestione Utenti</PageTitle>
+
+<div class="page-header d-flex align-items-center gap-3 mb-3">
+    <div class="page-header-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6" />
+        </svg>
+    </div>
+    <div>
+        <h3 class="page-header-title mb-0">Gestione Utenti</h3>
+        <div class="page-header-subtitle">Crea, modifica e gestisci gli accessi degli utenti EasyLab</div>
+    </div>
+</div>
+
+@if (loading)
+{
+    <Loading></Loading>
+}
+
+@if (!string.IsNullOrEmpty(ErroreMessaggio))
+{
+    <div class="alert alert-danger">@ErroreMessaggio</div>
+}
+
+<DxSplitter Height="calc(100vh - 220px)">
+    <Panes>
+        <DxSplitterPane Size="30%" MinSize="280px">
+            <DxGrid @ref="MyGrid"
+                    Data="@DataSource"
+                    KeyFieldName="Id"
+                    ShowSearchBox="true"
+                    ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                    AllowSelectRowByClick="true"
+                    PagerVisible="true"
+                    PageSize="20"
+                    CssClass="h-100"
+                    HighlightRowOnHover="true"
+                    EditMode="GridEditMode.PopupEditForm"
+                    PopupEditFormCssClass="custom-grid-popup"
+                    CustomizeEditModel="OnCustomizeEditModel"
+                    EditModelSaving="OnEditModelSaving"
+                    DataItemDeleting="OnDelete"
+                    FocusedRowEnabled="true"
+                    FocusedRowChanged="RigaSelezionataCambiata">
+                <Columns>
+                    <DxGridCommandColumn Width="110px" NewButtonVisible="true" EditButtonVisible="true" DeleteButtonVisible="true" ShowInColumnChooser="false" />
+                    <DxGridDataColumn FieldName="Id" Caption="Id" Width="220px" ReadOnly="true" Visible="false" />
+                    <DxGridDataColumn FieldName="UserName" Caption="Username" />
+                    <DxGridDataColumn FieldName="NormalizedUserName" Caption="Username Normalizzato" ReadOnly="true" Visible="false" />
+                    <DxGridDataColumn FieldName="Email" Caption="Email" />
+                    <DxGridDataColumn FieldName="NormalizedEmail" Caption="Email Normalizzata" ReadOnly="true" Visible="false" />
+                    <DxGridDataColumn FieldName="EmailConfirmed" Caption="Email Confermata" Width="130px" Visible="false" />
+                    <DxGridDataColumn FieldName="PasswordHash" Caption="Password Hash" ReadOnly="true" Visible="false">
+                        <CellDisplayTemplate Context="ctx">@(ctx.Value is null ? "" : "••••••••")</CellDisplayTemplate>
+                    </DxGridDataColumn>
+                    <DxGridDataColumn FieldName="SecurityStamp" Caption="Security Stamp" ReadOnly="true" Visible="false" />
+                    <DxGridDataColumn FieldName="ConcurrencyStamp" Caption="Concurrency Stamp" ReadOnly="true" Visible="false" />
+                    <DxGridDataColumn FieldName="PhoneNumber" Caption="Telefono" Visible="false" />
+                    <DxGridDataColumn FieldName="PhoneNumberConfirmed" Caption="Telefono Confermato" Width="150px" Visible="false" />
+                    <DxGridDataColumn FieldName="TwoFactorEnabled" Caption="Due Fattori" Width="110px" Visible="false" />
+                    <DxGridDataColumn FieldName="LockoutEnd" Caption="Blocco Fino A" Width="160px" Visible="false" />
+                    <DxGridDataColumn FieldName="LockoutEnabled" Caption="Blocco Abilitato" Width="130px" Visible="false" />
+                    <DxGridDataColumn FieldName="AccessFailedCount" Caption="Tentativi Falliti" Width="130px" Visible="false" />
+                    <DxGridDataColumn FieldName="idEasyPLM" Caption="Id EasyPLM" Width="110px" Visible="false" />
+                    <DxGridDataColumn FieldName="idLaboratorio" Caption="Id Laboratorio" Width="120px" />
+                    <DxGridDataColumn FieldName="idCompagnia" Caption="Id Compagnia" Width="120px" />
+                </Columns>
+                <EditFormTemplate Context="editContext">
+                    @{
+                        var model = (ApplicationUser)editContext.EditModel;
+                        var isNew = editContext.DataItem == null;
+                    }
+                    <DxFormLayout>
+                        <DxFormLayoutItem Caption="Id" ColSpanMd="6">
+                            <DxTextBox @bind-Text="model.Id" ReadOnly="true" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Username" ColSpanMd="6">
+                            <DxTextBox @bind-Text="model.UserName" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Email" ColSpanMd="6">
+                            <DxTextBox @bind-Text="model.Email" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Telefono" ColSpanMd="6">
+                            <DxTextBox @bind-Text="model.PhoneNumber" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="@(isNew ? "Password" : "Nuova Password (lascia vuoto per non modificarla)")" ColSpanMd="6">
+                            <DxTextBox @bind-Text="model.Password" Password="true" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Email Confermata" ColSpanMd="4">
+                            <DxCheckBox @bind-Checked="model.EmailConfirmed" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Telefono Confermato" ColSpanMd="4">
+                            <DxCheckBox @bind-Checked="model.PhoneNumberConfirmed" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Due Fattori" ColSpanMd="4">
+                            <DxCheckBox @bind-Checked="model.TwoFactorEnabled" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Blocco Abilitato" ColSpanMd="4">
+                            <DxCheckBox @bind-Checked="model.LockoutEnabled" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Blocco Fino A" ColSpanMd="4">
+                            <DxDateEdit Date="@model.LockoutEnd?.LocalDateTime"
+                                        DateChanged="@((DateTime? v) => model.LockoutEnd = v == null ? null : new DateTimeOffset(v.Value))"
+                                        ValidationEnabled="false"
+                                        NullText="—" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Tentativi Falliti" ColSpanMd="4">
+                            <DxSpinEdit @bind-Value="model.AccessFailedCount" ReadOnly="true" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Id EasyPLM" ColSpanMd="4">
+                            <DxSpinEdit @bind-Value="model.idEasyPLM" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Id Laboratorio" ColSpanMd="4">
+                            <DxSpinEdit @bind-Value="model.idLaboratorio" />
+                        </DxFormLayoutItem>
+                        <DxFormLayoutItem Caption="Id Compagnia" ColSpanMd="4">
+                        <DxSpinEdit @bind-Value="model.idCompagnia" />
+                    </DxFormLayoutItem>
+                </DxFormLayout>
+            </EditFormTemplate>
+            </DxGrid>
+        </DxSplitterPane>
+        <DxSplitterPane>
+            <div class="d-flex flex-column h-100">
+                <div class="utenti-tab-nav flex-shrink-0">
+                    <button class="@(ActiveTab == "dettagli" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveTab = "dettagli")">Dettagli</button>
+                    <button class="@(ActiveTab == "permessi" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveTab = "permessi")">Permessi</button>
+                    <button class="@(ActiveTab == "database" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveTab = "database")">Database</button>
+                </div>
+                <div class="p-3" style="flex: 1; min-height: 0; overflow-y: auto;">
+                    @if (ActiveTab == "permessi")
+                    {
+                        <UtentiPermessi Utente="@UtenteSelezionato" />
+                    }
+                    else if (ActiveTab == "database")
+                    {
+                        <UtentiDatabase Utente="@UtenteSelezionato" />
+                    }
+                    else
+                    {
+                        <UtentiDettagli Utente="@UtenteSelezionato" />
+                    }
+                </div>
+            </div>
+        </DxSplitterPane>
+    </Panes>
+</DxSplitter>
+
+@code {
+    private DxGrid MyGrid = default!;
+    private List<ApplicationUser>? DataSource;
+    private ApplicationUser? UtenteSelezionato;
+    private string ActiveTab = "dettagli";
+    private bool loading = true;
+    private string? ErroreMessaggio;
+
+    private void RigaSelezionataCambiata(GridFocusedRowChangedEventArgs e)
+    {
+        UtenteSelezionato = e.DataItem as ApplicationUser;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await CaricaDati();
+        }
+    }
+
+    private async Task CaricaDati()
+    {
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            DataSource = await DbContext.Users.AsNoTracking().ToListAsync();
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OnCustomizeEditModel(GridCustomizeEditModelEventArgs e)
+    {
+        if (e.IsNew)
+        {
+            e.EditModel = new ApplicationUser
+            {
+                UserName = "",
+                Email = "",
+                PhoneNumber = "",
+                LockoutEnabled = true,
+                idEasyPLM = 0,
+                idLaboratorio = 0,
+                idCompagnia = 0
+            };
+        }
+    }
+
+    private async Task OnEditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        var model = (ApplicationUser)e.EditModel;
+        ErroreMessaggio = null;
+
+        if (string.IsNullOrWhiteSpace(model.UserName))
+        {
+            ErroreMessaggio = "Lo username è obbligatorio.";
+            e.Cancel = true;
+            return;
+        }
+
+        if (e.IsNew && string.IsNullOrWhiteSpace(model.Password))
+        {
+            ErroreMessaggio = "La password è obbligatoria per un nuovo utente.";
+            e.Cancel = true;
+            return;
+        }
+
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            IdentityResult result;
+            if (e.IsNew)
+            {
+                result = await UserManager.CreateAsync(model, model.Password!);
+            }
+            else
+            {
+                var utente = await UserManager.FindByIdAsync(model.Id);
+                if (utente == null)
+                {
+                    ErroreMessaggio = "Utente non trovato.";
+                    e.Cancel = true;
+                    return;
+                }
+
+                // Utenti creati prima dell'introduzione di UserManager (o inseriti manualmente su DB)
+                // possono avere SecurityStamp nullo: UserManager lo richiede per qualsiasi update.
+                if (string.IsNullOrEmpty(utente.SecurityStamp))
+                {
+                    await UserManager.UpdateSecurityStampAsync(utente);
+                }
+
+                utente.UserName = model.UserName;
+                utente.Email = model.Email;
+                utente.PhoneNumber = model.PhoneNumber;
+                utente.EmailConfirmed = model.EmailConfirmed;
+                utente.PhoneNumberConfirmed = model.PhoneNumberConfirmed;
+                utente.TwoFactorEnabled = model.TwoFactorEnabled;
+                utente.LockoutEnabled = model.LockoutEnabled;
+                utente.LockoutEnd = model.LockoutEnd;
+                utente.idEasyPLM = model.idEasyPLM;
+                utente.idLaboratorio = model.idLaboratorio;
+                utente.idCompagnia = model.idCompagnia;
+
+                result = await UserManager.UpdateAsync(utente);
+
+                if (result.Succeeded && !string.IsNullOrWhiteSpace(model.Password))
+                {
+                    await UserManager.RemovePasswordAsync(utente);
+                    result = await UserManager.AddPasswordAsync(utente, model.Password);
+                }
+            }
+
+            if (!result.Succeeded)
+            {
+                ErroreMessaggio = string.Join(" ", result.Errors.Select(err => err.Description));
+                e.Cancel = true;
+                return;
+            }
+
+            await CaricaDati();
+        }
+        catch (Exception ex)
+        {
+            ErroreMessaggio = $"Si è verificato un errore durante il salvataggio: {ex.Message}";
+            e.Cancel = true;
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnDelete(GridDataItemDeletingEventArgs e)
+    {
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            var model = (ApplicationUser)e.DataItem;
+            var utente = await UserManager.FindByIdAsync(model.Id);
+            if (utente != null)
+            {
+                await UserManager.DeleteAsync(utente);
+            }
+            await CaricaDati();
+        }
+        catch (Exception ex)
+        {
+            ErroreMessaggio = $"Si è verificato un errore durante l'eliminazione: {ex.Message}";
+            e.Cancel = true;
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+}
