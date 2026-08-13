@@ -1,0 +1,47 @@
+.articoli-page {
+    padding-bottom: 60px;
+    width: 1px;
+    min-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+.articoli-filtri {
+    background: #f8f9fa;
+}
+
+.detail-card {
+    background: #ffffff;
+    border-left: 4px solid #ff8c00;
+}
+
+.art-tab-nav {
+    display: flex;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #dee2e6;
+    background-color: #fff;
+}
+
+.art-tab-btn {
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: none;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    color: #6c757d;
+    cursor: pointer;
+    margin-bottom: -1px;
+    white-space: nowrap;
+    transition: color 0.15s;
+}
+
+    .art-tab-btn:hover {
+        color: #495057;
+        background-color: #f8f9fa;
+    }
+
+.art-tab-active {
+    color: #ff8c00;
+    border-bottom-color: #ff8c00;
+    font-weight: 500;
+}

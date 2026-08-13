@@ -1,0 +1,246 @@
+@using EasyLab.Models
+@using Microsoft.EntityFrameworkCore
+
+@if (CommessaSelezionata != null)
+{
+    <div class="commessa-dettaglio-card">
+        <div class="commessa-immagine-wrapper">
+            @if (ImmagineBase64 != null)
+            {
+                <img src="data:image/png;base64,@ImmagineBase64" alt="Immagine modello" />
+            }
+            else
+            {
+                <div class="no-image-placeholder">
+                    <span>N/D</span>
+                </div>
+            }
+        </div>
+
+        <div class="commessa-info">
+            <div class="info-grid">
+                <div class="info-field">
+                    <span class="info-label">Contatto</span>
+                    <span class="info-value">@CommessaSelezionata.Contatto</span>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Tipo</span>
+                    <span class="info-value">@CommessaSelezionata.Tipo</span>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Mod</span>
+                    <span class="info-value">@ModCod</span>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Comm.</span>
+                    <span class="info-value">@CommessaSelezionata.NrScheda</span>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Data</span>
+                    <span class="info-value">@CommessaSelezionata.DataComm?.ToString("dd/MM/yyyy")</span>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-field">
+                    <span class="info-label">Parte</span>
+                    <span class="info-value">@CommessaSelezionata.Parte</span>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Descrizione</span>
+                    <span class="info-value">@CommessaSelezionata.ParteDesc</span>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Data Ric. Magazzino</span>
+                    <span class="info-value">@CommessaSelezionata.DataRicRientro?.ToString("dd/MM/yyyy")</span>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Tot. Capi</span>
+                    <span class="info-value">@CommessaSelezionata.TotCapi</span>
+                </div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-field">
+                    <span class="info-label">Fase</span>
+                    <span class="info-value">@CommessaSelezionata.FaseDesc</span>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Fornitore</span>
+                    <span class="info-value">@CommessaSelezionata.Forn</span>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Data Conf.</span>
+                    <span class="info-value">@CommessaSelezionata.DataConfRientro?.ToString("dd/MM/yyyy")</span>
+                </div>
+                <div class="info-field">
+                    <span class="info-label">Conf.</span>
+                    <span class="info-value @(CommessaSelezionata.CkConf == true ? "ck-si" : "ck-no")">
+                        @(CommessaSelezionata.CkConf == true ? "✓" : "✗")
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex align-items-center justify-content-center text-muted" style="height: 120px;">
+        <p class="mb-0">Seleziona una commessa dall'elenco per vedere il dettaglio.</p>
+    </div>
+}
+
+@if (loadingRighe)
+{
+    <Loading></Loading>
+}
+else if (RigheSaldo != null)
+{
+    <DxGrid Data="@RigheSaldo"
+            KeyFieldName="Id"
+            ShowSearchBox="true"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            PagerVisible="false"
+            CssClass="mt-2"
+            HighlightRowOnHover="true">
+        <Columns>
+            <DxGridBandColumn Caption="Chiave">
+                <Columns>
+                    <DxGridDataColumn FieldName="ParteCol" Caption="Parte Col." Width="110px" />
+                    <DxGridDataColumn FieldName="ParteColDesc" Caption="Desc" Width="150px" />
+                    <DxGridDataColumn FieldName="ParteMis" Caption="Mis" Width="80px" />
+                    <DxGridDataColumn FieldName="ImgModCol" Caption="Img" Width="70px">
+                        <CellDisplayTemplate Context="ctx">
+                            @{
+                                var bytes = (byte[]?)ctx.Value;
+                            }
+                            @if (bytes != null)
+                            {
+                                <img src="data:image/png;base64,@Convert.ToBase64String(bytes)" style="height:32px;width:32px;object-fit:cover;border-radius:4px;" />
+                            }
+                        </CellDisplayTemplate>
+                    </DxGridDataColumn>
+                </Columns>
+            </DxGridBandColumn>
+            <DxGridBandColumn Caption="Lanciato Commessa">
+                <Columns>
+                    <DxGridDataColumn FieldName="Qta" Caption="Qta" Width="70px" />
+                    <DxGridDataColumn FieldName="TotNr" Caption="Tot" Width="70px" />
+                    @for (var i = 1; i <= 12; i++)
+                    {
+                        var idx = i;
+                        <DxGridDataColumn FieldName="@($"Nr{idx}")" Caption="@($"Nr{idx}")" Width="60px" />
+                    }
+                </Columns>
+            </DxGridBandColumn>
+            <DxGridBandColumn Caption="Da Ricevere">
+                <Columns>
+                    <DxGridDataColumn FieldName="QtaDr" Caption="Qta" Width="70px" />
+                    @for (var i = 1; i <= 12; i++)
+                    {
+                        var idx = i;
+                        <DxGridDataColumn FieldName="@($"Dr{idx}")" Caption="@($"Dr{idx}")" Width="60px" />
+                    }
+                </Columns>
+            </DxGridBandColumn>
+        </Columns>
+    </DxGrid>
+}
+
+@if (!loadingRighe && RigheFasi != null)
+{
+    <DxGrid Data="@RigheFasi"
+            KeyFieldName="IdFase"
+            ShowSearchBox="true"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            PagerVisible="false"
+            CssClass="mt-2"
+            HighlightRowOnHover="true">
+        <Columns>
+            <DxGridDataColumn FieldName="Fase" Caption="Fase" Width="150px" />
+            <DxGridDataColumn FieldName="Forn" Caption="Forn." Width="150px" />
+            <DxGridDataColumn FieldName="TotCar" Caption="Car" Width="80px" />
+            <DxGridDataColumn FieldName="TotScr" Caption="Scr" Width="80px" />
+            <DxGridDataColumn FieldName="TotDiff" Caption="Diff" Width="80px" />
+            <DxGridDataColumn FieldName="CkOpen" Caption="Open" Width="70px">
+                <CellDisplayTemplate Context="ctx">
+                    <span class="@((short?)ctx.Value == 1 ? "ck-si" : "ck-no")">@((short?)ctx.Value == 1 ? "✓" : "✗")</span>
+                </CellDisplayTemplate>
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="CkInBol" Caption="Ck In Bol" Width="80px">
+                <CellDisplayTemplate Context="ctx">
+                    <span class="@((bool?)ctx.Value == true ? "ck-si" : "ck-no")">@((bool?)ctx.Value == true ? "✓" : "✗")</span>
+                </CellDisplayTemplate>
+            </DxGridDataColumn>
+            <DxGridDataColumn FieldName="Tempo" Caption="Tempo" Width="80px" />
+            <DxGridDataColumn FieldName="TraspGg" Caption="Trasp. GG" Width="90px" />
+        </Columns>
+    </DxGrid>
+}
+
+@code {
+    [Parameter] public VProduzGeneCommesseTesta2? CommessaSelezionata { get; set; }
+
+    private string? ModCod;
+    private string? ImmagineBase64;
+    private List<ProduzGeneCommesseSaldi2Riga>? RigheSaldo;
+    private List<MovimentiClvCommModFasiRiga>? RigheFasi;
+    private bool loadingRighe;
+    private int? _idCommessaCaricata;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (CommessaSelezionata == null)
+        {
+            _idCommessaCaricata = null;
+            ModCod = null;
+            ImmagineBase64 = null;
+            RigheSaldo = null;
+            return;
+        }
+
+        if (_idCommessaCaricata == CommessaSelezionata.Id)
+        {
+            return;
+        }
+
+        _idCommessaCaricata = CommessaSelezionata.Id;
+        ModCod = null;
+        ImmagineBase64 = null;
+        RigheSaldo = null;
+        RigheFasi = null;
+        loadingRighe = true;
+
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+
+            var modello = await context.BasiModellis.AsNoTracking()
+                .Where(m => m.Id == CommessaSelezionata.IdMod)
+                .Select(m => new { m.Mdl, m.Nome })
+                .FirstOrDefaultAsync();
+            ModCod = modello == null ? CommessaSelezionata.IdMod.ToString() : (string.IsNullOrWhiteSpace(modello.Nome) ? modello.Mdl : modello.Nome);
+
+            var immagine = await context.Database
+                .SqlQuery<byte[]?>($"SELECT dbo.GET_Immagine_idMod1({CommessaSelezionata.IdMod}) AS Value")
+                .FirstOrDefaultAsync();
+            if (immagine != null)
+            {
+                ImmagineBase64 = Convert.ToBase64String(immagine);
+            }
+
+            var idComm = CommessaSelezionata.Id;
+            RigheSaldo = await context.ProduzGeneCommesseSaldi2Righe
+                .FromSqlInterpolated($"EXEC dbo.SP_V_Produz_GeneCommesseSaldi2_Select_idComm @idComm={idComm}")
+                .ToListAsync();
+
+            RigheFasi = await context.MovimentiClvCommModFasiRighe
+                .FromSqlInterpolated($"EXEC dbo.SP_V_MovimentiCLV_SelectDistCommModFasi_idComm @idComm={idComm}")
+                .ToListAsync();
+        }
+        finally
+        {
+            loadingRighe = false;
+        }
+    }
+}

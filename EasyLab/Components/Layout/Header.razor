@@ -26,6 +26,12 @@
 			</button>
 			<span>DiBa</span>
 		</div> *@
+        <div @onclick="PianficazioneLanci">
+            <button>
+                <img src="/images/cellsautoheight_32x32.png" alt="Pianficazione Lanci" />
+            </button>
+            <span>Pianficazione Lanci</span>
+        </div>
         <div @onclick="Utenti">
             <button>
                 <img src="/images/UteSWG.svg" alt="Utenti" />
@@ -127,6 +133,18 @@
         else
         {
             NavManager.NavigateTo("/Prodotti");
+        }
+    }
+    
+    private async Task PianficazioneLanci(MouseEventArgs e)
+    {
+        if (e.ShiftKey)
+        {
+            await JSRuntime.InvokeVoidAsync("open", "/PianficazioneLanci", "_blank");
+        }
+        else
+        {
+            NavManager.NavigateTo("/PianficazioneLanci");
         }
     }
 

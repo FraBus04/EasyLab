@@ -2219,6 +2219,10 @@ public partial class SeaseTstContext : DbContext
 
     public virtual DbSet<VProduzGeneCommesseSaldi2> VProduzGeneCommesseSaldi2s { get; set; }
 
+    public virtual DbSet<ProduzGeneCommesseSaldi2Riga> ProduzGeneCommesseSaldi2Righe { get; set; }
+
+    public virtual DbSet<MovimentiClvCommModFasiRiga> MovimentiClvCommModFasiRighe { get; set; }
+
     public virtual DbSet<VProduzGeneCommesseTesta2> VProduzGeneCommesseTesta2s { get; set; }
 
     public virtual DbSet<VProduzGeneCommesseTestaAvanzFasi> VProduzGeneCommesseTestaAvanzFasis { get; set; }
@@ -64034,6 +64038,39 @@ public partial class SeaseTstContext : DbContext
                 .IsUnicode(false)
                 .IsFixedLength()
                 .HasColumnName("TIPO");
+        });
+
+        modelBuilder.Entity<ProduzGeneCommesseSaldi2Riga>(entity =>
+        {
+            entity.HasNoKey();
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.IdComm).HasColumnName("idComm");
+            entity.Property(e => e.IdContatto).HasColumnName("idContatto");
+            entity.Property(e => e.ACdAll).HasColumnName("A_cdALL");
+            entity.Property(e => e.ACdAllcol).HasColumnName("A_cdALLCol");
+            entity.Property(e => e.ACdAllmis).HasColumnName("A_cdALLMis");
+            entity.Property(e => e.ImgModCol).HasColumnName("imgModCol");
+        });
+
+        modelBuilder.Entity<MovimentiClvCommModFasiRiga>(entity =>
+        {
+            entity.HasNoKey();
+
+            entity.Property(e => e.IdComm).HasColumnName("idComm");
+            entity.Property(e => e.CdAll).HasColumnName("cdALL");
+            entity.Property(e => e.IdFase).HasColumnName("idFase");
+            entity.Property(e => e.OrdPm).HasColumnName("OrdPM");
+            entity.Property(e => e.TotCar).HasColumnName("TotCAR");
+            entity.Property(e => e.TotScr).HasColumnName("TotSCR");
+            entity.Property(e => e.TotDiff).HasColumnName("TotDIFF");
+            entity.Property(e => e.CkOpen).HasColumnName("ckOpen");
+            entity.Property(e => e.CkInBol).HasColumnName("ckInBol");
+            entity.Property(e => e.TraspGg).HasColumnName("TraspGG");
+            entity.Property(e => e.IdForn).HasColumnName("idForn");
+            entity.Property(e => e.IdContatto).HasColumnName("idContatto");
+            entity.Property(e => e.PercFase).HasColumnName("PercFase");
+            entity.Property(e => e.CkConfRientro).HasColumnName("ckConfRientro");
         });
 
         modelBuilder.Entity<VProduzGeneCommesseTesta2>(entity =>

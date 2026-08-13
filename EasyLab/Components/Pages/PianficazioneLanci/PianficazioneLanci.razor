@@ -1,0 +1,406 @@
+@page "/PianficazioneLanci"
+@using EasyLab.Models
+@using Microsoft.EntityFrameworkCore
+@rendermode InteractiveServer
+@inject IDbContextFactory<SeaseTstContext> DbFactory
+
+<PageTitle>Pianificazione Lanci</PageTitle>
+
+<div class="articoli-page">
+
+@if (loading)
+{
+    <Loading></Loading>
+}
+
+<div class="articoli-toolbar d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="@(() => MostraFiltri = !MostraFiltri)">
+        @(MostraFiltri ? "Nascondi filtri" : "Mostra filtri")
+    </button>
+    <div class="d-flex align-items-end gap-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="@(() => myColumnChooser.Visible = !myColumnChooser.Visible)">Colonne</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ShowListOnly">Lista</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ShowSplitView">Split</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ShowDetailsOnly">Dettaglio</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="ExportToExcel">Esporta Excel</button>
+    </div>
+</div>
+
+@if (MostraFiltri)
+{
+    <div class="articoli-filtri p-2 mb-2 border rounded d-flex flex-wrap gap-3 align-items-end">
+        <div style="min-width:220px;">
+            <label class="form-label small mb-0">Brand</label>
+            <CheckboxDropdown TItem="Contatti"
+                              Data="@Brands"
+                              @bind-SelectedItems="BrandSelezionati"
+                              TextFieldSelector="@(b => b.Societa1)"
+                              NullText="Tutti i brand"
+                              SelectAllText="Tutti i brand" />
+        </div>
+        <div style="min-width:220px;">
+            <label class="form-label small mb-0">Stagione</label>
+            <CheckboxDropdown TItem="TabStagioni"
+                              Data="@Stagioni"
+                              @bind-SelectedItems="StagioneSelezionati"
+                              TextFieldSelector="@(s => s.Cod)"
+                              NullText="Tutte le stagioni"
+                              SelectAllText="Tutte le stagioni" />
+        </div>
+        <div style="min-width:220px;">
+            <label class="form-label small mb-0">TipoOrdine</label>
+            <CheckboxDropdown TItem="TabTipoOrdineCl"
+                              Data="@TipiOrdine"
+                              @bind-SelectedItems="TipiOrdineSelezionati"
+                              TextFieldSelector="@(s => s.Cod)"
+                              NullText="Tutti i tipi"
+                              SelectAllText="Tutti i tipi" />
+        </div>
+        <div style="min-width:220px;">
+            <label class="form-label small mb-0">Tipo</label>
+            <CheckboxDropdown TItem="string"
+                              Data="@TipiDisponibili"
+                              @bind-SelectedItems="TipiSelezionati"
+                              TextFieldSelector="@GetTipoLabel"
+                              NullText="Nessun tipo"
+                              SelectAllText="Tutti i tipi" />
+        </div>
+        <DxButton Text="Cerca" RenderStyle="ButtonRenderStyle.Primary" Click="Cerca" />
+    </div>
+}
+
+<DxSplitter Height="calc(100vh - 300px)">
+    <Panes>
+        <DxSplitterPane Size="60%" MinSize="300px" @bind-Collapsed="@ListPaneCollapsed">
+            <DxGrid @ref="MyGrid"
+                    Data="@DataSource"
+                    KeyFieldName="Id"
+                    ShowSearchBox="true"
+                    ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                    AllowSelectRowByClick="true"
+                    PagerVisible="false"
+                    VirtualScrollingEnabled="true"
+                    CssClass="h-100"
+                    HighlightRowOnHover="true"
+                    FocusedRowEnabled="true"
+                    FocusedRowChanged="RigaSelezionataCambiata">
+                <Columns>
+                    <DxGridDataColumn FieldName="NrScheda" Caption="Com." Width="90px" MinWidth="80" />
+                    <DxGridDataColumn FieldName="Parte" Caption="Parte" Width="120px" MinWidth="100" />
+                    <DxGridDataColumn FieldName="TotCapi" Caption="Tot. Capi" Width="100px" MinWidth="90" />
+                    <DxGridDataColumn FieldName="TotCapiFin" Caption="Capi Rientrati" Width="120px" MinWidth="100" />
+                    <DxGridDataColumn FieldName="PercTotCapiFin" Caption="%" Width="80px" MinWidth="70" DisplayFormat="N0" />
+                    <DxGridDataColumn FieldName="ParteDesc" Caption="Descrizione" Width="220px" MinWidth="160" />
+                    <DxGridDataColumn FieldName="Forn" Caption="Fornitore" Width="180px" MinWidth="140" />
+                    <DxGridDataColumn FieldName="LabDesc" Caption="Laboratorio" Width="200px" MinWidth="150" />
+                    <DxGridDataColumn FieldName="FaseDesc" Caption="Fase" Width="160px" MinWidth="130" />
+                    <DxGridDataColumn FieldName="CkInvMatLogist" Caption="Log." Width="70px" MinWidth="60" />
+                    <DxGridDataColumn FieldName="CdMag" Caption="Mag." Width="90px" MinWidth="80" />
+                    <DxGridDataColumn FieldName="TotQta" Caption="Tot. Qta" Width="100px" MinWidth="90" />
+                    <DxGridDataColumn FieldName="PercTotQtaFin" Caption="%" Width="80px" MinWidth="70" DisplayFormat="N0" />
+                    <DxGridDataColumn FieldName="DataRicRientro" Caption="Data Richiesta" Width="140px" MinWidth="120" />
+                    <DxGridDataColumn FieldName="DataConfRientro" Caption="Data Confermata" Width="150px" MinWidth="120" />
+                    <DxGridDataColumn FieldName="CkConf" Caption="Conf." Width="70px" MinWidth="60" />
+                    <DxGridDataColumn FieldName="StatoDesc" Caption="Stato" Width="130px" MinWidth="110" />
+                    <DxGridDataColumn FieldName="Nota" Caption="Nota" Width="220px" MinWidth="160" />
+                    <DxGridDataColumn FieldName="Prezzo" Caption="Prezzo" Width="110px" MinWidth="90" />
+
+                    <DxGridDataColumn FieldName="Tipo" Caption="Tipo" Visible="false" />
+                    <DxGridDataColumn FieldName="OrdTipo" Caption="Tipo Ordine" Visible="false" />
+                    <DxGridDataColumn FieldName="OrdTipoDesc" Caption="Descrizione Tipo Ordine" Visible="false" />
+                    <DxGridDataColumn FieldName="Contatto" Caption="Brand" Visible="false" />
+                    <DxGridDataColumn FieldName="StagCod" Caption="Stagione" Visible="false" />
+                    <DxGridDataColumn FieldName="ACdAll" Caption="Cod. Allocazione" Visible="false" />
+                    <DxGridDataColumn FieldName="Saldo" Caption="Saldo" Visible="false" />
+                    <DxGridDataColumn FieldName="StatoApp" Caption="Stato Approvazione" Visible="false" />
+                    <DxGridDataColumn FieldName="DataApp" Caption="Data Approvazione" Visible="false" />
+                    <DxGridDataColumn FieldName="FaseCod" Caption="Cod. Fase" Visible="false" />
+                    <DxGridDataColumn FieldName="CdValuta" Caption="Valuta" Visible="false" />
+                    <DxGridDataColumn FieldName="CkExp" Caption="Ck Esportato" Visible="false" />
+                    <DxGridDataColumn FieldName="StatoExp" Caption="Stato Esportazione" Visible="false" />
+                    <DxGridDataColumn FieldName="DataExp" Caption="Data Esportazione" Visible="false" />
+                    <DxGridDataColumn FieldName="FornDest" Caption="Fornitore Destinazione" Visible="false" />
+                    <DxGridDataColumn FieldName="TraspCura" Caption="Trasportatore Cura" Visible="false" />
+                    <DxGridDataColumn FieldName="Vettore" Caption="Vettore" Visible="false" />
+                    <DxGridDataColumn FieldName="DataComm" Caption="Data Commessa" Visible="false" />
+                    <DxGridDataColumn FieldName="Po" Caption="PO" Visible="false" />
+                    <DxGridDataColumn FieldName="Pagamento" Caption="Pagamento" Visible="false" />
+                    <DxGridDataColumn FieldName="DataConsDa" Caption="Data Consegna Da" Visible="false" />
+                    <DxGridDataColumn FieldName="DataConsA" Caption="Data Consegna A" Visible="false" />
+                    <DxGridDataColumn FieldName="TotCapiPersi" Caption="Tot. Capi Persi" Visible="false" />
+                    <DxGridDataColumn FieldName="Lotto" Caption="Lotto" Visible="false" />
+                    <DxGridDataColumn FieldName="RitX" Caption="Rit. X" Visible="false" />
+                    <DxGridDataColumn FieldName="RitY" Caption="Rit. Y" Visible="false" />
+                    <DxGridDataColumn FieldName="TotQtaFin" Caption="Tot. Qta Rientrata" Visible="false" />
+                    <DxGridDataColumn FieldName="Ragg1Mod" Caption="Raggruppamento 1" Visible="false" />
+                    <DxGridDataColumn FieldName="Ragg2Mod" Caption="Raggruppamento 2" Visible="false" />
+                    <DxGridDataColumn FieldName="NrAllegati" Caption="Nr. Allegati" Visible="false" />
+                </Columns>
+                <TotalSummary>
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="Id" FooterColumnName="ParteDesc" />
+                </TotalSummary>
+            </DxGrid>
+        </DxSplitterPane>
+        <DxSplitterPane @bind-Collapsed="@DetailsPaneCollapsed">
+                <div class="d-flex flex-column" style="height: 100%;">
+                    @if (CommessaSelezionata != null)
+                    {
+                    @if (MostraDettagli)
+                    {
+                        var bytes = Brands.FirstOrDefault(b => b.Id == CommessaSelezionata.IdContatto)?.Immagine;
+                        if (bytes != null)
+                        {
+                            Base64 = Convert.ToBase64String(bytes);
+                        }
+
+                        <div class="modern-article-header p-3 rounded shadow-sm d-flex align-items-center flex-shrink-0 gap-2">
+
+                                <div class="dropdown-actions d-flex gap-3">
+                                        <div class="header-btn-container" title="Reports">
+                                        <DxMenu CssClass="modern-menu" Title="">
+                                            <Items>
+                                                <DxMenuItem CssClass="border-0">
+                                                    <TextTemplate>
+                                                            <img src="images/print_32x323.png" class="menu-icon-img" alt="Reports" />
+                                                    </TextTemplate>
+                                                    <Items>
+                                                        <DxMenuItem Text="Stampa" IconCssClass="oi oi-print text-primary" />
+                                                        <DxMenuItem Text="Scheda Tecnica" IconCssClass="oi oi-file text-info" />
+                                                        <DxMenuItem Text="Esporta in Excel" IconCssClass="oi oi-spreadsheet text-success" Click="ExportToExcel" />
+                                                    </Items>
+                                                </DxMenuItem>
+                                            </Items>
+                                        </DxMenu>
+                                    </div>
+                                </div>
+                            </div>
+                    }
+                else
+                {
+                    <button type="button" class="btn btn-sm d-flex align-items-center gap-1 mb-2 align-self-start"
+                            style="background-color:#ff8c00;color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;opacity:0.85;"
+                            @onclick="ShowDetails">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
+                        </svg>
+                        Dettagli
+                    </button>
+                }
+                }
+                    <div class="detail-tabs-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
+                        <div class="art-tab-nav flex-shrink-0">
+                            <button class="@(ActiveTab == "ContoLavoro" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "ContoLavoro")">Conto Lavoro</button>
+                            <button class="@(ActiveTab == "BuonoPrelievo" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "BuonoPrelievo")">Gestione Buono di Prelievo (Commessa)</button>
+                            <button class="@(ActiveTab == "ElencoOrdini" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "ElencoOrdini")">Elenco Ordini</button>
+                            <button class="@(ActiveTab == "ReportCommessa" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "ReportCommessa")">Report (Commessa)</button>
+                            <button class="@(ActiveTab == "ReportDiBa" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "ReportDiBa")">Report (Commessa/DiBa)</button>
+                        </div>
+                        <div class="p-2" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;">
+                            @if (ActiveTab == "ContoLavoro")
+                            {
+                                <PianficazioneLanciContoLavoro CommessaSelezionata="@CommessaSelezionata"></PianficazioneLanciContoLavoro>
+                            }
+                            else if (ActiveTab == "BuonoPrelievo")
+                            {
+                                <PianficazioneLanciBuonoPrelievo CommessaSelezionata="@CommessaSelezionata"></PianficazioneLanciBuonoPrelievo>
+                            }
+                            else if (ActiveTab == "ElencoOrdini")
+                            {
+                                <PianficazioneLanciElencoOrdini CommessaSelezionata="@CommessaSelezionata"></PianficazioneLanciElencoOrdini>
+                            }
+                            else if (ActiveTab == "ReportCommessa")
+                            {
+                                <PianficazioneLanciReportCommessa CommessaSelezionata="@CommessaSelezionata"></PianficazioneLanciReportCommessa>
+                            }
+                            else if (ActiveTab == "ReportDiBa")
+                            {
+                                <PianficazioneLanciReportCommessaDiBa CommessaSelezionata="@CommessaSelezionata"></PianficazioneLanciReportCommessaDiBa>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </DxSplitterPane>
+    </Panes>
+</DxSplitter>
+
+<CustomColumnChooser @ref="myColumnChooser"
+                     dxGrid="MyGrid"
+                     Columns="@(MyGrid?.GetColumns().Where(c => c is DxGridDataColumn).ToList() ?? new())"
+                     StaticColumns="@(MyGrid?.GetColumns().Where(c => c is DxGridCommandColumn).ToList() ?? new())"
+                     SelectedColumns="@(MyGrid?.GetVisibleColumns().Where(c => c is DxGridDataColumn).ToList() ?? new())" />
+
+<DxPopup @bind-Visible="_dialogVisible"
+         CloseOnOutsideClick="false"
+         ShowCloseButton="false"
+         ShowFooter="true"
+         HeaderText="@_dialogTitle"
+         Width="420px"
+         Height="auto">
+    <BodyContentTemplate>
+        <div style="white-space: pre-line; padding: 4px 0;">@_dialogMessage</div>
+    </BodyContentTemplate>
+    <FooterContentTemplate>
+        @foreach (var btn in _dialogButtons)
+        {
+            var b = btn;
+            <DxButton Text="@b.Label" RenderStyle="@b.RenderStyle" Click="() => OnDialogButtonClick(b.Value)" />
+        }
+    </FooterContentTemplate>
+</DxPopup>
+
+</div>
+
+@code {
+    private DxGrid MyGrid = default!;
+    private List<VProduzGeneCommesseTesta2>? DataSource;
+    private bool loading = true;
+    private bool MostraFiltri = true;
+    private CustomColumnChooser myColumnChooser = default!;
+    private bool ListPaneCollapsed = false;
+    private bool DetailsPaneCollapsed = false;
+
+    private bool _dialogVisible;
+    private string _dialogTitle = "";
+    private string _dialogMessage = "";
+    private List<(string Label, string Value, ButtonRenderStyle RenderStyle)> _dialogButtons = new();
+
+    private VProduzGeneCommesseTesta2? CommessaSelezionata;
+    private string ActiveTab = "ContoLavoro";
+    private bool MostraDettagli = true;
+    private string? Base64;
+
+    private List<Contatti> Brands = new();
+    private List<TabStagioni> Stagioni = new();
+    private List<TabTipoOrdineCl> TipiOrdine = new();
+    private static readonly List<string> TipiDisponibili = new() { "PR", "MP", "SM" };
+
+    private List<Contatti> BrandSelezionati = new();
+    private List<TabStagioni> StagioneSelezionati = new();
+    private List<TabTipoOrdineCl> TipiOrdineSelezionati = new();
+    private List<string> TipiSelezionati = new() { "PR", "MP", "SM" };
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            loading = true;
+            StateHasChanged();
+            try
+            {
+                using var context = await DbFactory.CreateDbContextAsync();
+                Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
+                Stagioni = await context.TabStagionis.AsNoTracking().Where(x => x.Stato == "A").OrderByDescending(s => s.OrdPm).ToListAsync();
+                TipiOrdine = await context.TabTipoOrdineCls.AsNoTracking().OrderBy(x => x.OrdPm).ToListAsync();
+                BrandSelezionati = Brands.ToList();
+                StagioneSelezionati = Stagioni.ToList();
+                TipiOrdineSelezionati = TipiOrdine.ToList();
+            }
+            finally
+            {
+                loading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task Cerca()
+    {
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            await CaricaDati();
+        }
+        catch (Exception ex)
+        {
+            await ShowDialog("Errore", $"Si è verificato un errore durante la ricerca: {ex.Message}", ("OK", "ok", ButtonRenderStyle.Primary));
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CaricaDati()
+    {
+        using var context = await DbFactory.CreateDbContextAsync();
+        var query = context.VProduzGeneCommesseTesta2s.AsNoTracking()
+            .Where(a => TipiSelezionati.Contains(a.Tipo));
+
+        if (BrandSelezionati.Any())
+        {
+            var brandIds = BrandSelezionati.Select(b => b.Id).ToList();
+            query = query.Where(a => brandIds.Contains(a.IdContatto));
+        }
+        if (StagioneSelezionati.Any())
+        {
+            var stagioneIds = StagioneSelezionati.Select(s => s.Id).ToList();
+            query = query.Where(a => stagioneIds.Contains(a.IdStag));
+        }
+        if (TipiOrdineSelezionati.Any())
+        {
+            var ordTipoCodes = TipiOrdineSelezionati.Select(t => t.Cod).ToList();
+            query = query.Where(a => ordTipoCodes.Contains(a.OrdTipo));
+        }
+
+        DataSource = await query.OrderByDescending(a => a.NrScheda).ToListAsync();
+    }
+
+    private void RigaSelezionataCambiata(GridFocusedRowChangedEventArgs e)
+    {
+        CommessaSelezionata = e.DataItem as VProduzGeneCommesseTesta2;
+    }
+
+    private void ShowDetails()
+    {
+        MostraDettagli = true;
+    }
+
+    private void ShowListOnly()
+    {
+        ListPaneCollapsed = false;
+        DetailsPaneCollapsed = true;
+    }
+
+    private void ShowSplitView()
+    {
+        ListPaneCollapsed = false;
+        DetailsPaneCollapsed = false;
+    }
+
+    private void ShowDetailsOnly()
+    {
+        ListPaneCollapsed = true;
+        DetailsPaneCollapsed = false;
+    }
+
+    private async Task ExportToExcel()
+    {
+        var fileName = $"PianificazioneLanci_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+        await MyGrid.ExportToXlsxAsync(fileName, new GridXlExportOptions());
+    }
+
+    private Task<string> ShowDialog(string title, string message, params (string Label, string Value, ButtonRenderStyle RenderStyle)[] buttons)
+    {
+        _dialogTitle = title;
+        _dialogMessage = message;
+        _dialogButtons = buttons.ToList();
+        _dialogVisible = true;
+        StateHasChanged();
+        return Task.FromResult(string.Empty);
+    }
+
+    private void OnDialogButtonClick(string value)
+    {
+        _dialogVisible = false;
+    }
+
+    private static string GetTipoLabel(string tipo) => tipo switch
+    {
+        "PR" => "Prodotti",
+        "MP" => "Materiali",
+        "SM" => "Semilavorati",
+        _ => tipo
+    };
+}
