@@ -14,15 +14,36 @@
 }
 
 <div class="articoli-toolbar d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
-    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="@(() => MostraFiltri = !MostraFiltri)">
-        @(MostraFiltri ? "Nascondi filtri" : "Mostra filtri")
-    </button>
+    @if (MostraFiltri)
+    {
+        <button type="button" class="btn btn-sm d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:28px;height:28px;background:transparent;color:#ff8c00;border:1px solid #ff8c00;border-radius:50%;padding:0;"
+                title="Nascondi filtri"
+                @onclick="@(() => MostraFiltri = false)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z" />
+            </svg>
+        </button>
+    }
+    else
+    {
+        <button type="button" class="btn btn-sm d-flex align-items-center gap-1"
+                style="background-color:#ff8c00;color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;opacity:0.85;"
+                @onclick="@(() => MostraFiltri = true)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
+            </svg>
+            Mostra filtri
+        </button>
+    }
     <div class="d-flex align-items-end gap-2">
-        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="@(() => myColumnChooser.Visible = !myColumnChooser.Visible)">Colonne</button>
-        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ShowListOnly">Lista</button>
-        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ShowSplitView">Split</button>
-        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="ShowDetailsOnly">Dettaglio</button>
-        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="ExportToExcel">Esporta Excel</button>
+        <button type="button" class="btn btn-sm btn-outline-orange" @onclick="@(() => myColumnChooser.Visible = !myColumnChooser.Visible)">Colonne</button>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm @(!ListPaneCollapsed && DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowListOnly">Lista</button>
+            <button type="button" class="btn btn-sm @(!ListPaneCollapsed && !DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowSplitView">Split</button>
+            <button type="button" class="btn btn-sm @(ListPaneCollapsed && !DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowDetailsOnly">Dettaglio</button>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-orange" @onclick="ExportToExcel">Esporta Excel</button>
     </div>
 </div>
 
@@ -65,11 +86,13 @@
                               NullText="Nessun tipo"
                               SelectAllText="Tutti i tipi" />
         </div>
-        <DxButton Text="Cerca" RenderStyle="ButtonRenderStyle.Primary" Click="Cerca" />
+        <button type="button" class="btn-icon-plain" @onclick="Cerca" title="Cerca">
+            <img src="images/RefreshOranSVG1.svg" class="btn-icon-search" alt="Cerca" />
+        </button>
     </div>
 }
 
-<DxSplitter Height="calc(100vh - 300px)">
+<DxSplitter Height="@(MostraFiltri ? "calc(100vh - 300px)" : "calc(100vh - 212px)")">
     <Panes>
         <DxSplitterPane Size="60%" MinSize="300px" @bind-Collapsed="@ListPaneCollapsed">
             <DxGrid @ref="MyGrid"
@@ -82,9 +105,12 @@
                     VirtualScrollingEnabled="true"
                     CssClass="h-100"
                     HighlightRowOnHover="true"
+                    EditMode="GridEditMode.PopupEditForm"
+                    DataItemDeleting="OnDeleteCommessa"
                     FocusedRowEnabled="true"
                     FocusedRowChanged="RigaSelezionataCambiata">
                 <Columns>
+                    <DxGridCommandColumn Width="90px" EditButtonVisible="true" DeleteButtonVisible="true" NewButtonVisible="false" ShowInColumnChooser="false" />
                     <DxGridDataColumn FieldName="NrScheda" Caption="Com." Width="90px" MinWidth="80" />
                     <DxGridDataColumn FieldName="Parte" Caption="Parte" Width="120px" MinWidth="100" />
                     <DxGridDataColumn FieldName="TotCapi" Caption="Tot. Capi" Width="100px" MinWidth="90" />
@@ -464,6 +490,31 @@
     private void OnDialogButtonClick(string value)
     {
         _dialogVisible = false;
+    }
+
+    private async Task OnDeleteCommessa(GridDataItemDeletingEventArgs e)
+    {
+        // DxGrid mostra già la propria conferma "Are you sure...Yes/No" prima di arrivare qui.
+        e.Cancel = true;
+        var model = (VProduzGeneCommesseTesta2)e.DataItem;
+
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            await context.Database.ExecuteSqlInterpolatedAsync($"EXEC dbo.SP_Produz_GeneCommesse_Testa_Delete_id @id={model.Id}");
+            await CaricaDati();
+        }
+        catch (Exception ex)
+        {
+            await ShowDialog("Errore", $"Si è verificato un errore durante l'eliminazione: {ex.Message}", ("OK", "ok", ButtonRenderStyle.Primary));
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
     }
 
     private static string GetTipoLabel(string tipo) => tipo switch

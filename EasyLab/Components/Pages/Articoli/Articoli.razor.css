@@ -2,6 +2,41 @@
     padding-bottom: 60px;
 }
 
+.articoli-toolbar button:focus,
+.articoli-toolbar button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(255, 140, 0, 0.4);
+}
+
+.btn-outline-orange {
+    color: #ff8c00;
+    border-color: #ff8c00;
+}
+
+    .btn-outline-orange:hover,
+    .btn-outline-orange:focus {
+        color: #fff;
+        background-color: #ff8c00;
+        border-color: #ff8c00;
+    }
+
+.btn-outline-orange:focus,
+.btn-orange-active:focus {
+    box-shadow: 0 0 0 0.2rem rgba(255, 140, 0, 0.4);
+}
+
+.btn-orange-active {
+    color: #fff;
+    background-color: #ff8c00;
+    border-color: #ff8c00;
+}
+
+    .btn-orange-active:hover {
+        color: #fff;
+        background-color: #e67a00;
+        border-color: #e67a00;
+    }
+
 .articoli-filtri {
     background: #f8f9fa;
 }
@@ -112,6 +147,28 @@
     color: #ff8c00;
     border-bottom-color: #ff8c00;
     font-weight: 500;
+}
+
+.btn-icon-img {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+
+.btn-icon-plain {
+    background: transparent;
+    border: none;
+    padding: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.btn-icon-search {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
 }
 
 ::deep .row-cancellato {
