@@ -155,6 +155,70 @@
 
                         <div class="modern-article-header p-3 rounded shadow-sm d-flex align-items-center flex-shrink-0 gap-2">
 
+                            <button type="button" class="btn btn-sm d-flex align-items-center justify-content-center flex-shrink-0"
+                                    style="width:28px;height:28px;background:transparent;color:#ff8c00;border:1px solid #ff8c00;border-radius:50%;padding:0;"
+                                    title="Nascondi dettagli"
+                                    @onclick="@(() => HideDetails())">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                                    <path d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z" />
+                                </svg>
+                            </button>
+
+                            <div class="header-divider"></div>
+                            <img src="data:image/png;base64,@Base64" style="height:40px; cursor: pointer;" title="🔍" />
+                            <div class="header-divider"></div>
+
+                            <div class="header-section header-section-fixed">
+                                <div class="icon-container me-3 text-success">
+                                    <i class="oi oi-layers header-icon-size"></i>
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <span class="header-label text-uppercase fw-bold">Stagione</span>
+                                    <span class="header-value">@CommessaSelezionata.StagCod</span>
+                                </div>
+                            </div>
+
+                            <div class="header-divider"></div>
+
+                            <div class="header-section header-section-fixed">
+                                <div class="icon-container me-3 text-warning">
+                                    <i class="oi oi-tag header-icon-size"></i>
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <span class="header-label text-uppercase fw-bold">Nr. Commessa</span>
+                                    <span class="header-value">@CommessaSelezionata.NrScheda</span>
+                                </div>
+                            </div>
+
+                            <div class="header-divider"></div>
+
+                            <div class="header-section header-section-fixed">
+                                <div class="icon-container me-3 text-success">
+                                    <i class="oi oi-layers header-icon-size"></i>
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <span class="header-label text-uppercase fw-bold">Codice Parte</span>
+                                    <span class="header-value">@CommessaSelezionata.Parte</span>
+                                </div>
+                            </div>
+
+                            <div class="header-divider"></div>
+
+                            <div class="header-section header-section-fluid">
+                                <div class="icon-container me-3 text-info">
+                                    <i class="oi oi-info header-icon-size"></i>
+                                </div>
+                                <div class="d-flex flex-column flex-column-no-min">
+                                    <span class="header-label text-uppercase fw-bold">Descrizione</span>
+                                    <span class="header-value" title="@CommessaSelezionata.ParteDesc">@CommessaSelezionata.ParteDesc</span>
+                                </div>
+                            </div>
+
+                            <div class="ms-auto d-flex align-items-center gap-2 flex-shrink-0">
+                                <span class="type-badge me-2">@CommessaSelezionata.Tipo</span>
+
+                                <div class="header-divider h-25 mx-2"></div>
+
                                 <div class="dropdown-actions d-flex gap-3">
                                         <div class="header-btn-container" title="Reports">
                                         <DxMenu CssClass="modern-menu" Title="">
@@ -174,6 +238,7 @@
                                     </div>
                                 </div>
                             </div>
+                        </div>
                     }
                 else
                 {
@@ -355,6 +420,11 @@
     private void ShowDetails()
     {
         MostraDettagli = true;
+    }
+
+    private void HideDetails()
+    {
+        MostraDettagli = false;
     }
 
     private void ShowListOnly()

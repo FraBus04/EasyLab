@@ -1,5 +1,256 @@
 @using EasyLab.Models
+@using Microsoft.EntityFrameworkCore
+@using System.Data.Common
+
+@if (CommessaSelezionata != null)
+{
+    <div class="buono-prelievo-header">
+        <div class="info-grid">
+            <div class="info-field">
+                <span class="info-label">Id</span>
+                <span class="info-value">@CommessaSelezionata.Id</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Nr. Commessa</span>
+                <span class="info-value">@CommessaSelezionata.NrScheda</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Parte</span>
+                <span class="info-value">@CommessaSelezionata.Parte</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Desc</span>
+                <span class="info-value">@CommessaSelezionata.ParteDesc</span>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <DxButton RenderStyle="ButtonRenderStyle.Secondary">
+                <img src="images/print_32x323.png" class="btn-icon-img" alt="" />
+                Stampa Commessa
+            </DxButton>
+            <DxButton RenderStyle="ButtonRenderStyle.Secondary">
+                <img src="images/Funzioni32.png" class="btn-icon-img" alt="" />
+                Scarico Mass. Mag.
+            </DxButton>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex align-items-center justify-content-center text-muted" style="height: 80px;">
+        <p class="mb-0">Seleziona una commessa dall'elenco per vedere il dettaglio.</p>
+    </div>
+}
+
+@if (loadingRighe)
+{
+    <Loading></Loading>
+}
+else if (RigheBuonoPrelievo != null)
+{
+    <DxGrid Data="@RigheBuonoPrelievo"
+            KeyFieldName="Id"
+            ShowSearchBox="true"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            PagerVisible="false"
+            CssClass="mt-2"
+            HighlightRowOnHover="true"
+            FocusedRowEnabled="true"
+            FocusedRowChanged="OnMaterialeSelezionato">
+        <Columns>
+            <DxGridDataColumn FieldName="BTipo" Caption="Tipo" Width="80px" />
+            <DxGridDataColumn FieldName="BTpDesc" Caption="Gestione" Width="150px" />
+            <DxGridDataColumn FieldName="BParte" Caption="Parte" Width="110px" />
+            <DxGridDataColumn FieldName="BParteDesc" Caption="Parte Desc." Width="180px" />
+            <DxGridDataColumn FieldName="BParteCol" Caption="Parte Col." Width="110px" />
+            <DxGridDataColumn FieldName="BParteMis" Caption="Mis/Tg" Width="80px" />
+            <DxGridDataColumn FieldName="BHUtile" Caption="B_HUtile" Width="90px" />
+            <DxGridDataColumn FieldName="BCdMag" Caption="Mag" Width="80px" />
+            <DxGridDataColumn FieldName="BUm" Caption="B_UM" Width="80px" />
+            <DxGridDataColumn FieldName="BQta" Caption="Qta Netta" Width="100px" />
+            <DxGridDataColumn FieldName="BQtaLorda" Caption="Qta Lorda" Width="100px" />
+            <DxGridDataColumn FieldName="BQtaEvaso" Caption="Evaso" Width="90px" />
+            <DxGridDataColumn FieldName="BFaseDesc" Caption="Fase" Width="150px" />
+        </Columns>
+    </DxGrid>
+}
+
+@if (loadingMovimenti)
+{
+    <Loading></Loading>
+}
+else if (RigheMovimenti != null)
+{
+    <DxGrid Data="@RigheMovimenti"
+            KeyFieldName="Id"
+            ShowSearchBox="true"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            PagerVisible="false"
+            CssClass="mt-2"
+            HighlightRowOnHover="true">
+        <Columns>
+            <DxGridDataColumn FieldName="CdMat" Caption="Cd Mat" Width="100px" />
+            <DxGridDataColumn FieldName="DescMat" Caption="Desc Mat" Width="180px" />
+            <DxGridDataColumn FieldName="CodCol" Caption="Cod Col" Width="90px" />
+            <DxGridDataColumn FieldName="DescCol" Caption="Desc Col" Width="150px" />
+            <DxGridDataColumn FieldName="Mis" Caption="Mis" Width="80px" />
+            <DxGridDataColumn FieldName="Qta" Caption="Qta" Width="90px" />
+            <DxGridDataColumn FieldName="Bloccato" Caption="Bloccato" Width="90px" />
+            <DxGridDataColumn FieldName="Disponibile" Caption="Disponibile" Width="100px" />
+        </Columns>
+    </DxGrid>
+
+    <DxGrid Data="@RigheMovimenti"
+            KeyFieldName="Id"
+            ShowSearchBox="true"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            PagerVisible="false"
+            CssClass="mt-2"
+            HighlightRowOnHover="true">
+        <Columns>
+            <DxGridDataColumn FieldName="Id" Caption="Id" Width="80px" />
+            <DxGridDataColumn FieldName="CdMat" Caption="Cd Mat" Width="100px" />
+            <DxGridDataColumn FieldName="Lotto" Caption="Lotto" Width="100px" />
+            <DxGridDataColumn FieldName="Mis" Caption="Mis" Width="80px" />
+            <DxGridDataColumn FieldName="NrPezza" Caption="Nr Pezza" Width="100px" />
+            <DxGridDataColumn FieldName="DataIng" Caption="Data Ing." Width="110px" />
+            <DxGridDataColumn FieldName="Qta" Caption="Qta" Width="90px" />
+            <DxGridDataColumn FieldName="Scaffale" Caption="Scaffale" Width="100px" />
+            <DxGridDataColumn FieldName="Posizione" Caption="Posizione" Width="100px" />
+            <DxGridDataColumn FieldName="Piano" Caption="Piano" Width="90px" />
+            <DxGridDataColumn FieldName="MagLogico" Caption="Mag Logico" Width="100px" />
+            <DxGridDataColumn FieldName="CdMag" Caption="Cd Mag" Width="90px" />
+            <DxGridDataColumn FieldName="CdCella" Caption="Cd Cella" Width="90px" />
+            <DxGridDataColumn FieldName="Bloccato" Caption="Bloccato" Width="90px" />
+            <DxGridDataColumn FieldName="Disponibile" Caption="Disponibile" Width="100px" />
+            <DxGridDataColumn FieldName="DescMat" Caption="Desc Mat" Width="180px" />
+            <DxGridDataColumn FieldName="Forn" Caption="Forn." Width="150px" />
+            <DxGridDataColumn FieldName="CodColForn" Caption="Cod Col Forn." Width="120px" />
+            <DxGridDataColumn FieldName="PathImgMat" Caption="Path Img Mat" Width="150px" Visible="false" />
+            <DxGridDataColumn FieldName="PathImgCol" Caption="Path Img Col" Width="150px" Visible="false" />
+            <DxGridDataColumn FieldName="IdContatto" Caption="Id Contatto" Width="100px" />
+        </Columns>
+    </DxGrid>
+}
 
 @code {
     [Parameter] public VProduzGeneCommesseTesta2? CommessaSelezionata { get; set; }
+
+    private List<ProduzBuonoPrelievoMpallRiga>? RigheBuonoPrelievo;
+    private ProduzBuonoPrelievoMpallRiga? MaterialeSelezionato;
+    private List<MagazzinoMpDettaglioRiga>? RigheMovimenti;
+    private bool loadingRighe;
+    private bool loadingMovimenti;
+    private int? _idCommessaCaricata;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (CommessaSelezionata == null)
+        {
+            _idCommessaCaricata = null;
+            RigheBuonoPrelievo = null;
+            return;
+        }
+
+        if (_idCommessaCaricata == CommessaSelezionata.Id)
+        {
+            return;
+        }
+
+        _idCommessaCaricata = CommessaSelezionata.Id;
+        RigheBuonoPrelievo = null;
+        loadingRighe = true;
+
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+
+            var idComm = CommessaSelezionata.Id;
+            RigheBuonoPrelievo = await context.ProduzBuonoPrelievoMpallRighe
+                .FromSqlInterpolated($"EXEC dbo.SP_V_Produz_BuonoPrelievoMPALL_Select_idComm @idComm={idComm}, @StatoC='C', @StatoA='A', @StatoE='E'")
+                .ToListAsync();
+        }
+        finally
+        {
+            loadingRighe = false;
+        }
+    }
+
+    private async Task OnMaterialeSelezionato(GridFocusedRowChangedEventArgs e)
+    {
+        MaterialeSelezionato = e.DataItem as ProduzBuonoPrelievoMpallRiga;
+        RigheMovimenti = null;
+
+        if (MaterialeSelezionato?.BCdAll == null || MaterialeSelezionato.BCdAllcol == null)
+        {
+            return;
+        }
+
+        loadingMovimenti = true;
+        StateHasChanged();
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var connection = context.Database.GetDbConnection();
+            await connection.OpenAsync();
+
+            // La stored procedure seleziona la colonna "Nota" due volte: EF Core FromSql
+            // non tollera nomi di colonna duplicati nel result set, quindi qui si legge
+            // con ADO.NET puro (DbDataReader) invece che tramite EF.
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "EXEC dbo.SP_V_MagazzinoALL_Select_cdALLCol @cdALL, @cdALLCol, @QtaMin, @Modo";
+
+            DbParameter AddParam(string name, object value)
+            {
+                var p = cmd.CreateParameter();
+                p.ParameterName = name;
+                p.Value = value;
+                cmd.Parameters.Add(p);
+                return p;
+            }
+            AddParam("@cdALL", MaterialeSelezionato.BCdAll);
+            AddParam("@cdALLCol", MaterialeSelezionato.BCdAllcol);
+            AddParam("@QtaMin", 0.0);
+            AddParam("@Modo", 2);
+
+            var righe = new List<MagazzinoMpDettaglioRiga>();
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                righe.Add(new MagazzinoMpDettaglioRiga
+                {
+                    Id = reader.GetInt32(reader.GetOrdinal("id")),
+                    CdMat = reader["cdMat"] as string,
+                    Lotto = reader["Lotto"] as string ?? "",
+                    CodCol = reader["CodCol"] as string,
+                    DescCol = reader["DescCol"] as string,
+                    Mis = reader["Mis"] as string,
+                    DescMis = reader["DescMis"] as string,
+                    NrPezza = reader["NrPezza"] as string ?? "",
+                    DataIng = reader["DataIng"] as DateTime?,
+                    Qta = reader["Qta"] as decimal?,
+                    Scaffale = reader["Scaffale"] as string,
+                    Posizione = reader["Posizione"] as string,
+                    Piano = reader["Piano"] as string,
+                    MagLogico = reader["MagLogico"] as string,
+                    CdMag = reader["cdMag"] as string ?? "",
+                    CdCella = reader["cdCella"] as string,
+                    Bloccato = reader["Bloccato"] as bool?,
+                    Disponibile = reader["Disponibile"] as bool?,
+                    DescMat = reader["DescMat"] as string,
+                    Forn = reader["Forn"] as string,
+                    CodColForn = reader["CodColForn"] as string,
+                    PathImgMat = reader["PathImgMat"] as string,
+                    PathImgCol = reader["PathImgCol"] as string,
+                    IdContatto = reader.GetInt32(reader.GetOrdinal("idContatto")),
+                });
+            }
+            RigheMovimenti = righe;
+        }
+        finally
+        {
+            loadingMovimenti = false;
+            StateHasChanged();
+        }
+    }
 }

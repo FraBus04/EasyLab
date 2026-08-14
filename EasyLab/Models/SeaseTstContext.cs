@@ -2223,6 +2223,10 @@ public partial class SeaseTstContext : DbContext
 
     public virtual DbSet<MovimentiClvCommModFasiRiga> MovimentiClvCommModFasiRighe { get; set; }
 
+    public virtual DbSet<ProduzBuonoPrelievoMpallRiga> ProduzBuonoPrelievoMpallRighe { get; set; }
+
+    public virtual DbSet<MagazzinoMpDettaglioRiga> MagazzinoMpDettaglioRighe { get; set; }
+
     public virtual DbSet<VProduzGeneCommesseTesta2> VProduzGeneCommesseTesta2s { get; set; }
 
     public virtual DbSet<VProduzGeneCommesseTestaAvanzFasi> VProduzGeneCommesseTestaAvanzFasis { get; set; }
@@ -64071,6 +64075,73 @@ public partial class SeaseTstContext : DbContext
             entity.Property(e => e.IdContatto).HasColumnName("idContatto");
             entity.Property(e => e.PercFase).HasColumnName("PercFase");
             entity.Property(e => e.CkConfRientro).HasColumnName("ckConfRientro");
+        });
+
+        modelBuilder.Entity<ProduzBuonoPrelievoMpallRiga>(entity =>
+        {
+            entity.HasNoKey();
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.IdComm).HasColumnName("idComm");
+            entity.Property(e => e.ATipo).HasColumnName("A_TIPO");
+            entity.Property(e => e.ACdAll).HasColumnName("A_cdALL");
+            entity.Property(e => e.AContatto).HasColumnName("A_Contatto");
+            entity.Property(e => e.AIdContatto).HasColumnName("A_idContatto");
+            entity.Property(e => e.AIdStag).HasColumnName("A_idStag");
+            entity.Property(e => e.AParte).HasColumnName("A_Parte");
+            entity.Property(e => e.AParteDesc).HasColumnName("A_ParteDesc");
+            entity.Property(e => e.AStag).HasColumnName("A_Stag");
+            entity.Property(e => e.ANrComm).HasColumnName("A_NrComm");
+            entity.Property(e => e.AOrdTipo).HasColumnName("A_OrdTipo");
+            entity.Property(e => e.ASaldoComm).HasColumnName("A_SaldoComm");
+            entity.Property(e => e.ACdMag).HasColumnName("A_cdMag");
+            entity.Property(e => e.IdFase).HasColumnName("idFase");
+            entity.Property(e => e.BTipo).HasColumnName("B_TIPO");
+            entity.Property(e => e.BCdAll).HasColumnName("B_cdALL");
+            entity.Property(e => e.BCdAllcol).HasColumnName("B_cdALLCol");
+            entity.Property(e => e.BCdAllmis).HasColumnName("B_cdALLMis");
+            entity.Property(e => e.BCdEan).HasColumnName("B_cdEAN");
+            entity.Property(e => e.BLotto).HasColumnName("B_Lotto");
+            entity.Property(e => e.BNrPezza).HasColumnName("B_NrPezza");
+            entity.Property(e => e.BFaseCod).HasColumnName("B_FaseCod");
+            entity.Property(e => e.BFaseDesc).HasColumnName("B_FaseDesc");
+            entity.Property(e => e.BIdTipoMat).HasColumnName("B_idTipoMat");
+            entity.Property(e => e.BIdMpScar).HasColumnName("B_idMPScar");
+            entity.Property(e => e.BContatto).HasColumnName("B_Contatto");
+            entity.Property(e => e.BParte).HasColumnName("B_Parte");
+            entity.Property(e => e.BParteDesc).HasColumnName("B_ParteDesc");
+            entity.Property(e => e.BParteCol).HasColumnName("B_ParteCol");
+            entity.Property(e => e.BParteColDesc).HasColumnName("B_ParteColDesc");
+            entity.Property(e => e.BParteMis).HasColumnName("B_ParteMis");
+            entity.Property(e => e.BParteMisDesc).HasColumnName("B_ParteMisDesc");
+            entity.Property(e => e.BParteColMis).HasColumnName("B_ParteColMis");
+            entity.Property(e => e.BUm).HasColumnName("B_UM");
+            entity.Property(e => e.BTp).HasColumnName("B_TP");
+            entity.Property(e => e.BTpDesc).HasColumnName("B_TP_Desc");
+            entity.Property(e => e.BTpOrdPm).HasColumnName("B_TP_OrdPM");
+            entity.Property(e => e.BCdTipoMat).HasColumnName("B_cdTipoMat");
+            entity.Property(e => e.BTipoMatDesc).HasColumnName("B_TipoMat_Desc");
+            entity.Property(e => e.BTipoMatOrdPm).HasColumnName("B_TipoMat_OrdPM");
+            entity.Property(e => e.BHUtile).HasColumnName("B_HUtile");
+            entity.Property(e => e.BNota).HasColumnName("B_Nota");
+            entity.Property(e => e.BCdMag).HasColumnName("B_cdMag");
+            entity.Property(e => e.BQta).HasColumnName("B_Qta");
+            entity.Property(e => e.BQtaLorda).HasColumnName("B_QtaLorda");
+            entity.Property(e => e.BQtaEvaso).HasColumnName("B_QtaEvaso");
+            entity.Property(e => e.BQtaMov).HasColumnName("B_QtaMov");
+            entity.Property(e => e.CkInvLogistica).HasColumnName("ckInvLogistica");
+            entity.Property(e => e.CkEvasoLogistica).HasColumnName("ckEvasoLogistica");
+        });
+
+        modelBuilder.Entity<MagazzinoMpDettaglioRiga>(entity =>
+        {
+            entity.HasNoKey();
+
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.CdMat).HasColumnName("cdMat");
+            entity.Property(e => e.CdMag).HasColumnName("cdMag");
+            entity.Property(e => e.CdCella).HasColumnName("cdCella");
+            entity.Property(e => e.IdContatto).HasColumnName("idContatto");
         });
 
         modelBuilder.Entity<VProduzGeneCommesseTesta2>(entity =>

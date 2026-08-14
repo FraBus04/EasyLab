@@ -1,5 +1,150 @@
 @using EasyLab.Models
+@using System.Data.Common
+
+@if (CommessaSelezionata != null)
+{
+    <div class="elenco-ordini-header">
+        <div class="info-grid">
+            <div class="info-field">
+                <span class="info-label">Nr. Commessa</span>
+                <span class="info-value">@CommessaSelezionata.NrScheda</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Parte</span>
+                <span class="info-value">@CommessaSelezionata.Parte</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Desc</span>
+                <span class="info-value">@CommessaSelezionata.ParteDesc</span>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <DxButton RenderStyle="ButtonRenderStyle.Secondary">
+                <img src="images/ModificaSVG.svg" class="btn-icon-img" alt="" />
+                Modif. Comm.
+            </DxButton>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex align-items-center justify-content-center text-muted" style="height: 80px;">
+        <p class="mb-0">Seleziona una commessa dall'elenco per vedere il dettaglio.</p>
+    </div>
+}
+
+@if (loadingOrdini)
+{
+    <Loading></Loading>
+}
+else if (RigheOrdini != null)
+{
+    <DxGrid Data="@RigheOrdini"
+            KeyFieldName="Id"
+            ShowSearchBox="true"
+            ColumnResizeMode="GridColumnResizeMode.NextColumn"
+            PagerVisible="false"
+            CssClass="mt-2"
+            HighlightRowOnHover="true">
+        <Columns>
+            <DxGridDataColumn FieldName="Po" Caption="PO" Width="110px" />
+            <DxGridDataColumn FieldName="OrdNr" Caption="Ord. Nr" Width="90px" />
+            <DxGridDataColumn FieldName="Cliente" Caption="Cliente" Width="150px" />
+            <DxGridDataColumn FieldName="Mod" Caption="Cod" Width="100px" />
+            <DxGridDataColumn FieldName="Col" Caption="Colore" Width="100px" />
+            <DxGridDataColumn FieldName="Lotto" Caption="Lotto" Width="100px" />
+            <DxGridDataColumn FieldName="Qta" Caption="Qta" Width="90px" />
+            <DxGridDataColumn FieldName="TotCapi" Caption="Tot. Col." Width="90px" />
+            @for (var i = 1; i <= 16; i++)
+            {
+                var idx = i;
+                <DxGridDataColumn FieldName="@($"Nr{idx}")" Caption="@($"Nr{idx}")" Width="60px" />
+            }
+        </Columns>
+    </DxGrid>
+}
 
 @code {
     [Parameter] public VProduzGeneCommesseTesta2? CommessaSelezionata { get; set; }
+
+    private List<ProduzGeneCommesseOrdineRiga>? RigheOrdini;
+    private bool loadingOrdini;
+    private int? _idCommessaCaricata;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (CommessaSelezionata == null)
+        {
+            _idCommessaCaricata = null;
+            RigheOrdini = null;
+            return;
+        }
+
+        if (_idCommessaCaricata == CommessaSelezionata.Id)
+        {
+            return;
+        }
+
+        _idCommessaCaricata = CommessaSelezionata.Id;
+        RigheOrdini = null;
+        loadingOrdini = true;
+        StateHasChanged();
+
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var connection = context.Database.GetDbConnection();
+            await connection.OpenAsync();
+
+            // La stored procedure seleziona la colonna "ImgMod" due volte: EF Core FromSql
+            // non tollera nomi di colonna duplicati nel result set, quindi qui si legge
+            // con ADO.NET puro (DbDataReader) invece che tramite EF.
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "EXEC dbo.SP_V_Produz_GeneCommesse_Select_idComm @idComm";
+            var p = cmd.CreateParameter();
+            p.ParameterName = "@idComm";
+            p.Value = CommessaSelezionata.Id;
+            cmd.Parameters.Add(p);
+
+            var righe = new List<ProduzGeneCommesseOrdineRiga>();
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                righe.Add(new ProduzGeneCommesseOrdineRiga
+                {
+                    Id = reader["id"] as int?,
+                    Po = reader["PO"] as string,
+                    OrdNr = reader["OrdNr"] as int?,
+                    Cliente = reader["Anag1"] as string,
+                    Mod = reader["Mod"] as string,
+                    Col = reader["Col"] as string,
+                    Lotto = reader["Lotto"] as string,
+                    Qta = reader["Qta"] as double?,
+                    TotCapi = reader["TotCapi"] as int?,
+                    Nr1 = reader["Nr1"] as short?,
+                    Nr2 = reader["Nr2"] as short?,
+                    Nr3 = reader["Nr3"] as short?,
+                    Nr4 = reader["Nr4"] as short?,
+                    Nr5 = reader["Nr5"] as short?,
+                    Nr6 = reader["Nr6"] as short?,
+                    Nr7 = reader["Nr7"] as short?,
+                    Nr8 = reader["Nr8"] as short?,
+                    Nr9 = reader["Nr9"] as short?,
+                    Nr10 = reader["Nr10"] as short?,
+                    Nr11 = reader["Nr11"] as short?,
+                    Nr12 = reader["Nr12"] as short?,
+                    Nr13 = reader["Nr13"] as short?,
+                    Nr14 = reader["Nr14"] as short?,
+                    Nr15 = reader["Nr15"] as short?,
+                    Nr16 = reader["Nr16"] as short?,
+                });
+            }
+            RigheOrdini = righe;
+        }
+        finally
+        {
+            loadingOrdini = false;
+            StateHasChanged();
+        }
+    }
 }
