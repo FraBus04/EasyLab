@@ -106,7 +106,9 @@
                     CssClass="h-100"
                     HighlightRowOnHover="true"
                     EditMode="GridEditMode.PopupEditForm"
+                    PopupEditFormCssClass="custom-grid-popup"
                     DataItemDeleting="OnDeleteCommessa"
+                    EditModelSaving="OnEditModelSaving"
                     FocusedRowEnabled="true"
                     FocusedRowChanged="RigaSelezionataCambiata">
                 <Columns>
@@ -165,6 +167,127 @@
                 <TotalSummary>
                     <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="Id" FooterColumnName="ParteDesc" />
                 </TotalSummary>
+                <EditFormTemplate Context="EditContext">
+                    @{
+                        var riga = (VProduzGeneCommesseTesta2)EditContext.EditModel;
+                    }
+                    <DxFormLayout CssClass="w-100">
+                        <DxFormLayoutGroup Caption="Dati Commessa" ColSpanMd="12" CssClass="commessa-edit-group">
+                            <DxFormLayoutItem Caption="Tipo" ColSpanMd="3">
+                                <DxTextBox @bind-Text="@riga.Tipo" ReadOnly="true" CssClass="campo-sola-lettura" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Tipo Ordine" ColSpanMd="3">
+                                <DxComboBox Data="@TipiOrdine" @bind-Value="@riga.OrdTipo" ValueFieldName="Cod" TextFieldName="Cod"
+                                            FilteringMode="DataGridFilteringMode.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Nr. Commessa" ColSpanMd="3">
+                                <DxSpinEdit @bind-Value="@riga.NrScheda" ReadOnly="true" CssClass="campo-sola-lettura" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Stagione" ColSpanMd="3">
+                                <DxComboBox Data="@Stagioni" @bind-Value="@riga.IdStag" ValueFieldName="Id" TextFieldName="Cod"
+                                            FilteringMode="DataGridFilteringMode.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Parte" ColSpanMd="3">
+                                <DxTextBox @bind-Text="@riga.Parte" ReadOnly="true" CssClass="campo-sola-lettura" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Descrizione" ColSpanMd="9">
+                                <DxTextBox @bind-Text="@riga.ParteDesc" ReadOnly="true" CssClass="campo-sola-lettura" />
+                            </DxFormLayoutItem>
+                        </DxFormLayoutGroup>
+
+                        <DxFormLayoutGroup Caption="Fornitura e Lavorazione" ColSpanMd="12" CssClass="commessa-edit-group">
+                            <DxFormLayoutItem Caption="Fornitore" ColSpanMd="3">
+                                <DxComboBox Data="@Brands" @bind-Value="@riga.IdCcli" ValueFieldName="Id" TextFieldName="Societa1"
+                                            FilteringMode="DataGridFilteringMode.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" NullText="—" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Fase Lavorazione" ColSpanMd="3">
+                                <DxComboBox Data="@FasiLavorazione" @bind-Value="@riga.IdFase" ValueFieldName="IdFase" TextFieldName="Descr"
+                                            FilteringMode="DataGridFilteringMode.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" NullText="—" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Laboratorio" ColSpanMd="3">
+                                <DxComboBox Data="@Brands" @bind-Value="@riga.IdLab" ValueFieldName="Id" TextFieldName="Societa1"
+                                            FilteringMode="DataGridFilteringMode.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Destinazione" ColSpanMd="3">
+                                <DxComboBox Data="@Brands" @bind-Value="@riga.IdCcliDest" ValueFieldName="Id" TextFieldName="Societa1"
+                                            FilteringMode="DataGridFilteringMode.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" NullText="—" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Mag" ColSpanMd="3">
+                                <DxComboBox Data="@CodiciMag" @bind-Value="@riga.CdMag"
+                                            FilteringMode="DataGridFilteringMode.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" NullText="—" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Lotto" ColSpanMd="3">
+                                <DxTextBox @bind-Text="@riga.Lotto" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Trasporto a Cura" ColSpanMd="3">
+                                <DxComboBox Data="@Brands" @bind-Value="@riga.IdDdtTraspCura" ValueFieldName="Id" TextFieldName="Societa1"
+                                            FilteringMode="DataGridFilteringMode.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" NullText="—" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Vettore" ColSpanMd="3">
+                                <DxComboBox Data="@Brands" @bind-Value="@riga.IdDdtVettore" ValueFieldName="Id" TextFieldName="Societa1"
+                                            FilteringMode="DataGridFilteringMode.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" NullText="—" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Rit. X" ColSpanMd="3">
+                                <DxSpinEdit @bind-Value="@riga.RitX" ShowSpinButtons="false" Format="0.###" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Rit. Y" ColSpanMd="3">
+                                <DxSpinEdit @bind-Value="@riga.RitY" ShowSpinButtons="false" Format="0.###" />
+                            </DxFormLayoutItem>
+                        </DxFormLayoutGroup>
+
+                        <DxFormLayoutGroup Caption="Condizioni Economiche" ColSpanMd="12" CssClass="commessa-edit-group">
+                            <DxFormLayoutItem Caption="Valuta" ColSpanMd="3">
+                                <DxComboBox Data="@Valute" @bind-Value="@riga.CdValuta" ValueFieldName="CdValuta" TextFieldName="CdValuta"
+                                            FilteringMode="DataGridFilteringMode.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" NullText="—" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Prezzo" ColSpanMd="3">
+                                <DxSpinEdit @bind-Value="@riga.Prezzo" ShowSpinButtons="false" Format="0.###" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Pagamento" ColSpanMd="3">
+                                <DxComboBox Data="@Pagamenti" @bind-Value="@riga.IdPag" ValueFieldName="Id" TextFieldName="Descr"
+                                            FilteringMode="DataGridFilteringMode.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" NullText="—" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Stato Export" ColSpanMd="3">
+                                <DxComboBox Data="@StatiExp" @bind-Value="@riga.StatoExp" ValueFieldName="Stato" TextFieldName="Stato"
+                                            FilteringMode="DataGridFilteringMode.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" NullText="—" />
+                            </DxFormLayoutItem>
+                        </DxFormLayoutGroup>
+
+                        <DxFormLayoutGroup Caption="Date e Note" ColSpanMd="12" CssClass="commessa-edit-group">
+                            <DxFormLayoutItem Caption="Data Richiesta" ColSpanMd="3">
+                                <DxDateEdit @bind-Date="@riga.DataRicRientro" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Data Confermata" ColSpanMd="3">
+                                <DxDateEdit @bind-Date="@riga.DataConfRientro" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Data Confermata Check" ColSpanMd="3">
+                                <DxCheckBox @bind-Checked="@riga.CkConf" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Nota" ColSpanMd="9">
+                                <DxMemo @bind-Text="@riga.Nota" Rows="2" />
+                            </DxFormLayoutItem>
+                        </DxFormLayoutGroup>
+
+                        <DxFormLayoutGroup Caption="Rientro Merce" ColSpanMd="12" CssClass="commessa-edit-group">
+                            <DxFormLayoutItem Caption="Capi Lanciati" ColSpanMd="3">
+                                <DxSpinEdit @bind-Value="@riga.TotCapi" ReadOnly="true" CssClass="campo-sola-lettura" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Capi Rientrati" ColSpanMd="3">
+                                <DxSpinEdit @bind-Value="@riga.TotCapiFin" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Qta Lanciata" ColSpanMd="3">
+                                <DxSpinEdit @bind-Value="@riga.TotQta" ReadOnly="true" Format="0.###" CssClass="campo-sola-lettura" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Qta Rientrata" ColSpanMd="3">
+                                <DxSpinEdit @bind-Value="@riga.TotQtaFin" ShowSpinButtons="false" Format="0.###" />
+                            </DxFormLayoutItem>
+                            <DxFormLayoutItem Caption="Stato Commessa" ColSpanMd="3">
+                                <DxComboBox Data="@StatiCommessa" @bind-Value="@riga.Stato" ValueFieldName="Stato" TextFieldName="Descr"
+                                            FilteringMode="DataGridFilteringMode.Contains" ClearButtonDisplayMode="DataEditorClearButtonDisplayMode.Auto" />
+                            </DxFormLayoutItem>
+                        </DxFormLayoutGroup>
+                    </DxFormLayout>
+                </EditFormTemplate>
             </DxGrid>
         </DxSplitterPane>
         <DxSplitterPane @bind-Collapsed="@DetailsPaneCollapsed">
@@ -363,6 +486,12 @@
     private List<Contatti> Brands = new();
     private List<TabStagioni> Stagioni = new();
     private List<TabTipoOrdineCl> TipiOrdine = new();
+    private List<TabFasiLavorazione> FasiLavorazione = new();
+    private List<TabValute> Valute = new();
+    private List<TabStatoCommesse> StatiCommessa = new();
+    private List<TabStatoExp> StatiExp = new();
+    private List<TabPagamenti> Pagamenti = new();
+    private List<string> CodiciMag = new();
     private static readonly List<string> TipiDisponibili = new() { "PR", "MP", "SM" };
 
     private List<Contatti> BrandSelezionati = new();
@@ -382,6 +511,12 @@
                 Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
                 Stagioni = await context.TabStagionis.AsNoTracking().Where(x => x.Stato == "A").OrderByDescending(s => s.OrdPm).ToListAsync();
                 TipiOrdine = await context.TabTipoOrdineCls.AsNoTracking().OrderBy(x => x.OrdPm).ToListAsync();
+                FasiLavorazione = await context.TabFasiLavoraziones.AsNoTracking().OrderBy(x => x.OrdPm).ToListAsync();
+                Valute = await context.TabValutes.AsNoTracking().Where(x => x.Stato == "A").OrderBy(x => x.CdValuta).ToListAsync();
+                StatiCommessa = await context.TabStatoCommesses.AsNoTracking().OrderBy(x => x.Descr).ToListAsync();
+                StatiExp = await context.TabStatoExps.AsNoTracking().OrderBy(x => x.Stato).ToListAsync();
+                Pagamenti = await context.TabPagamentis.AsNoTracking().OrderBy(x => x.Descr).ToListAsync();
+                CodiciMag = await context.TabMagazzinis.AsNoTracking().Select(x => x.CodMag).Distinct().OrderBy(x => x).ToListAsync();
                 BrandSelezionati = Brands.ToList();
                 StagioneSelezionati = Stagioni.ToList();
                 TipiOrdineSelezionati = TipiOrdine.ToList();
@@ -436,6 +571,11 @@
         }
 
         DataSource = await query.OrderByDescending(a => a.NrScheda).ToListAsync();
+
+        if (CommessaSelezionata != null)
+        {
+            CommessaSelezionata = DataSource.FirstOrDefault(x => x.Id == CommessaSelezionata.Id);
+        }
     }
 
     private void RigaSelezionataCambiata(GridFocusedRowChangedEventArgs e)
@@ -509,6 +649,62 @@
         catch (Exception ex)
         {
             await ShowDialog("Errore", $"Si è verificato un errore durante l'eliminazione: {ex.Message}", ("OK", "ok", ButtonRenderStyle.Primary));
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnEditModelSaving(GridEditModelSavingEventArgs e)
+    {
+        var editModel = (VProduzGeneCommesseTesta2)e.EditModel;
+
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var entity = await context.ProduzGeneCommesseTesta.FirstOrDefaultAsync(x => x.Id == editModel.Id);
+            if (entity == null)
+            {
+                e.Cancel = true;
+                return;
+            }
+
+            entity.OrdTipo = editModel.OrdTipo;
+            entity.IdStag = editModel.IdStag;
+            entity.IdCcli = editModel.IdCcli;
+            entity.IdFase = editModel.IdFase;
+            entity.CdValuta = editModel.CdValuta;
+            entity.Prezzo = editModel.Prezzo;
+            entity.StatoExp = editModel.StatoExp;
+            entity.IdCcliDest = editModel.IdCcliDest;
+            entity.IdLab = editModel.IdLab;
+            entity.CdMag = editModel.CdMag;
+            entity.Lotto = editModel.Lotto;
+            entity.RitX = editModel.RitX;
+            entity.RitY = editModel.RitY;
+            entity.IdPag = editModel.IdPag;
+            entity.IdDdtTraspCura = editModel.IdDdtTraspCura;
+            entity.IdDdtVettore = editModel.IdDdtVettore;
+            entity.DataRicRientro = editModel.DataRicRientro;
+            entity.DataConfRientro = editModel.DataConfRientro;
+            entity.CkConf = editModel.CkConf;
+            entity.Nota = editModel.Nota;
+            entity.TotCapiFin = editModel.TotCapiFin;
+            entity.TotQtaFin = editModel.TotQtaFin;
+            entity.Stato = editModel.Stato;
+            entity.DataUpd = DateTime.Now;
+
+            await context.SaveChangesAsync();
+            await CaricaDati();
+        }
+        catch (Exception ex)
+        {
+            e.Cancel = true;
+            await ShowDialog("Errore", $"Si è verificato un errore durante il salvataggio: {ex.Message}", ("OK", "ok", ButtonRenderStyle.Primary));
         }
         finally
         {

@@ -428,48 +428,67 @@ h1:focus {
     transform: scale(0.8) !important;
 }
 
-.custom-grid-popup {
-    min-width: 80% !important;
-    height: auto !important;
-    max-height: 90vh !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    z-index: 3000 !important;
+/* DxGrid PopupEditForm renders via .dxbl-modal-root > .dxbl-window > .dxbl-window-body,
+   NOT bootstrap .modal markup. .dxbl-modal-root centers its content with CSS Grid
+   align-items:center, which clips content taller than the viewport with no way to
+   scroll to the clipped part. Force top alignment + an internal scroll region instead. */
+.dxbl-modal-root:has(.custom-grid-popup) {
+    align-items: start !important;
+    padding: 110px 0 40px !important;
+    box-sizing: border-box !important;
 }
 
-    .custom-grid-popup .modal-dialog {
-        width: 80% !important;
-        max-width: 80% !important;
-        height: auto !important;
-        margin: auto !important;
-        display: flex !important;
-        align-items: center !important;
+.custom-grid-popup,
+.dxbl-window:has(.custom-grid-popup) {
+    width: 80vw !important;
+    max-width: 1100px !important;
+    max-height: calc(100vh - 80px) !important;
+    overflow-y: auto !important;
+    border-radius: 12px !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2) !important;
+}
+
+    .custom-grid-popup .dxbl-window-dialog,
+    .dxbl-window:has(.custom-grid-popup) .dxbl-window-dialog {
+        max-height: calc(100vh - 80px) !important;
+        min-height: 0 !important;
     }
 
-    .custom-grid-popup .modal-content {
-        height: auto !important;
-        min-height: 200px !important;
-        max-height: 85vh !important;
-        border-radius: 12px !important;
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2) !important;
-        border: none !important;
-        background-color: #fff !important;
-        overflow: hidden !important;
-        display: flex !important;
-        flex-direction: column !important;
-    }
-
-    .custom-grid-popup .modal-body {
-        padding: 24px !important;
+    .custom-grid-popup .dxbl-window-body,
+    .dxbl-window:has(.custom-grid-popup) .dxbl-window-body {
         overflow-y: auto !important;
-        flex: 1 1 auto !important;
+        min-height: 0 !important;
     }
 
 .Tipo-Articolo-Select {
     padding-left: 10px;
     padding-top: 10px;
 }
+
+.campo-sola-lettura,
+.campo-sola-lettura input,
+.campo-sola-lettura .dxbl-input {
+    opacity: 0.55 !important;
+    background-color: #eceef0 !important;
+    cursor: not-allowed !important;
+}
+
+.commessa-edit-group {
+    border: 1px solid #e5e7eb !important;
+    border-radius: 10px !important;
+    padding: 14px 16px 6px 16px !important;
+    margin-bottom: 18px !important;
+    background-color: #fbfbfc !important;
+}
+
+    .commessa-edit-group > .dxbl-form-layout-group-caption {
+        color: #ff8c00 !important;
+        font-weight: 700 !important;
+        font-size: 0.8rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.04em !important;
+        margin-bottom: 10px !important;
+    }
 
 .Popup-Gestione-Tabelle-Content {
     overflow-y: auto;
