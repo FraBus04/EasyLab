@@ -8,6 +8,9 @@
 
 <div class="articoli-page">
 
+@if (VistaAttiva == "SituazioneCommesse")
+{
+
 @if (loading)
 {
     <Loading></Loading>
@@ -42,6 +45,10 @@
             <button type="button" class="btn btn-sm @(!ListPaneCollapsed && DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowListOnly">Lista</button>
             <button type="button" class="btn btn-sm @(!ListPaneCollapsed && !DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowSplitView">Split</button>
             <button type="button" class="btn btn-sm @(ListPaneCollapsed && !DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowDetailsOnly">Dettaglio</button>
+        </div>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm @(VistaAttiva == "SituazioneCommesse" ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => VistaAttiva = "SituazioneCommesse")">Situazione Commesse</button>
+            <button type="button" class="btn btn-sm @(VistaAttiva == "LanciCommesse" ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => VistaAttiva = "LanciCommesse")">Lanci Commesse</button>
         </div>
         <button type="button" class="btn btn-sm btn-outline-orange" @onclick="ExportToExcel">Esporta Excel</button>
     </div>
@@ -462,9 +469,423 @@
     </FooterContentTemplate>
 </DxPopup>
 
+}
+else if (VistaAttiva == "LanciCommesse")
+{
+    <div class="articoli-toolbar d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm @(VistaLanciCommesse == "PrDaOrdini" ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => VistaLanciCommesse = "PrDaOrdini")">Commessa PR da Ordini</button>
+            <button type="button" class="btn btn-sm @(VistaLanciCommesse == "Libera" ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => VistaLanciCommesse = "Libera")">Commessa Libera</button>
+        </div>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm @(VistaAttiva == "SituazioneCommesse" ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => VistaAttiva = "SituazioneCommesse")">Situazione Commesse</button>
+            <button type="button" class="btn btn-sm @(VistaAttiva == "LanciCommesse" ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => VistaAttiva = "LanciCommesse")">Lanci Commesse</button>
+        </div>
+    </div>
+
+    @if (VistaLanciCommesse == "PrDaOrdini")
+    {
+        <div class="articoli-toolbar d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+            @if (MostraFiltriLanciPr)
+            {
+                <button type="button" class="btn btn-sm d-flex align-items-center justify-content-center flex-shrink-0"
+                        style="width:28px;height:28px;background:transparent;color:#ff8c00;border:1px solid #ff8c00;border-radius:50%;padding:0;"
+                        title="Nascondi filtri"
+                        @onclick="@(() => MostraFiltriLanciPr = false)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z" />
+                    </svg>
+                </button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-sm d-flex align-items-center gap-1"
+                        style="background-color:#ff8c00;color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;opacity:0.85;"
+                        @onclick="@(() => MostraFiltriLanciPr = true)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
+                    </svg>
+                    Mostra filtri
+                </button>
+            }
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm @(!ListPaneCollapsedPr && DetailsPaneCollapsedPr ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowListOnlyPr">Lista</button>
+                <button type="button" class="btn btn-sm @(!ListPaneCollapsedPr && !DetailsPaneCollapsedPr ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowSplitViewPr">Split</button>
+                <button type="button" class="btn btn-sm @(ListPaneCollapsedPr && !DetailsPaneCollapsedPr ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowDetailsOnlyPr">Dettaglio</button>
+            </div>
+        </div>
+
+        @if (MostraFiltriLanciPr)
+        {
+            <div class="articoli-filtri p-2 mb-2 border rounded d-flex flex-wrap gap-3 align-items-end">
+                <div style="min-width:220px;">
+                    <label class="form-label small mb-0">Brand</label>
+                    <CheckboxDropdown TItem="Contatti"
+                                      Data="@Brands"
+                                      @bind-SelectedItems="BrandSelezionatiLanciPr"
+                                      TextFieldSelector="@(b => b.Societa1)"
+                                      NullText="Tutti i brand"
+                                      SelectAllText="Tutti i brand" />
+                </div>
+                <div style="min-width:220px;">
+                    <label class="form-label small mb-0">Stagione</label>
+                    <CheckboxDropdown TItem="TabStagioni"
+                                      Data="@Stagioni"
+                                      @bind-SelectedItems="StagioneSelezionatiLanciPr"
+                                      TextFieldSelector="@(s => s.Cod)"
+                                      NullText="Tutte le stagioni"
+                                      SelectAllText="Tutte le stagioni" />
+                </div>
+                <div style="min-width:220px;">
+                    <label class="form-label small mb-0">TipoOrdine</label>
+                    <CheckboxDropdown TItem="TabTipoOrdineCl"
+                                      Data="@TipiOrdine"
+                                      @bind-SelectedItems="TipiOrdineSelezionatiLanciPr"
+                                      TextFieldSelector="@(s => s.Cod)"
+                                      NullText="Tutti i tipi"
+                                      SelectAllText="Tutti i tipi" />
+                </div>
+                <button type="button" class="btn-icon-plain" @onclick="CercaLanciPr" title="Cerca">
+                    <img src="images/RefreshOranSVG1.svg" class="btn-icon-search" alt="Cerca" />
+                </button>
+            </div>
+        }
+
+        @if (loadingLanciPr)
+        {
+            <Loading></Loading>
+        }
+        else
+        {
+            <DxSplitter Height="@(MostraFiltriLanciPr ? "calc(100vh - 350px)" : "calc(100vh - 262px)")">
+                <Panes>
+                    <DxSplitterPane Size="60%" MinSize="300px" @bind-Collapsed="@ListPaneCollapsedPr">
+                        <DxGrid Data="@DataSourceLanciPr"
+                                KeyFieldName="Id"
+                                ShowSearchBox="true"
+                                ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                                AllowSelectRowByClick="true"
+                                PagerVisible="false"
+                                VirtualScrollingEnabled="true"
+                                CssClass="h-100"
+                                HighlightRowOnHover="true"
+                                FocusedRowEnabled="true"
+                                FocusedRowChanged="RigaSelezionataCambiataPr">
+                            <Columns>
+                                <DxGridDataColumn FieldName="Gender" Caption="Gender" Width="90px" />
+                                <DxGridDataColumn FieldName="Mod" Caption="Mod" Width="100px" />
+                                <DxGridDataColumn FieldName="Tess" Caption="Tess" Width="100px" />
+                                <DxGridDataColumn FieldName="Nome" Caption="Nome" Width="180px" />
+                                <DxGridDataColumn FieldName="TotVend" Caption="Vend" Width="80px" />
+                                <DxGridDataColumn FieldName="TotRecup" Caption="Recup" Width="80px" />
+                                <DxGridDataColumn FieldName="TotDaLanc" Caption="Da Lanc" Width="90px" />
+                                <DxGridDataColumn FieldName="TotLanc" Caption="Lanc" Width="80px" />
+                                <DxGridDataColumn FieldName="TotMag" Caption="Ass" Width="80px" />
+                                <DxGridDataColumn FieldName="TotSped" Caption="Sped" Width="80px" />
+                                <DxGridDataColumn FieldName="TotAnn" Caption="Ann" Width="80px" />
+                                <DxGridDataColumn FieldName="Ragg1Mod" Caption="Ragg1" Width="110px" />
+                                <DxGridDataColumn FieldName="LabPrev" Caption="Laboratorio" Width="160px" />
+                                <DxGridDataColumn FieldName="FornPref" Caption="Fornitore" Width="160px" />
+                                <DxGridDataColumn FieldName="LeadTimeGg" Caption="LT gg" Width="80px" />
+                                <DxGridDataColumn FieldName="DataPianifProd" Caption="Data Pianif. P.Comm" Width="150px" />
+                                <DxGridDataColumn FieldName="CapiScad" Caption="Scad" Width="80px" />
+                                @for (var i = 1; i <= 20; i++)
+                                {
+                                    var idx = i;
+                                    <DxGridDataColumn FieldName="@($"Capi{idx}")" Caption="@($"Capi{idx}")" Width="70px" />
+                                }
+                                <DxGridDataColumn FieldName="CapiOltre" Caption="Oltre" Width="80px" />
+                            </Columns>
+                        </DxGrid>
+                    </DxSplitterPane>
+                    <DxSplitterPane @bind-Collapsed="@DetailsPaneCollapsedPr">
+                        <div style="height: 100%; overflow-y: auto; overflow-x: hidden;">
+                        @if (ModelloSelezionatoPr != null)
+                        {
+                            <div class="modern-article-header p-3 rounded shadow-sm d-flex align-items-center flex-shrink-0 gap-2">
+                                @if (!string.IsNullOrEmpty(ImmagineModelloPrBase64))
+                                {
+                                    <img src="data:image/png;base64,@ImmagineModelloPrBase64" style="height:60px; cursor: pointer;" title="🔍" />
+                                    <div class="header-divider"></div>
+                                }
+
+                                <div class="header-section header-section-fixed">
+                                    <div class="d-flex flex-column">
+                                        <span class="header-label text-uppercase fw-bold">Stagione</span>
+                                        <span class="header-value">@ModelloSelezionatoPr.StagCod</span>
+                                    </div>
+                                </div>
+
+                                <div class="header-divider"></div>
+
+                                <div class="header-section header-section-fixed">
+                                    <div class="d-flex flex-column">
+                                        <span class="header-label text-uppercase fw-bold">Modello</span>
+                                        <span class="header-value">@ModelloSelezionatoPr.Mod</span>
+                                    </div>
+                                </div>
+
+                                <div class="header-divider"></div>
+
+                                <div class="header-section header-section-fixed">
+                                    <div class="d-flex flex-column">
+                                        <span class="header-label text-uppercase fw-bold">Tessuto</span>
+                                        <span class="header-value">@ModelloSelezionatoPr.Tess</span>
+                                    </div>
+                                </div>
+
+                                <div class="header-divider"></div>
+
+                                <div class="header-section header-section-fluid">
+                                    <div class="d-flex flex-column flex-column-no-min">
+                                        <span class="header-label text-uppercase fw-bold">Nome</span>
+                                        <span class="header-value" title="@ModelloSelezionatoPr.Nome">@ModelloSelezionatoPr.Nome</span>
+                                    </div>
+                                </div>
+
+                                <div class="ms-auto d-flex align-items-center gap-2 flex-shrink-0">
+                                    <button type="button" class="btn btn-sm btn-outline-orange" @onclick="SimulaLanciPr">Simula</button>
+                                    <button type="button" class="btn btn-sm text-white" style="background-color:#ff8c00;" @onclick="CreaCommessaLanciPr">Crea Commessa</button>
+                                </div>
+                            </div>
+
+                            @if (loadingRigheDaLanciarePr)
+                            {
+                                <Loading></Loading>
+                            }
+                            else
+                            {
+                                <DxGrid Data="@RigheDaLanciarePr"
+                                        KeyFieldName="IdRiga"
+                                        ShowSearchBox="true"
+                                        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                                        PagerVisible="false"
+                                        CssClass="mt-2"
+                                        HighlightRowOnHover="true">
+                                    <Columns>
+                                        <DxGridDataColumn FieldName="StatoRigaOrd" Caption="Stato Riga Ordine" Width="130px" />
+                                        <DxGridDataColumn FieldName="OrdTipo" Caption="Tipo" Width="80px" />
+                                        <DxGridDataColumn FieldName="OrdNr" Caption="Ord Nr" Width="90px" />
+                                        <DxGridDataColumn FieldName="Anag1" Caption="Anag1" Width="160px" />
+                                        <DxGridDataColumn FieldName="ColOrd" Caption="Col" Width="90px" />
+                                        <DxGridDataColumn FieldName="DescCol" Caption="Desc Col" Width="140px" />
+                                        <DxGridDataColumn FieldName="NrCommessa" Caption="Comm" Width="90px" />
+                                        <DxGridDataColumn FieldName="TotCapi" Caption="Tot Capi" Width="90px" />
+                                        <DxGridDataColumn FieldName="DataCons" Caption="Data Cons" Width="110px" />
+                                        @for (var i = 1; i <= 16; i++)
+                                        {
+                                            var idx = i;
+                                            <DxGridDataColumn FieldName="@($"DaL{idx}")" Caption="@($"Da_L{idx}")" Width="65px" />
+                                        }
+                                        <DxGridDataColumn FieldName="StrNota" Caption="Nota" Width="180px" />
+                                    </Columns>
+                                </DxGrid>
+                            }
+
+                            @if (loadingBuonoPrelievoSimPr)
+                            {
+                                <Loading></Loading>
+                            }
+                            else
+                            {
+                                <DxGrid Data="@RigheBuonoPrelievoSimPr"
+                                        ShowSearchBox="true"
+                                        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                                        PagerVisible="false"
+                                        CssClass="mt-2"
+                                        HighlightRowOnHover="true">
+                                    <Columns>
+                                        <DxGridDataColumn FieldName="BParte" Caption="Parte" Width="110px" />
+                                        <DxGridDataColumn FieldName="BParteDesc" Caption="Parte Desc." Width="160px" />
+                                        <DxGridDataColumn FieldName="BParteCol" Caption="Parte Col." Width="100px" />
+                                        <DxGridDataColumn FieldName="BParteColDesc" Caption="Parte Col. Desc." Width="140px" />
+                                        <DxGridDataColumn FieldName="Um" Caption="UM" Width="70px" />
+                                        <DxGridDataColumn FieldName="Qta" Caption="Qta" Width="90px" />
+                                        <DxGridDataColumn FieldName="MagNetto" Caption="Saldo" Width="90px" />
+                                        <DxGridDataColumn FieldName="MagLordo" Caption="Mag Lordo" Width="100px" />
+                                        <DxGridDataColumn FieldName="FabbNetto" Caption="Fabb. Netto" Width="100px" />
+                                        <DxGridDataColumn FieldName="InOrd" Caption="In Ordine" Width="90px" />
+                                        <DxGridDataColumn FieldName="DataArrOrd" Caption="Data Arrivo Ordine" Width="140px" />
+                                        <DxGridDataColumn FieldName="CkDataConf" Caption="Data Conferma" Width="110px" />
+                                        <DxGridDataColumn FieldName="BContatto" Caption="Fornitore Materiale" Width="160px" />
+                                        <DxGridDataColumn FieldName="CodArtFornitore" Caption="Cod. Art. Fornitore" Width="140px" />
+                                        <DxGridDataColumn FieldName="BCdAllCol" Caption="Cod. Col." Width="100px" />
+                                    </Columns>
+                                </DxGrid>
+                            }
+                        }
+                        else
+                        {
+                            <div class="d-flex align-items-center justify-content-center text-muted" style="height: 120px;">
+                                <p class="mb-0">Seleziona un modello dall'elenco per vedere il dettaglio.</p>
+                            </div>
+                        }
+                        </div>
+                    </DxSplitterPane>
+                </Panes>
+            </DxSplitter>
+        }
+    }
+    else if (VistaLanciCommesse == "Libera")
+    {
+        <div class="articoli-toolbar d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+            @if (MostraFiltriLibera)
+            {
+                <button type="button" class="btn btn-sm d-flex align-items-center justify-content-center flex-shrink-0"
+                        style="width:28px;height:28px;background:transparent;color:#ff8c00;border:1px solid #ff8c00;border-radius:50%;padding:0;"
+                        title="Nascondi filtri"
+                        @onclick="@(() => MostraFiltriLibera = false)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z" />
+                    </svg>
+                </button>
+            }
+            else
+            {
+                <button type="button" class="btn btn-sm d-flex align-items-center gap-1"
+                        style="background-color:#ff8c00;color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;opacity:0.85;"
+                        @onclick="@(() => MostraFiltriLibera = true)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
+                    </svg>
+                    Mostra filtri
+                </button>
+            }
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm @(!ListPaneCollapsedLibera && DetailsPaneCollapsedLibera ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowListOnlyLibera">Lista</button>
+                <button type="button" class="btn btn-sm @(!ListPaneCollapsedLibera && !DetailsPaneCollapsedLibera ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowSplitViewLibera">Split</button>
+                <button type="button" class="btn btn-sm @(ListPaneCollapsedLibera && !DetailsPaneCollapsedLibera ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowDetailsOnlyLibera">Dettaglio</button>
+            </div>
+        </div>
+
+        @if (MostraFiltriLibera)
+        {
+            <div class="articoli-filtri p-2 mb-2 border rounded d-flex flex-wrap gap-3 align-items-end">
+                <div style="min-width:220px;">
+                    <label class="form-label small mb-0">Brand</label>
+                    <CheckboxDropdown TItem="Contatti"
+                                      Data="@Brands"
+                                      @bind-SelectedItems="BrandSelezionatiLibera"
+                                      TextFieldSelector="@(b => b.Societa1)"
+                                      NullText="Tutti i brand"
+                                      SelectAllText="Tutti i brand" />
+                </div>
+                <div style="min-width:220px;">
+                    <label class="form-label small mb-0">Stagione</label>
+                    <CheckboxDropdown TItem="TabStagioni"
+                                      Data="@Stagioni"
+                                      @bind-SelectedItems="StagioneSelezionatiLibera"
+                                      TextFieldSelector="@(s => s.Cod)"
+                                      NullText="Tutte le stagioni"
+                                      SelectAllText="Tutte le stagioni" />
+                </div>
+                <div style="min-width:220px;">
+                    <label class="form-label small mb-0">Tipo</label>
+                    <CheckboxDropdown TItem="string"
+                                      Data="@TipiDisponibili"
+                                      @bind-SelectedItems="TipiSelezionatiLibera"
+                                      TextFieldSelector="@GetTipoLabel"
+                                      NullText="Nessun tipo"
+                                      SelectAllText="Tutti i tipi" />
+                </div>
+                <div style="min-width:220px;">
+                    <label class="form-label small mb-0">Magazzino</label>
+                    <CheckboxDropdown TItem="string"
+                                      Data="@CodiciMag"
+                                      @bind-SelectedItems="MagazziniSelezionatiLibera"
+                                      TextFieldSelector="@(m => m)"
+                                      NullText="Tutti i magazzini"
+                                      SelectAllText="Tutti i magazzini" />
+                </div>
+                <button type="button" class="btn-icon-plain" @onclick="CercaLibera" title="Cerca">
+                    <img src="images/RefreshOranSVG1.svg" class="btn-icon-search" alt="Cerca" />
+                </button>
+            </div>
+        }
+
+        @if (loadingLibera)
+        {
+            <Loading></Loading>
+        }
+        else
+        {
+            <DxSplitter Height="@(MostraFiltriLibera ? "calc(100vh - 350px)" : "calc(100vh - 262px)")">
+                <Panes>
+                    <DxSplitterPane Size="60%" MinSize="300px" @bind-Collapsed="@ListPaneCollapsedLibera">
+                        <DxGrid Data="@DataSourceLibera"
+                                ShowSearchBox="true"
+                                ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                                AllowSelectRowByClick="true"
+                                PagerVisible="false"
+                                VirtualScrollingEnabled="true"
+                                CssClass="h-100"
+                                HighlightRowOnHover="true"
+                                FocusedRowEnabled="true"
+                                FocusedRowChanged="RigaSelezionataCambiataLibera">
+                            <Columns>
+                                <DxGridDataColumn Caption="Img" Width="70px">
+                                    <CellDisplayTemplate Context="ctx">
+                                        @{
+                                            var riga = (BasiAllLiberaRiga)ctx.DataItem;
+                                        }
+                                        @if (riga.ImgParte1 != null)
+                                        {
+                                            <img src="data:image/png;base64,@Convert.ToBase64String(riga.ImgParte1)" style="height:32px;width:32px;object-fit:cover;border-radius:4px;" />
+                                        }
+                                    </CellDisplayTemplate>
+                                </DxGridDataColumn>
+                                <DxGridDataColumn FieldName="Tipo" Caption="Tipo" Width="80px" />
+                                <DxGridDataColumn FieldName="Stag" Caption="Stag" Width="90px" />
+                                <DxGridDataColumn FieldName="Parte" Caption="Parte" Width="120px" />
+                                <DxGridDataColumn FieldName="ParteDesc" Caption="Parte Desc." Width="220px" />
+                                <DxGridDataColumn FieldName="CodArtFornitore" Caption="Cod. Art. Fornitore" Width="150px" />
+                                <DxGridDataColumn FieldName="Contatto" Caption="Brand" Width="160px" />
+                            </Columns>
+                        </DxGrid>
+                    </DxSplitterPane>
+                    <DxSplitterPane @bind-Collapsed="@DetailsPaneCollapsedLibera">
+                        <div class="d-flex align-items-center justify-content-center text-muted" style="height: 120px;">
+                            <p class="mb-0">Sezione in lavorazione.</p>
+                        </div>
+                    </DxSplitterPane>
+                </Panes>
+            </DxSplitter>
+        }
+    }
+}
+
 </div>
 
 @code {
+    private string VistaAttiva = "SituazioneCommesse";
+    private string VistaLanciCommesse = "PrDaOrdini";
+    private bool MostraFiltriLanciPr = true;
+    private bool loadingLanciPr = false;
+    private List<VPianifStatoModelli1> DataSourceLanciPr = new();
+    private List<Contatti> BrandSelezionatiLanciPr = new();
+    private List<TabStagioni> StagioneSelezionatiLanciPr = new();
+    private List<TabTipoOrdineCl> TipiOrdineSelezionatiLanciPr = new();
+    private bool ListPaneCollapsedPr = false;
+    private bool DetailsPaneCollapsedPr = false;
+    private VPianifStatoModelli1? ModelloSelezionatoPr;
+    private string? ImmagineModelloPrBase64;
+
+    private bool MostraFiltriLibera = true;
+    private bool loadingLibera = false;
+    private List<BasiAllLiberaRiga> DataSourceLibera = new();
+    private List<Contatti> BrandSelezionatiLibera = new();
+    private List<TabStagioni> StagioneSelezionatiLibera = new();
+    private List<string> TipiSelezionatiLibera = new() { "PR", "MP", "SM" };
+    private List<string> MagazziniSelezionatiLibera = new();
+    private bool ListPaneCollapsedLibera = false;
+    private bool DetailsPaneCollapsedLibera = false;
+    private BasiAllLiberaRiga? RigaSelezionataLibera;
+
+    private List<OrdiniClDaLanciareRiga> RigheDaLanciarePr = new();
+    private List<BuonoPrelievoMpSimRiga> RigheBuonoPrelievoSimPr = new();
+    private bool loadingBuonoPrelievoSimPr;
+    private bool loadingRigheDaLanciarePr;
+
     private DxGrid MyGrid = default!;
     private List<VProduzGeneCommesseTesta2>? DataSource;
     private bool loading = true;
@@ -520,6 +941,12 @@
                 BrandSelezionati = Brands.ToList();
                 StagioneSelezionati = Stagioni.ToList();
                 TipiOrdineSelezionati = TipiOrdine.ToList();
+                BrandSelezionatiLanciPr = Brands.ToList();
+                StagioneSelezionatiLanciPr = Stagioni.ToList();
+                TipiOrdineSelezionatiLanciPr = TipiOrdine.ToList();
+                BrandSelezionatiLibera = Brands.ToList();
+                StagioneSelezionatiLibera = Stagioni.ToList();
+                MagazziniSelezionatiLibera = CodiciMag.ToList();
             }
             finally
             {
@@ -546,6 +973,296 @@
             loading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task CercaLanciPr()
+    {
+        loadingLanciPr = true;
+        StateHasChanged();
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var query = context.VPianifStatoModellis1.AsNoTracking().Where(x => x.IdMod > 0);
+
+            if (BrandSelezionatiLanciPr.Any())
+            {
+                var brandIds = BrandSelezionatiLanciPr.Select(b => b.Id).ToList();
+                query = query.Where(a => brandIds.Contains(a.IdContatto));
+            }
+            if (StagioneSelezionatiLanciPr.Any())
+            {
+                var stagioneIds = StagioneSelezionatiLanciPr.Select(s => s.Id).ToList();
+                query = query.Where(a => stagioneIds.Contains(a.IdStag));
+            }
+
+            DataSourceLanciPr = await query.ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            await ShowDialog("Errore", $"Si è verificato un errore durante la ricerca: {ex.Message}", ("OK", "ok", ButtonRenderStyle.Primary));
+        }
+        finally
+        {
+            loadingLanciPr = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RigaSelezionataCambiataPr(GridFocusedRowChangedEventArgs e)
+    {
+        ModelloSelezionatoPr = e.DataItem as VPianifStatoModelli1;
+        ImmagineModelloPrBase64 = null;
+        RigheDaLanciarePr = new();
+        RigheBuonoPrelievoSimPr = new();
+
+        if (ModelloSelezionatoPr != null)
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var immagine = await context.Database
+                .SqlQuery<byte[]?>($"SELECT dbo.GET_Immagine_idMod1({ModelloSelezionatoPr.IdMod}) AS Value")
+                .FirstOrDefaultAsync();
+            if (immagine != null)
+            {
+                ImmagineModelloPrBase64 = Convert.ToBase64String(immagine);
+            }
+            StateHasChanged();
+
+            loadingRigheDaLanciarePr = true;
+            StateHasChanged();
+            try
+            {
+                var connection = context.Database.GetDbConnection();
+                await connection.OpenAsync();
+
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "EXEC dbo.SP_V_OrdiniCL_DaLanciare_Select_idMod @idMod, @idClasse, @idUte";
+                var pMod = cmd.CreateParameter();
+                pMod.ParameterName = "@idMod";
+                pMod.Value = ModelloSelezionatoPr.IdMod;
+                cmd.Parameters.Add(pMod);
+                var pClasse = cmd.CreateParameter();
+                pClasse.ParameterName = "@idClasse";
+                pClasse.Value = 7;
+                cmd.Parameters.Add(pClasse);
+                var pUte = cmd.CreateParameter();
+                pUte.ParameterName = "@idUte";
+                pUte.Value = 1;
+                cmd.Parameters.Add(pUte);
+
+                var righe = new List<OrdiniClDaLanciareRiga>();
+                using var reader = await cmd.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    righe.Add(new OrdiniClDaLanciareRiga
+                    {
+                        IdRiga = reader["idRiga"] as int?,
+                        StatoRigaOrd = reader["StatoRigaOrd"] as string,
+                        OrdTipo = reader["OrdTipo"] as string,
+                        OrdNr = reader["OrdNr"] as int?,
+                        Anag1 = reader["Anag1"] as string,
+                        ColOrd = reader["ColOrd"] as string,
+                        DescCol = reader["DescCol"] as string,
+                        NrCommessa = reader["NrCommessa"] as int?,
+                        TotCapi = reader["TotCapi"] as int?,
+                        DataCons = reader["DataCons"] is DateTime dataCons ? DateOnly.FromDateTime(dataCons) : (DateOnly?)null,
+                        DaL1 = reader["Da_L1"] as int?,
+                        DaL2 = reader["Da_L2"] as int?,
+                        DaL3 = reader["Da_L3"] as int?,
+                        DaL4 = reader["Da_L4"] as int?,
+                        DaL5 = reader["Da_L5"] as int?,
+                        DaL6 = reader["Da_L6"] as int?,
+                        DaL7 = reader["Da_L7"] as int?,
+                        DaL8 = reader["Da_L8"] as int?,
+                        DaL9 = reader["Da_L9"] as int?,
+                        DaL10 = reader["Da_L10"] as int?,
+                        DaL11 = reader["Da_L11"] as int?,
+                        DaL12 = reader["Da_L12"] as int?,
+                        DaL13 = reader["Da_L13"] as int?,
+                        DaL14 = reader["Da_L14"] as int?,
+                        DaL15 = reader["Da_L15"] as int?,
+                        DaL16 = reader["Da_L16"] as int?,
+                        StrNota = reader["strNota"] as string,
+                    });
+                }
+                RigheDaLanciarePr = righe;
+            }
+            finally
+            {
+                loadingRigheDaLanciarePr = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private void ShowListOnlyPr()
+    {
+        ListPaneCollapsedPr = false;
+        DetailsPaneCollapsedPr = true;
+    }
+
+    private void ShowSplitViewPr()
+    {
+        ListPaneCollapsedPr = false;
+        DetailsPaneCollapsedPr = false;
+    }
+
+    private void ShowDetailsOnlyPr()
+    {
+        ListPaneCollapsedPr = true;
+        DetailsPaneCollapsedPr = false;
+    }
+
+    private async Task CercaLibera()
+    {
+        loadingLibera = true;
+        StateHasChanged();
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var connection = context.Database.GetDbConnection();
+            await connection.OpenAsync();
+
+            using var cmd = connection.CreateCommand();
+            var whereClauses = new List<string> { "Stato = 'A'" };
+            var paramIndex = 0;
+
+            void AddInClause(string column, IEnumerable<object> values)
+            {
+                var valueList = values.ToList();
+                if (valueList.Count == 0) return;
+                var names = new List<string>();
+                foreach (var v in valueList)
+                {
+                    var pname = $"@p{paramIndex++}";
+                    names.Add(pname);
+                    var p = cmd.CreateParameter();
+                    p.ParameterName = pname;
+                    p.Value = v;
+                    cmd.Parameters.Add(p);
+                }
+                whereClauses.Add($"{column} IN ({string.Join(",", names)})");
+            }
+
+            AddInClause("TIPO", TipiSelezionatiLibera.Cast<object>());
+            AddInClause("idContatto", BrandSelezionatiLibera.Select(b => (object)b.Id));
+            AddInClause("idStag", StagioneSelezionatiLibera.Select(s => (object)s.Id));
+
+            cmd.CommandText = "SELECT cd, TIPO, idContatto, Contatto, Stag, Parte, ParteDesc, idStag, CodArtFornitore, "
+                + "dbo.GET_Immagine_cdALL1(cd) AS imgParte1 FROM V_BasiALL WHERE "
+                + string.Join(" AND ", whereClauses) + " ORDER BY Parte";
+
+            var righe = new List<BasiAllLiberaRiga>();
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                righe.Add(new BasiAllLiberaRiga
+                {
+                    Cd = reader["cd"] as string,
+                    Tipo = reader["TIPO"] as string,
+                    Stag = reader["Stag"] as string,
+                    Parte = reader["Parte"] as string,
+                    ParteDesc = reader["ParteDesc"] as string,
+                    CodArtFornitore = reader["CodArtFornitore"] as string,
+                    Contatto = reader["Contatto"] as string,
+                    ImgParte1 = reader["imgParte1"] as byte[],
+                });
+            }
+            DataSourceLibera = righe;
+        }
+        catch (Exception ex)
+        {
+            await ShowDialog("Errore", $"Si è verificato un errore durante la ricerca: {ex.Message}", ("OK", "ok", ButtonRenderStyle.Primary));
+        }
+        finally
+        {
+            loadingLibera = false;
+            StateHasChanged();
+        }
+    }
+
+    private void RigaSelezionataCambiataLibera(GridFocusedRowChangedEventArgs e)
+    {
+        RigaSelezionataLibera = e.DataItem as BasiAllLiberaRiga;
+    }
+
+    private void ShowListOnlyLibera()
+    {
+        ListPaneCollapsedLibera = false;
+        DetailsPaneCollapsedLibera = true;
+    }
+
+    private void ShowSplitViewLibera()
+    {
+        ListPaneCollapsedLibera = false;
+        DetailsPaneCollapsedLibera = false;
+    }
+
+    private void ShowDetailsOnlyLibera()
+    {
+        ListPaneCollapsedLibera = true;
+        DetailsPaneCollapsedLibera = false;
+    }
+
+    private async Task SimulaLanciPr()
+    {
+        loadingBuonoPrelievoSimPr = true;
+        StateHasChanged();
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var connection = context.Database.GetDbConnection();
+            await connection.OpenAsync();
+
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "EXEC dbo.SP_Produz_BuonoPrelievoMPTemp_Crea @idUte, @Modo";
+            var pUte = cmd.CreateParameter();
+            pUte.ParameterName = "@idUte";
+            pUte.Value = 1;
+            cmd.Parameters.Add(pUte);
+            var pModo = cmd.CreateParameter();
+            pModo.ParameterName = "@Modo";
+            pModo.Value = "SINTESI";
+            cmd.Parameters.Add(pModo);
+
+            var righe = new List<BuonoPrelievoMpSimRiga>();
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                righe.Add(new BuonoPrelievoMpSimRiga
+                {
+                    BParte = reader["B_Parte"] as string,
+                    BParteDesc = reader["B_ParteDesc"] as string,
+                    BParteCol = reader["B_ParteCol"] as string,
+                    BParteColDesc = reader["B_ParteColDesc"] as string,
+                    Um = reader["UM"] as string,
+                    Qta = reader["Qta"] as double?,
+                    MagNetto = reader["MagNetto"] as double?,
+                    MagLordo = reader["MagLordo"] as double?,
+                    FabbNetto = reader["FabbNetto"] as double?,
+                    InOrd = reader["InOrd"] as double?,
+                    DataArrOrd = reader["DataArrOrd"] is DateTime dataArrOrd ? DateOnly.FromDateTime(dataArrOrd) : (DateOnly?)null,
+                    CkDataConf = reader["ckDataConf"] as string,
+                    BContatto = reader["B_Contatto"] as string,
+                    CodArtFornitore = reader["CodArtFornitore"] as string,
+                    BCdAllCol = reader["B_cdALLCol"] as string,
+                });
+            }
+            RigheBuonoPrelievoSimPr = righe;
+        }
+        catch (Exception ex)
+        {
+            await ShowDialog("Errore", $"Si è verificato un errore durante la simulazione: {ex.Message}", ("OK", "ok", ButtonRenderStyle.Primary));
+        }
+        finally
+        {
+            loadingBuonoPrelievoSimPr = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CreaCommessaLanciPr()
+    {
+        // TODO: creazione commessa da modello selezionato
     }
 
     private async Task CaricaDati()
