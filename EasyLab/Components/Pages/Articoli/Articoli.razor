@@ -1,6 +1,4 @@
 @page "/Articoli"
-@page "/Materiali"
-@page "/Prodotti"
 @attribute [Authorize]
 @inject NavigationManager NavManager
 @inject IJSRuntime JSRuntime
@@ -79,6 +77,15 @@
                               SelectAllText="Tutte le stagioni" />
         </div>
         <div style="min-width:220px;">
+            <label class="form-label small mb-0">Laboratorio</label>
+            <CheckboxDropdown TItem="TabAnagCliFor"
+                              Data="@Laboratori"
+                              @bind-SelectedItems="LaboratoriSelezionati"
+                              TextFieldSelector="@(l => l.Anag1)"
+                              NullText="Tutti i laboratori"
+                              SelectAllText="Tutti i laboratori" />
+        </div>
+        <div style="min-width:220px;">
             <label class="form-label small mb-0">Tipo</label>
             <CheckboxDropdown TItem="string"
                               Data="@TipiDisponibili"
@@ -142,7 +149,7 @@
                     </DxGridDataColumn>
                     <DxGridDataColumn FieldName="TabKw.Descr" Caption="KW" Visible="false" />
                     <DxGridDataColumn FieldName="ContattiFornPref.Societa1" Caption="Fornitore Pref." Visible="false" />
-                    <DxGridDataColumn FieldName="ContattiLabPrev.Societa1" Caption="Laboratorio Prev." Visible="false" />
+                    <DxGridDataColumn FieldName="LaboratorioPrev.Anag1" Caption="Laboratorio Prev." Visible="false" />
                     <DxGridDataColumn FieldName="CodArtFornitore" Caption="Cod. Art. Fornitore" Visible="false" />
                     <DxGridDataColumn FieldName="CdOp" Caption="CdOp" Visible="false" />
                     <DxGridDataColumn FieldName="Um" Caption="UM" Visible="false" />
@@ -471,14 +478,25 @@
 </div>
 
 @code {
+    // Deve combaciare con i TabellaId usati in UtentiDatabase.razor (permessi di lettura per utente).
+    private const int IdTabellaStagioni = 1;
+    private const int IdTabellaBrand = 2;
+    private const int IdTabellaLaboratori = 3;
+    private const int IdTipoAnagLaboratorio = 4;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
     private DxGrid MyGrid = default!;
     private List<BasiAll>? DataSource;
     private List<Contatti> Brands = new();
     private List<TabStagioni> Stagioni = new();
+    private List<TabAnagCliFor> Laboratori = new();
     private BasiAll? ArticoloSelezionato;
 
     private List<Contatti> BrandSelezionati = new();
     private List<TabStagioni> StagioneSelezionati = new();
+    private List<TabAnagCliFor> LaboratoriSelezionati = new();
     private List<string> TipiSelezionati = new() { "PR", "MP", "SM" };
     private static readonly List<string> TipiDisponibili = new() { "PR", "MP", "SM" };
 
@@ -515,10 +533,12 @@
                 using var context = await DbFactory.CreateDbContextAsync();
                 Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
                 Stagioni = await context.TabStagionis.AsNoTracking().Where(x => x.Stato == "A").OrderByDescending(s => s.OrdPm).ToListAsync();
+                Laboratori = await context.TabAnagCliFors.AsNoTracking().Where(x => x.IdTipoAnag == IdTipoAnagLaboratorio).OrderBy(x => x.Anag1).ToListAsync();
+                await ApplicaPermessiLettura();
                 BrandSelezionati = Brands.ToList();
                 StagioneSelezionati = Stagioni.ToList();
+                LaboratoriSelezionati = Laboratori.ToList();
                 await CaricaLookups();
-                ApplyRouteFilters();
             }
             finally
             {
@@ -528,31 +548,47 @@
         }
     }
 
+    private async Task ApplicaPermessiLettura()
+    {
+        if (AuthStateTask == null) return;
+
+        var authState = await AuthStateTask;
+        var utenteId = UserManager.GetUserId(authState.User);
+        if (utenteId == null) return;
+
+        // Una riga senza permesso esplicito è considerata visibile (stesso default usato in
+        // UtentiDatabase.razor: i permessi vengono creati a true finché non li si disattiva).
+        var nascosti = await DbContext.PermessiLetturaTabelles.AsNoTracking()
+            .Where(p => p.UtenteId == utenteId && !p.Visualizza
+                && (p.TabellaId == IdTabellaStagioni || p.TabellaId == IdTabellaBrand || p.TabellaId == IdTabellaLaboratori))
+            .ToListAsync();
+
+        var brandNascosti = nascosti.Where(p => p.TabellaId == IdTabellaBrand).Select(p => p.RigaCod).ToHashSet();
+        var stagioniNascoste = nascosti.Where(p => p.TabellaId == IdTabellaStagioni).Select(p => p.RigaCod).ToHashSet();
+        var laboratoriNascosti = nascosti.Where(p => p.TabellaId == IdTabellaLaboratori).Select(p => p.RigaCod).ToHashSet();
+
+        if (brandNascosti.Count > 0)
+        {
+            Brands = Brands.Where(b => !brandNascosti.Contains(b.Id.ToString())).ToList();
+        }
+        if (stagioniNascoste.Count > 0)
+        {
+            Stagioni = Stagioni.Where(s => !stagioniNascoste.Contains(s.Id.ToString())).ToList();
+        }
+        if (laboratoriNascosti.Count > 0)
+        {
+            Laboratori = Laboratori.Where(l => !laboratoriNascosti.Contains(l.Id.ToString())).ToList();
+        }
+    }
+
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
-        // /Articoli, /Materiali e /Prodotti puntano allo stesso componente: Blazor lo riusa
-        // senza richiamare OnInitialized/OnAfterRender(firstRender), quindi il filtro Tipo
-        // va risincronizzato manualmente quando si passa da una scheda all'altra.
-        ApplyRouteFilters();
         InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
-    }
-
-    private void ApplyRouteFilters()
-    {
-        var uri = NavigationManager.Uri;
-        if (uri.Contains("/Materiali", StringComparison.OrdinalIgnoreCase))
-        {
-            TipiSelezionati = new List<string> { "MP" };
-        }
-        else if (uri.Contains("/Prodotti", StringComparison.OrdinalIgnoreCase))
-        {
-            TipiSelezionati = new List<string> { "PR" };
-        }
     }
 
     private static string GetTipoLabel(string tipo) => tipo switch
@@ -609,6 +645,13 @@
                 var stagioneIds = StagioneSelezionati.Select(s => s.Id).ToList();
                 query = query.Where(a => a.IdStag != null && stagioneIds.Contains(a.IdStag.Value));
             }
+            if (LaboratoriSelezionati.Any())
+            {
+                var laboratorioIds = LaboratoriSelezionati.Select(l => l.Id).ToList();
+                // IdLabPrev è sempre valorizzato: 0 significa "nessun laboratorio previsto" e va sempre incluso,
+                // non è un id reale su cui filtrare.
+                query = query.Where(a => a.IdLabPrev == null || a.IdLabPrev == 0 || laboratorioIds.Contains(a.IdLabPrev.Value));
+            }
 
             DataSource = await query.OrderBy(a => a.Cd).ToListAsync();
         }
@@ -640,7 +683,7 @@
                 .Include(a => a.SetTaglieDettA)
                 .Include(a => a.TabKw)
                 .Include(a => a.ContattiFornPref)
-                .Include(a => a.ContattiLabPrev)
+                .Include(a => a.LaboratorioPrev)
                 .Include(a => a.TabComposizione1)
                 .Include(a => a.TabComposizione2)
                 .Include(a => a.TabComposizione3)

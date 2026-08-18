@@ -11,6 +11,13 @@ namespace EasyLab.Models.Local
         {
         }
 
+        public DbSet<PermessiLetturaTabelle> PermessiLetturaTabelles { get; set; } = null!;
 
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+
+            builder.Entity<PermessiLetturaTabelle>().ToTable("PermessiLetturaTabelle", t => t.ExcludeFromMigrations());
+        }
     }
 }

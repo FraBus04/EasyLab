@@ -14,7 +14,7 @@ public partial class SeaseTstContext
             entity.HasOne(b => b.SetTaglieDettA).WithMany().HasForeignKey(b => b.IdTgA).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(b => b.TabKw).WithMany().HasForeignKey(b => b.IdKw).HasPrincipalKey(k => k.IdKw).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(b => b.ContattiFornPref).WithMany().HasForeignKey(b => b.IdFornPref).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
-            entity.HasOne(b => b.ContattiLabPrev).WithMany().HasForeignKey(b => b.IdLabPrev).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
+            entity.HasOne(b => b.LaboratorioPrev).WithMany().HasForeignKey(b => b.IdLabPrev).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(b => b.TabComposizione1).WithMany().HasForeignKey(b => b.IdComp1).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(b => b.TabComposizione2).WithMany().HasForeignKey(b => b.IdComp2).IsRequired(false).OnDelete(DeleteBehavior.NoAction);
             entity.HasOne(b => b.TabComposizione3).WithMany().HasForeignKey(b => b.IdComp3).IsRequired(false).OnDelete(DeleteBehavior.NoAction);

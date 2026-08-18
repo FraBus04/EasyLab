@@ -1,12 +1,335 @@
 @if (Utente == null)
 {
-
+    <div class="d-flex align-items-center justify-content-center text-muted" style="height: 200px;">
+        <p class="mb-0">Seleziona un utente dall'elenco per gestirne il database.</p>
+    </div>
 }
 else
 {
+    <div class="utente-card">
+        <div class="fw-bold fs-5">Database di @Utente.UserName</div>
 
+        <div class="utenti-tab-nav mt-3">
+            <button class="@(ActiveSubTab == "laboratori" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveSubTab = "laboratori")">Laboratori</button>
+            <button class="@(ActiveSubTab == "stagioni" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveSubTab = "stagioni")">Stagioni</button>
+            <button class="@(ActiveSubTab == "brand" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveSubTab = "brand")">Brand</button>
+        </div>
+
+        <div class="detail-section">
+            @if (loading)
+            {
+                <Loading></Loading>
+            }
+            else if (ActiveSubTab == "stagioni")
+            {
+                <DxGrid Data="@StagioniRows"
+                        KeyFieldName="Id"
+                        ShowSearchBox="true"
+                        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                        AllowSelectRowByClick="true"
+                        PagerVisible="false"
+                        VirtualScrollingEnabled="true"
+                        PageSize="30"
+                        Height="60vh"
+                        CssClass="h-100"
+                        HighlightRowOnHover="true"
+                        FocusedRowEnabled="true">
+                    <Columns>
+                        <DxGridDataColumn FieldName="Id" Caption="Id" Width="220px" ReadOnly="true" Visible="false" />
+                        <DxGridDataColumn FieldName="Cod" Caption="Codice" Width="110px" />
+                        <DxGridDataColumn FieldName="Descr" Caption="Descrizione" />
+                        <DxGridDataColumn FieldName="CodImp" Caption="Cod. Imp." Width="110px" />
+                        <DxGridDataColumn FieldName="Anno" Caption="Anno" Width="100px" />
+                        <DxGridDataColumn FieldName="TipoStag" Caption="Tipo Stagione" Width="140px" />
+                        <DxGridDataColumn FieldName="AnnoDesc" Caption="Anno Descrizione" Width="150px" />
+                        <DxGridDataColumn FieldName="DataIns" Caption="Data Inserimento" Width="160px" ReadOnly="true" />
+                        <DxGridDataColumn FieldName="DataUpd" Caption="Data Aggiornamento" Width="160px" ReadOnly="true" />
+                        <DxGridDataColumn FieldName="Visualizza" Caption="Visualizza" Width="100px">
+                            <CellDisplayTemplate Context="ctx">
+                                @{ var riga = (StagioneRow)ctx.DataItem; }
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked="@riga.Visualizza" @onchange="@((ChangeEventArgs e) => ToggleVisualizzaStagione(riga, (bool)e.Value!))" />
+                                    <span class="toggle-switch-slider"></span>
+                                </label>
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+                    </Columns>
+                </DxGrid>
+            }
+            else if (ActiveSubTab == "brand")
+            {
+                <DxGrid Data="@BrandRows"
+                        KeyFieldName="Id"
+                        ShowSearchBox="true"
+                        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                        AllowSelectRowByClick="true"
+                        PagerVisible="false"
+                        VirtualScrollingEnabled="true"
+                        PageSize="30"
+                        Height="60vh"
+                        CssClass="h-100"
+                        HighlightRowOnHover="true"
+                        FocusedRowEnabled="true">
+                    <Columns>
+                        <DxGridDataColumn FieldName="Id" Caption="Id" Width="220px" ReadOnly="true" Visible="false" />
+                        <DxGridDataColumn FieldName="Societa1" Caption="Brand" />
+                        <DxGridDataColumn FieldName="Societa2" Caption="Ragione Sociale" />
+                        <DxGridDataColumn FieldName="Citta" Caption="Città" Width="140px" />
+                        <DxGridDataColumn FieldName="Prov" Caption="Prov." Width="90px" />
+                        <DxGridDataColumn FieldName="Stato" Caption="Stato" Width="90px" />
+                        <DxGridDataColumn FieldName="DataIns" Caption="Data Inserimento" Width="160px" ReadOnly="true" />
+                        <DxGridDataColumn FieldName="DataUpd" Caption="Data Aggiornamento" Width="160px" ReadOnly="true" />
+                        <DxGridDataColumn FieldName="Visualizza" Caption="Visualizza" Width="100px">
+                            <CellDisplayTemplate Context="ctx">
+                                @{ var riga = (BrandRow)ctx.DataItem; }
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked="@riga.Visualizza" @onchange="@((ChangeEventArgs e) => ToggleVisualizzaBrand(riga, (bool)e.Value!))" />
+                                    <span class="toggle-switch-slider"></span>
+                                </label>
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+                    </Columns>
+                </DxGrid>
+            }
+            else
+            {
+                <DxGrid Data="@LaboratoriRows"
+                        KeyFieldName="Id"
+                        ShowSearchBox="true"
+                        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                        AllowSelectRowByClick="true"
+                        PagerVisible="false"
+                        VirtualScrollingEnabled="true"
+                        PageSize="30"
+                        Height="60vh"
+                        CssClass="h-100"
+                        HighlightRowOnHover="true"
+                        FocusedRowEnabled="true">
+                    <Columns>
+                        <DxGridDataColumn FieldName="Id" Caption="Id" Width="220px" ReadOnly="true" Visible="false" />
+                        <DxGridDataColumn FieldName="Anag1" Caption="Laboratorio" />
+                        <DxGridDataColumn FieldName="Anag2" Caption="Ragione Sociale" />
+                        <DxGridDataColumn FieldName="Citta" Caption="Città" Width="140px" />
+                        <DxGridDataColumn FieldName="Prov" Caption="Prov." Width="90px" />
+                        <DxGridDataColumn FieldName="Stato" Caption="Stato" Width="90px" />
+                        <DxGridDataColumn FieldName="DataIns" Caption="Data Inserimento" Width="160px" ReadOnly="true" />
+                        <DxGridDataColumn FieldName="DataUpd" Caption="Data Aggiornamento" Width="160px" ReadOnly="true" />
+                        <DxGridDataColumn FieldName="Visualizza" Caption="Visualizza" Width="100px">
+                            <CellDisplayTemplate Context="ctx">
+                                @{ var riga = (LaboratorioRow)ctx.DataItem; }
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked="@riga.Visualizza" @onchange="@((ChangeEventArgs e) => ToggleVisualizzaLaboratorio(riga, (bool)e.Value!))" />
+                                    <span class="toggle-switch-slider"></span>
+                                </label>
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+                    </Columns>
+                </DxGrid>
+            }
+        </div>
+    </div>
 }
 
 @code {
+    private const int IdTabellaStagioni = 1;
+    private const int IdTabellaBrand = 2;
+    private const int IdTabellaLaboratori = 3;
+    private const int IdTipoAnagLaboratorio = 4;
+
     [Parameter] public ApplicationUser? Utente { get; set; }
+
+    private string ActiveSubTab = "laboratori";
+    private bool loading = true;
+    private List<StagioneRow> StagioniRows = new();
+    private List<BrandRow> BrandRows = new();
+    private List<LaboratorioRow> LaboratoriRows = new();
+    private string? _previousUtenteId;
+
+    private class StagioneRow
+    {
+        public int Id { get; set; }
+        public string Cod { get; set; } = null!;
+        public string Descr { get; set; } = null!;
+        public string? CodImp { get; set; }
+        public int? Anno { get; set; }
+        public string? TipoStag { get; set; }
+        public string? AnnoDesc { get; set; }
+        public DateTime DataIns { get; set; }
+        public DateTime DataUpd { get; set; }
+        public bool Visualizza { get; set; }
+    }
+
+    private class BrandRow
+    {
+        public int Id { get; set; }
+        public string Societa1 { get; set; } = null!;
+        public string? Societa2 { get; set; }
+        public string? Citta { get; set; }
+        public string? Prov { get; set; }
+        public string? Stato { get; set; }
+        public DateTime? DataIns { get; set; }
+        public DateTime? DataUpd { get; set; }
+        public bool Visualizza { get; set; }
+    }
+
+    private class LaboratorioRow
+    {
+        public int Id { get; set; }
+        public string Anag1 { get; set; } = null!;
+        public string? Anag2 { get; set; }
+        public string? Citta { get; set; }
+        public string? Prov { get; set; }
+        public string? Stato { get; set; }
+        public DateTime? DataIns { get; set; }
+        public DateTime? DataUpd { get; set; }
+        public bool Visualizza { get; set; }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Utente?.Id != _previousUtenteId)
+        {
+            _previousUtenteId = Utente?.Id;
+            await CaricaDati();
+        }
+    }
+
+    private async Task CaricaDati()
+    {
+        if (Utente == null)
+        {
+            StagioniRows = new();
+            BrandRows = new();
+            LaboratoriRows = new();
+            return;
+        }
+
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+
+            var stagioni = await context.TabStagionis.AsNoTracking().Where(x => x.Stato == "A").OrderBy(s => s.OrdPm).ToListAsync();
+            var permessiStagioni = await CaricaECompletaPermessi(IdTabellaStagioni, stagioni.Select(s => s.Id.ToString()));
+            StagioniRows = stagioni.Select(s => new StagioneRow
+            {
+                Id = s.Id,
+                Cod = s.Cod,
+                Descr = s.Descr,
+                CodImp = s.CodImp,
+                Anno = s.Anno,
+                TipoStag = s.TipoStag,
+                AnnoDesc = s.AnnoDesc,
+                DataIns = s.DataIns,
+                DataUpd = s.DataUpd,
+                Visualizza = permessiStagioni.TryGetValue(s.Id.ToString(), out var v1) && v1
+            }).ToList();
+
+            var brand = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
+            var permessiBrand = await CaricaECompletaPermessi(IdTabellaBrand, brand.Select(b => b.Id.ToString()));
+            BrandRows = brand.Select(b => new BrandRow
+            {
+                Id = b.Id,
+                Societa1 = b.Societa1,
+                Societa2 = b.Societa2,
+                Citta = b.Citta,
+                Prov = b.Prov,
+                Stato = b.Stato,
+                DataIns = b.DataIns,
+                DataUpd = b.DataUpd,
+                Visualizza = permessiBrand.TryGetValue(b.Id.ToString(), out var v2) && v2
+            }).ToList();
+
+            var laboratori = await context.TabAnagCliFors.AsNoTracking().Where(x => x.IdTipoAnag == IdTipoAnagLaboratorio).OrderBy(x => x.Anag1).ToListAsync();
+            var permessiLaboratori = await CaricaECompletaPermessi(IdTabellaLaboratori, laboratori.Select(l => l.Id.ToString()));
+            LaboratoriRows = laboratori.Select(l => new LaboratorioRow
+            {
+                Id = l.Id,
+                Anag1 = l.Anag1,
+                Anag2 = l.Anag2,
+                Citta = l.Citta,
+                Prov = l.Prov,
+                Stato = l.Stato,
+                DataIns = l.DataIns,
+                DataUpd = l.DataUpd,
+                Visualizza = permessiLaboratori.TryGetValue(l.Id.ToString(), out var v3) && v3
+            }).ToList();
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<Dictionary<string, bool>> CaricaECompletaPermessi(int idTabella, IEnumerable<string> righeCod)
+    {
+        var permessi = await DbContext.PermessiLetturaTabelles.AsNoTracking()
+            .Where(p => p.UtenteId == Utente!.Id && p.TabellaId == idTabella)
+            .ToDictionaryAsync(p => p.RigaCod, p => p.Visualizza);
+
+        var mancanti = righeCod.Where(cod => !permessi.ContainsKey(cod)).ToList();
+        if (mancanti.Count > 0)
+        {
+            foreach (var rigaCod in mancanti)
+            {
+                DbContext.PermessiLetturaTabelles.Add(new PermessiLetturaTabelle
+                {
+                    TabellaId = idTabella,
+                    UtenteId = Utente!.Id,
+                    RigaCod = rigaCod,
+                    Visualizza = true
+                });
+                permessi[rigaCod] = true;
+            }
+
+            await DbContext.SaveChangesAsync();
+        }
+
+        return permessi;
+    }
+
+    private async Task ToggleVisualizzaStagione(StagioneRow riga, bool nuovoValore)
+    {
+        riga.Visualizza = nuovoValore;
+        await SalvaPermesso(IdTabellaStagioni, riga.Id.ToString(), nuovoValore);
+    }
+
+    private async Task ToggleVisualizzaBrand(BrandRow riga, bool nuovoValore)
+    {
+        riga.Visualizza = nuovoValore;
+        await SalvaPermesso(IdTabellaBrand, riga.Id.ToString(), nuovoValore);
+    }
+
+    private async Task ToggleVisualizzaLaboratorio(LaboratorioRow riga, bool nuovoValore)
+    {
+        riga.Visualizza = nuovoValore;
+        await SalvaPermesso(IdTabellaLaboratori, riga.Id.ToString(), nuovoValore);
+    }
+
+    private async Task SalvaPermesso(int idTabella, string rigaCod, bool nuovoValore)
+    {
+        if (Utente == null) return;
+
+        var permesso = await DbContext.PermessiLetturaTabelles
+            .FirstOrDefaultAsync(p => p.UtenteId == Utente.Id && p.TabellaId == idTabella && p.RigaCod == rigaCod);
+
+        if (permesso == null)
+        {
+            DbContext.PermessiLetturaTabelles.Add(new PermessiLetturaTabelle
+            {
+                TabellaId = idTabella,
+                UtenteId = Utente.Id,
+                RigaCod = rigaCod,
+                Visualizza = nuovoValore
+            });
+        }
+        else
+        {
+            permesso.Visualizza = nuovoValore;
+        }
+
+        await DbContext.SaveChangesAsync();
+    }
 }

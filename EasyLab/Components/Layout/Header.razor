@@ -8,17 +8,11 @@
 		<div @onclick="Home">
 			<img style="cursor: pointer; width: auto; height: auto;" src="/images/EASY-20-60.png" alt="Home" />
 		</div>
-		<div @onclick="Materiali">
+		<div @onclick="Articoli">
 			<button>
-                <img src="/images/MatSVG.svg" alt="Materiali" />
+                <img src="/images/SchedaProdottoSVG.svg" alt="Articoli" />
 			</button>
-			<span>Materiali</span>
-		</div>
-		<div @onclick="Prodotti">
-			<button>
-                <img src="/images/SchedaProdottoSVG.svg" alt="Prodotti" />
-			</button>
-			<span>Prodotti</span>
+			<span>Articoli</span>
 		</div> 
 		@* <div @onclick="DiBa">
 			<button>
@@ -100,18 +94,6 @@
         }
     }
 
-    private async Task Materiali(MouseEventArgs e)
-    {
-        if (e.ShiftKey)
-        {
-            await JSRuntime.InvokeVoidAsync("open", "/Materiali", "_blank");
-        }
-        else
-        {
-            NavManager.NavigateTo("/Materiali");
-        }
-    }
-
     private async Task DiBa(MouseEventArgs e)
     {
         if (e.ShiftKey)
@@ -124,18 +106,6 @@
         }
     }
 
-    private async Task Prodotti(MouseEventArgs e)
-    {
-        if (e.ShiftKey)
-        {
-            await JSRuntime.InvokeVoidAsync("open", "/Prodotti", "_blank");
-        }
-        else
-        {
-            NavManager.NavigateTo("/Prodotti");
-        }
-    }
-    
     private async Task PianficazioneLanci(MouseEventArgs e)
     {
         if (e.ShiftKey)

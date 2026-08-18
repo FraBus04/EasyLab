@@ -11,7 +11,7 @@ public partial class BasiAll
     public virtual SetTaglieDett? SetTaglieDettA { get; set; }
     public virtual TabKw? TabKw { get; set; }
     public virtual Contatti? ContattiFornPref { get; set; }
-    public virtual Contatti? ContattiLabPrev { get; set; }
+    public virtual TabAnagCliFor? LaboratorioPrev { get; set; }
     public virtual TabComposizione? TabComposizione1 { get; set; }
     public virtual TabComposizione? TabComposizione2 { get; set; }
     public virtual TabComposizione? TabComposizione3 { get; set; }
