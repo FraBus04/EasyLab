@@ -9,6 +9,8 @@ main {
     display: flex;
     flex-direction: column;
     background-color: #FAFAFA;
+    min-width: 0;
+    max-width: 100%;
 }
 
 html, body {
@@ -37,6 +39,8 @@ a, .btn-link {
     background-color: #FAFAFA;
     margin-bottom: 0;
     flex: 1;
+    min-width: 0;
+    max-width: 100%;
 }
 
 h1:focus {
