@@ -602,7 +602,7 @@ h1:focus {
 /* Checkbox Dropdown Filter */
 .checkbox-dropdown {
     position: relative;
-    min-width: 250px;
+    width: 100%;
     outline: none;
     z-index: 1045;
 }
@@ -636,6 +636,7 @@ h1:focus {
 
 .checkbox-dropdown-text {
     flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;

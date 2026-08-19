@@ -58,40 +58,40 @@
 @if (MostraFiltri)
 {
     <div class="articoli-filtri p-2 mb-2 border rounded d-flex flex-wrap gap-3 align-items-end">
-        <div style="min-width:220px;">
+        <div style="width:220px;">
             <label class="form-label small mb-0">Brand</label>
             <CheckboxDropdown TItem="Contatti"
                               Data="@Brands"
                               @bind-SelectedItems="BrandSelezionati"
                               TextFieldSelector="@(b => b.Societa1)"
-                              NullText="Tutti i brand"
+                              NullText="Nessun brand selezionato"
                               SelectAllText="Tutti i brand" />
         </div>
-        <div style="min-width:220px;">
+        <div style="width:220px;">
             <label class="form-label small mb-0">Stagione</label>
             <CheckboxDropdown TItem="TabStagioni"
                               Data="@Stagioni"
                               @bind-SelectedItems="StagioneSelezionati"
                               TextFieldSelector="@(s => s.Cod)"
-                              NullText="Tutte le stagioni"
+                              NullText="Nessuna stagione selezionata"
                               SelectAllText="Tutte le stagioni" />
         </div>
-        <div style="min-width:220px;">
+        <div style="width:220px;">
             <label class="form-label small mb-0">Laboratorio</label>
             <CheckboxDropdown TItem="TabAnagCliFor"
                               Data="@Laboratori"
                               @bind-SelectedItems="LaboratoriSelezionati"
                               TextFieldSelector="@(l => l.Anag1)"
-                              NullText="Tutti i laboratori"
+                              NullText="Nessun laboratorio selezionato"
                               SelectAllText="Tutti i laboratori" />
         </div>
-        <div style="min-width:220px;">
+        <div style="width:220px;">
             <label class="form-label small mb-0">Tipo</label>
             <CheckboxDropdown TItem="string"
                               Data="@TipiDisponibili"
                               @bind-SelectedItems="TipiSelezionati"
                               TextFieldSelector="@GetTipoLabel"
-                              NullText="Nessun tipo"
+                              NullText="Nessun tipo selezionato"
                               SelectAllText="Tutti i tipi" />
         </div>
         <button type="button" class="btn-icon-plain" @onclick="Cerca" title="Cerca">
@@ -259,7 +259,7 @@
             </DxGrid>
         </DxSplitterPane>
         <DxSplitterPane @bind-Collapsed="@DetailsPaneCollapsed">
-                <div class="d-flex flex-column" style="height: 100%;">
+                <div class="d-flex flex-column" style="height: 100%; min-width: 0;">
                     @if (ArticoloSelezionato != null)
                     {
                     @if (MostraDettagli)
@@ -482,6 +482,8 @@
     private const int IdTabellaStagioni = 1;
     private const int IdTabellaBrand = 2;
     private const int IdTabellaLaboratori = 3;
+    // Il "Tipo" non ha una tabella a database: le righe sono le sigle PR/MP/SM.
+    private const int IdTabellaTipo = 4;
     private const int IdTipoAnagLaboratorio = 4;
 
     [CascadingParameter]
@@ -497,8 +499,8 @@
     private List<Contatti> BrandSelezionati = new();
     private List<TabStagioni> StagioneSelezionati = new();
     private List<TabAnagCliFor> LaboratoriSelezionati = new();
-    private List<string> TipiSelezionati = new() { "PR", "MP", "SM" };
-    private static readonly List<string> TipiDisponibili = new() { "PR", "MP", "SM" };
+    private List<string> TipiSelezionati = new();
+    private List<string> TipiDisponibili = new() { "PR", "MP", "SM" };
 
     private CustomColumnChooser myColumnChooser = default!;
     private Dictionary<string, Dictionary<int, string>> Lookups = new();
@@ -538,6 +540,7 @@
                 BrandSelezionati = Brands.ToList();
                 StagioneSelezionati = Stagioni.ToList();
                 LaboratoriSelezionati = Laboratori.ToList();
+                TipiSelezionati = TipiDisponibili.ToList();
                 await CaricaLookups();
             }
             finally
@@ -556,29 +559,21 @@
         var utenteId = UserManager.GetUserId(authState.User);
         if (utenteId == null) return;
 
-        // Una riga senza permesso esplicito è considerata visibile (stesso default usato in
-        // UtentiDatabase.razor: i permessi vengono creati a true finché non li si disattiva).
-        var nascosti = await DbContext.PermessiLetturaTabelles.AsNoTracking()
-            .Where(p => p.UtenteId == utenteId && !p.Visualizza
-                && (p.TabellaId == IdTabellaStagioni || p.TabellaId == IdTabellaBrand || p.TabellaId == IdTabellaLaboratori))
+        // Una riga senza permesso esplicito NON è visibile: serve un permesso con Visualizza = true.
+        var visibili = await DbContext.PermessiLetturaTabelles.AsNoTracking()
+            .Where(p => p.UtenteId == utenteId && p.Visualizza
+                && (p.TabellaId == IdTabellaStagioni || p.TabellaId == IdTabellaBrand || p.TabellaId == IdTabellaLaboratori || p.TabellaId == IdTabellaTipo))
             .ToListAsync();
 
-        var brandNascosti = nascosti.Where(p => p.TabellaId == IdTabellaBrand).Select(p => p.RigaCod).ToHashSet();
-        var stagioniNascoste = nascosti.Where(p => p.TabellaId == IdTabellaStagioni).Select(p => p.RigaCod).ToHashSet();
-        var laboratoriNascosti = nascosti.Where(p => p.TabellaId == IdTabellaLaboratori).Select(p => p.RigaCod).ToHashSet();
+        var brandVisibili = visibili.Where(p => p.TabellaId == IdTabellaBrand).Select(p => p.RigaCod).ToHashSet();
+        var stagioniVisibili = visibili.Where(p => p.TabellaId == IdTabellaStagioni).Select(p => p.RigaCod).ToHashSet();
+        var laboratoriVisibili = visibili.Where(p => p.TabellaId == IdTabellaLaboratori).Select(p => p.RigaCod).ToHashSet();
+        var tipiVisibili = visibili.Where(p => p.TabellaId == IdTabellaTipo).Select(p => p.RigaCod).ToHashSet();
 
-        if (brandNascosti.Count > 0)
-        {
-            Brands = Brands.Where(b => !brandNascosti.Contains(b.Id.ToString())).ToList();
-        }
-        if (stagioniNascoste.Count > 0)
-        {
-            Stagioni = Stagioni.Where(s => !stagioniNascoste.Contains(s.Id.ToString())).ToList();
-        }
-        if (laboratoriNascosti.Count > 0)
-        {
-            Laboratori = Laboratori.Where(l => !laboratoriNascosti.Contains(l.Id.ToString())).ToList();
-        }
+        Brands = Brands.Where(b => brandVisibili.Contains(b.Id.ToString())).ToList();
+        Stagioni = Stagioni.Where(s => stagioniVisibili.Contains(s.Id.ToString())).ToList();
+        Laboratori = Laboratori.Where(l => laboratoriVisibili.Contains(l.Id.ToString())).ToList();
+        TipiDisponibili = TipiDisponibili.Where(t => tipiVisibili.Contains(t)).ToList();
     }
 
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
@@ -632,26 +627,19 @@
         {
             using var context = await DbFactory.CreateDbContextAsync();
             var query = context.BasiAlls.AsNoTracking()
+                .Include(a => a.LaboratorioPrev)
                 .Where(a => a.Stato != "C")
                 .Where(a => a.Tipo != null && TipiSelezionati.Contains(a.Tipo));
 
-            if (BrandSelezionati.Any())
-            {
-                var brandIds = BrandSelezionati.Select(b => b.Id).ToList();
-                query = query.Where(a => brandIds.Contains(a.IdContatto));
-            }
-            if (StagioneSelezionati.Any())
-            {
-                var stagioneIds = StagioneSelezionati.Select(s => s.Id).ToList();
-                query = query.Where(a => a.IdStag != null && stagioneIds.Contains(a.IdStag.Value));
-            }
-            if (LaboratoriSelezionati.Any())
-            {
-                var laboratorioIds = LaboratoriSelezionati.Select(l => l.Id).ToList();
-                // IdLabPrev è sempre valorizzato: 0 significa "nessun laboratorio previsto" e va sempre incluso,
-                // non è un id reale su cui filtrare.
-                query = query.Where(a => a.IdLabPrev == null || a.IdLabPrev == 0 || laboratorioIds.Contains(a.IdLabPrev.Value));
-            }
+            var brandIds = BrandSelezionati.Select(b => b.Id).ToList();
+            query = query.Where(a => brandIds.Contains(a.IdContatto));
+
+            var stagioneIds = StagioneSelezionati.Select(s => s.Id).ToList();
+            query = query.Where(a => a.IdStag != null && stagioneIds.Contains(a.IdStag.Value));
+
+            var laboratorioIds = LaboratoriSelezionati.Select(l => l.Id).ToList();
+
+            query = query.Where(a => a.IdLabPrev == null || a.IdLabPrev == 0 || laboratorioIds.Contains(a.IdLabPrev.Value));
 
             DataSource = await query.OrderBy(a => a.Cd).ToListAsync();
         }

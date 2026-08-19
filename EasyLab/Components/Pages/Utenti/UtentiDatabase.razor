@@ -13,6 +13,7 @@ else
             <button class="@(ActiveSubTab == "laboratori" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveSubTab = "laboratori")">Laboratori</button>
             <button class="@(ActiveSubTab == "stagioni" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveSubTab = "stagioni")">Stagioni</button>
             <button class="@(ActiveSubTab == "brand" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveSubTab = "brand")">Brand</button>
+            <button class="@(ActiveSubTab == "tipo" ? "utenti-tab-btn utenti-tab-active" : "utenti-tab-btn")" @onclick="@(() => ActiveSubTab = "tipo")">Tipo</button>
         </div>
 
         <div class="detail-section">
@@ -91,6 +92,35 @@ else
                     </Columns>
                 </DxGrid>
             }
+            else if (ActiveSubTab == "tipo")
+            {
+                <DxGrid Data="@TipoRows"
+                        KeyFieldName="Sigla"
+                        ShowSearchBox="true"
+                        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                        AllowSelectRowByClick="true"
+                        PagerVisible="false"
+                        VirtualScrollingEnabled="true"
+                        PageSize="30"
+                        Height="60vh"
+                        CssClass="h-100"
+                        HighlightRowOnHover="true"
+                        FocusedRowEnabled="true">
+                    <Columns>
+                        <DxGridDataColumn FieldName="Sigla" Caption="Sigla" Width="110px" />
+                        <DxGridDataColumn FieldName="Descrizione" Caption="Descrizione" />
+                        <DxGridDataColumn FieldName="Visualizza" Caption="Visualizza" Width="100px">
+                            <CellDisplayTemplate Context="ctx">
+                                @{ var riga = (TipoRow)ctx.DataItem; }
+                                <label class="toggle-switch">
+                                    <input type="checkbox" checked="@riga.Visualizza" @onchange="@((ChangeEventArgs e) => ToggleVisualizzaTipo(riga, (bool)e.Value!))" />
+                                    <span class="toggle-switch-slider"></span>
+                                </label>
+                            </CellDisplayTemplate>
+                        </DxGridDataColumn>
+                    </Columns>
+                </DxGrid>
+            }
             else
             {
                 <DxGrid Data="@LaboratoriRows"
@@ -134,7 +164,16 @@ else
     private const int IdTabellaStagioni = 1;
     private const int IdTabellaBrand = 2;
     private const int IdTabellaLaboratori = 3;
+    // Il "Tipo" non ha una tabella a database: le righe sono le sigle PR/MP/SM.
+    private const int IdTabellaTipo = 4;
     private const int IdTipoAnagLaboratorio = 4;
+
+    private static readonly (string Sigla, string Descrizione)[] TipiDisponibili =
+    {
+        ("PR", "Prodotti"),
+        ("MP", "Materiali"),
+        ("SM", "Semilavorati")
+    };
 
     [Parameter] public ApplicationUser? Utente { get; set; }
 
@@ -143,6 +182,7 @@ else
     private List<StagioneRow> StagioniRows = new();
     private List<BrandRow> BrandRows = new();
     private List<LaboratorioRow> LaboratoriRows = new();
+    private List<TipoRow> TipoRows = new();
     private string? _previousUtenteId;
 
     private class StagioneRow
@@ -185,6 +225,13 @@ else
         public bool Visualizza { get; set; }
     }
 
+    private class TipoRow
+    {
+        public string Sigla { get; set; } = null!;
+        public string Descrizione { get; set; } = null!;
+        public bool Visualizza { get; set; }
+    }
+
     protected override async Task OnParametersSetAsync()
     {
         if (Utente?.Id != _previousUtenteId)
@@ -201,6 +248,7 @@ else
             StagioniRows = new();
             BrandRows = new();
             LaboratoriRows = new();
+            TipoRows = new();
             return;
         }
 
@@ -255,6 +303,14 @@ else
                 DataUpd = l.DataUpd,
                 Visualizza = permessiLaboratori.TryGetValue(l.Id.ToString(), out var v3) && v3
             }).ToList();
+
+            var permessiTipo = await CaricaECompletaPermessi(IdTabellaTipo, TipiDisponibili.Select(t => t.Sigla));
+            TipoRows = TipiDisponibili.Select(t => new TipoRow
+            {
+                Sigla = t.Sigla,
+                Descrizione = t.Descrizione,
+                Visualizza = permessiTipo.TryGetValue(t.Sigla, out var v4) && v4
+            }).ToList();
         }
         finally
         {
@@ -279,9 +335,9 @@ else
                     TabellaId = idTabella,
                     UtenteId = Utente!.Id,
                     RigaCod = rigaCod,
-                    Visualizza = true
+                    Visualizza = false
                 });
-                permessi[rigaCod] = true;
+                permessi[rigaCod] = false;
             }
 
             await DbContext.SaveChangesAsync();
@@ -306,6 +362,12 @@ else
     {
         riga.Visualizza = nuovoValore;
         await SalvaPermesso(IdTabellaLaboratori, riga.Id.ToString(), nuovoValore);
+    }
+
+    private async Task ToggleVisualizzaTipo(TipoRow riga, bool nuovoValore)
+    {
+        riga.Visualizza = nuovoValore;
+        await SalvaPermesso(IdTabellaTipo, riga.Sigla, nuovoValore);
     }
 
     private async Task SalvaPermesso(int idTabella, string rigaCod, bool nuovoValore)

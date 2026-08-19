@@ -8,7 +8,7 @@
 
 <div class="checkbox-dropdown">
     <div class="checkbox-dropdown-toggle" @onclick="ToggleDropdown" @onclick:stopPropagation>
-        <span class="checkbox-dropdown-text">
+        <span class="checkbox-dropdown-text" title="@GetToggleText()">
             @if (SelectedItems.Count == 0)
             {
                 @NullText
@@ -87,6 +87,13 @@
     {
         if (TextFieldSelector != null) return TextFieldSelector(item);
         return item?.ToString() ?? "";
+    }
+
+    private string GetToggleText()
+    {
+        if (SelectedItems.Count == 0) return NullText;
+        if (SelectedItems.Count == GetAvailableItems().Count()) return SelectAllText;
+        return string.Join(", ", SelectedItems.Select(GetDisplayText));
     }
 
     private void ToggleDropdown()
