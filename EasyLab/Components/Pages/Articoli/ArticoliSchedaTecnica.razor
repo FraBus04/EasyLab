@@ -71,12 +71,8 @@
         else
         {
         <DxGrid Data="@SchedeTecniche"
-                KeyFieldName="Id"
-                EditMode="GridEditMode.PopupEditForm"
-                CustomizeEditModel="OnCustomizeEditModel"
-                EditModelSaving="OnEditModelSaving">
+                KeyFieldName="Id">
             <Columns>
-                <DxGridCommandColumn Width="70px" NewButtonVisible="true" EditButtonVisible="false" DeleteButtonVisible="false" ShowInColumnChooser="false" />
                 <DxGridDataColumn FieldName="Id" Caption="ID" Visible="false" />
                 <DxGridDataColumn Caption="Cod">
                     <CellDisplayTemplate Context="cellContext">
@@ -91,32 +87,6 @@
                 <DxGridDataColumn FieldName="CkEasy" Caption="Easy" Width="80px" />
                 <DxGridDataColumn FieldName="DataUpd" Caption="Aggiornato il" Width="140px" />
             </Columns>
-            <EditFormTemplate Context="editContext">
-                @{
-                    var model = (SchedaTecnicaTestum)editContext.EditModel;
-                }
-                @if (!string.IsNullOrEmpty(FormError))
-                {
-                    <div class="text-danger mb-2">@FormError</div>
-                }
-                <DxFormLayout>
-                    <DxFormLayoutItem Caption="Codice" ColSpanMd="6">
-                        <DxTextBox @bind-Text="model.Cod" />
-                    </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Tipo" ColSpanMd="6">
-                        <DxComboBox Data="@TipiSchedaTecnica" @bind-Value="model.IdSchedaTecnicaTipo" ValueFieldName="Id" TextFieldName="Descr" />
-                    </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Stato" ColSpanMd="6">
-                        <DxComboBox Data="@StatiSchedaTecnica" @bind-Value="model.Stato" ValueFieldName="Stato" TextFieldName="Descr" />
-                    </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Effettiva" ColSpanMd="3">
-                        <DxCheckBox @bind-Checked="model.CkEffettiva" />
-                    </DxFormLayoutItem>
-                    <DxFormLayoutItem Caption="Easy" ColSpanMd="3">
-                        <DxCheckBox @bind-Checked="model.CkEasy" />
-                    </DxFormLayoutItem>
-                </DxFormLayout>
-            </EditFormTemplate>
         </DxGrid>
         }
     </div>
@@ -133,21 +103,18 @@
         <BodyContentTemplate>
             @if (RichEditReady)
             {
-                <div id="richedit-dropzone" style="height:100%;">
-                    <DxRichEdit @ref="RichEdit"
-                                @bind-DocumentContent="DocumentContent"
-                                DocumentFormat="@DocumentFormatInUso"
-                                CheckSpelling="false"
-                                BarMode="BarMode.Ribbon"
-                                CssClass="w-100"
-                                style="height:100%;"
-                                DocumentLoaded="OnDocumentLoaded"/>
-                </div>
+                <DxRichEdit @ref="RichEdit"
+                            DocumentContent="@DocumentContent"
+                            DocumentFormat="@DocumentFormatInUso"
+                            ReadOnly="true"
+                            CheckSpelling="false"
+                            BarMode="BarMode.Ribbon"
+                            CssClass="w-100"
+                            style="height:100%;"/>
             }
         </BodyContentTemplate>
         <FooterContentTemplate>
-            <DxButton Text="Annulla" RenderStyle="ButtonRenderStyle.Secondary" Click="ClosePopup" />
-            <DxButton Text="Salva" RenderStyle="ButtonRenderStyle.Primary" Click="SaveRichText" />
+            <DxButton Text="Chiudi" RenderStyle="ButtonRenderStyle.Secondary" Click="ClosePopup" />
         </FooterContentTemplate>
     </DxPopup>
 }
@@ -160,9 +127,6 @@ else
     [Parameter] public BasiAll? ArticoloSelezionato { get; set; }
 
     private List<SchedaTecnicaTestum> SchedeTecniche = new();
-    private List<TabSchedaTecnicaTipo> TipiSchedaTecnica = new();
-    private List<TabStatoSchedaTecnica> StatiSchedaTecnica = new();
-    private string? FormError;
     private int? idModCaricato;
 
     private DxRichEdit? RichEdit;
@@ -171,59 +135,6 @@ else
     private byte[]? DocumentContent;
     private DocumentFormat DocumentFormatInUso = DocumentFormat.OpenXml;
     private SchedaTecnicaTestum? SchedaInEdit;
-    DotNetObjectReference<ArticoliSchedaTecnica>? dotNetRef;
-
-    async Task OnDocumentLoaded()
-    {
-        await Task.Delay(100);
-        dotNetRef ??= DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("initDropZone", "richedit-dropzone", dotNetRef);
-    }
-
-    [JSInvokable]
-    public async Task OnImageDropped(string base64Data, string fileName)
-    {
-        if (RichEdit == null) return;
-
-        var bytes = Convert.FromBase64String(base64Data);
-
-        const int maxWidthTwips = 8504; // larghezza utile di una pagina A4
-        int widthTwips = maxWidthTwips;
-        int heightTwips = maxWidthTwips;
-        try
-        {
-            using var probeStream = new MemoryStream(bytes);
-            using var img = System.Drawing.Image.FromStream(probeStream);
-            var dpiX = img.HorizontalResolution > 0 ? img.HorizontalResolution : 96;
-            var dpiY = img.VerticalResolution > 0 ? img.VerticalResolution : 96;
-            widthTwips = (int)(img.Width * 1440f / dpiX);
-            heightTwips = (int)(img.Height * 1440f / dpiY);
-            if (widthTwips > maxWidthTwips)
-            {
-                var scale = (float)maxWidthTwips / widthTwips;
-                widthTwips = maxWidthTwips;
-                heightTwips = (int)(heightTwips * scale);
-            }
-        }
-        catch (Exception)
-        {
-            // dimensioni non leggibili: si usa il fallback quadrato a piena larghezza pagina
-        }
-
-        var paragraphs = await RichEdit.DocumentAPI.Paragraphs.GetAllAsync();
-        var endPosition = paragraphs.Last().Interval.Start;
-
-        using var stream = new MemoryStream(bytes);
-        var imageSource = DocumentImageSource.LoadFromStream(stream, widthTwips, heightTwips);
-        await RichEdit.DocumentAPI.InlineImages.CreateAsync(endPosition, imageSource);
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        using var context = await DbFactory.CreateDbContextAsync();
-        TipiSchedaTecnica = await context.TabSchedaTecnicaTipos.AsNoTracking().OrderBy(t => t.Descr).ToListAsync();
-        StatiSchedaTecnica = await context.TabStatoSchedaTecnicas.AsNoTracking().ToListAsync();
-    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -250,45 +161,6 @@ else
             .ToListAsync();
     }
 
-    private void OnCustomizeEditModel(GridCustomizeEditModelEventArgs e)
-    {
-        if (e.IsNew && ArticoloSelezionato != null)
-        {
-            FormError = null;
-            e.EditModel = new SchedaTecnicaTestum
-            {
-                IdMod = ArticoloSelezionato.IdMod,
-                IdContatto = ArticoloSelezionato.IdContatto,
-                Cod = "",
-                IdSchedaTecnicaTipo = TipiSchedaTecnica.FirstOrDefault()?.Id ?? 0,
-                Stato = "L",
-                CkEffettiva = true,
-                CkEasy = false
-            };
-        }
-    }
-
-    private async Task OnEditModelSaving(GridEditModelSavingEventArgs e)
-    {
-        var model = (SchedaTecnicaTestum)e.EditModel;
-        if (string.IsNullOrWhiteSpace(model.Cod))
-        {
-            FormError = "Il codice è obbligatorio.";
-            e.Cancel = true;
-            return;
-        }
-
-        model.DataIns = DateTime.Now;
-        model.DataUpd = DateTime.Now;
-        model.IdUteIns = 1;
-        model.IdUteUpd = 1;
-
-        using var context = await DbFactory.CreateDbContextAsync();
-        context.SchedaTecnicaTesta.Add(model);
-        await context.SaveChangesAsync();
-        await LoadSchedeTecniche();
-    }
-
     private void OpenScheda(SchedaTecnicaTestum scheda)
     {
         SchedaInEdit = scheda;
@@ -307,19 +179,19 @@ else
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task OnPopupClosing(PopupClosingEventArgs e)
+    private Task OnPopupClosing(PopupClosingEventArgs e)
     {
         RichEditReady = false;
         SchedaInEdit = null;
-        await JS.InvokeVoidAsync("disposeDropZone");
+        return Task.CompletedTask;
     }
 
-    private async Task ClosePopup()
+    private Task ClosePopup()
     {
         PopupVisible = false;
         RichEditReady = false;
         SchedaInEdit = null;
-        await JS.InvokeVoidAsync("disposeDropZone");
+        return Task.CompletedTask;
     }
 
     private static (byte[]? Content, DocumentFormat Format) DecodeRichText(string? value)
@@ -335,28 +207,5 @@ else
             // Dati legacy: RichText contiene RTF in chiaro (es. "{\rtf1...}").
             return (System.Text.Encoding.UTF8.GetBytes(value), DocumentFormat.Rtf);
         }
-    }
-
-    private async Task SaveRichText()
-    {
-        if (RichEdit == null || SchedaInEdit == null) return;
-
-        await RichEdit.SaveDocumentAsync();
-        if (DocumentContent != null)
-        {
-            using var context = await DbFactory.CreateDbContextAsync();
-            var dbItem = await context.SchedaTecnicaTesta.FirstOrDefaultAsync(s => s.Id == SchedaInEdit.Id);
-            if (dbItem != null)
-            {
-                dbItem.RichText = DocumentFormatInUso == DocumentFormat.Rtf
-                    ? System.Text.Encoding.UTF8.GetString(DocumentContent)
-                    : Convert.ToBase64String(DocumentContent);
-                dbItem.DataUpd = DateTime.Now;
-                await context.SaveChangesAsync();
-                SchedaInEdit.RichText = dbItem.RichText;
-            }
-        }
-
-        await ClosePopup();
     }
 }
