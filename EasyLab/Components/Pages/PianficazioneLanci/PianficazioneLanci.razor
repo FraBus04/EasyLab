@@ -40,7 +40,6 @@
         </button>
     }
     <div class="d-flex align-items-end gap-2">
-        <button type="button" class="btn btn-sm btn-outline-orange" @onclick="@(() => myColumnChooser.Visible = !myColumnChooser.Visible)">Colonne</button>
         <div class="btn-group" role="group">
             <button type="button" class="btn btn-sm @(!ListPaneCollapsed && DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowListOnly">Lista</button>
             <button type="button" class="btn btn-sm @(!ListPaneCollapsed && !DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowSplitView">Split</button>
@@ -119,7 +118,17 @@
                     FocusedRowEnabled="true"
                     FocusedRowChanged="RigaSelezionataCambiata">
                 <Columns>
-                    <DxGridCommandColumn Width="90px" EditButtonVisible="true" DeleteButtonVisible="true" NewButtonVisible="false" ShowInColumnChooser="false" />
+                    <DxGridCommandColumn Width="90px" EditButtonVisible="true" DeleteButtonVisible="true" NewButtonVisible="false" ShowInColumnChooser="false">
+                        <HeaderTemplate Context="hdr">
+                            <DxButton RenderStyle="ButtonRenderStyle.None"
+                                      Click="@(() => myColumnChooser.Visible = !myColumnChooser.Visible)"
+                                      Tooltip="Colonne">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#ff8c00" viewBox="0 0 16 16" class="Image-Command-Column">
+                                    <path d="M0 1.5A1.5 1.5 0 0 1 1.5 0h13A1.5 1.5 0 0 1 16 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13zM1.5 1a.5.5 0 0 0-.5.5V14a.5.5 0 0 0 .5.5H5v-14H1.5zM6 1v14h4V1H6zm5 0v14h3.5a.5.5 0 0 0 .5-.5v-13a.5.5 0 0 0-.5-.5H11z" />
+                                </svg>
+                            </DxButton>
+                        </HeaderTemplate>
+                    </DxGridCommandColumn>
                     <DxGridDataColumn FieldName="NrScheda" Caption="Com." Width="90px" MinWidth="80" />
                     <DxGridDataColumn FieldName="Parte" Caption="Parte" Width="120px" MinWidth="100" />
                     <DxGridDataColumn FieldName="TotCapi" Caption="Tot. Capi" Width="100px" MinWidth="90" />
@@ -857,6 +866,15 @@ else if (VistaAttiva == "LanciCommesse")
 </div>
 
 @code {
+    // Deve combaciare con i TabellaId usati in UtentiDatabase.razor (permessi di lettura per utente).
+    private const int IdTabellaStagioni = 1;
+    private const int IdTabellaBrand = 2;
+    // Il "Tipo" non ha una tabella a database: le righe sono le sigle PR/MP/SM.
+    private const int IdTabellaTipo = 4;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
     private string VistaAttiva = "SituazioneCommesse";
     private string VistaLanciCommesse = "PrDaOrdini";
     private bool MostraFiltriLanciPr = true;
@@ -913,7 +931,7 @@ else if (VistaAttiva == "LanciCommesse")
     private List<TabStatoExp> StatiExp = new();
     private List<TabPagamenti> Pagamenti = new();
     private List<string> CodiciMag = new();
-    private static readonly List<string> TipiDisponibili = new() { "PR", "MP", "SM" };
+    private List<string> TipiDisponibili = new() { "PR", "MP", "SM" };
 
     private List<Contatti> BrandSelezionati = new();
     private List<TabStagioni> StagioneSelezionati = new();
@@ -938,14 +956,17 @@ else if (VistaAttiva == "LanciCommesse")
                 StatiExp = await context.TabStatoExps.AsNoTracking().OrderBy(x => x.Stato).ToListAsync();
                 Pagamenti = await context.TabPagamentis.AsNoTracking().OrderBy(x => x.Descr).ToListAsync();
                 CodiciMag = await context.TabMagazzinis.AsNoTracking().Select(x => x.CodMag).Distinct().OrderBy(x => x).ToListAsync();
+                await ApplicaPermessiLettura();
                 BrandSelezionati = Brands.ToList();
                 StagioneSelezionati = Stagioni.ToList();
                 TipiOrdineSelezionati = TipiOrdine.ToList();
+                TipiSelezionati = TipiDisponibili.ToList();
                 BrandSelezionatiLanciPr = Brands.ToList();
                 StagioneSelezionatiLanciPr = Stagioni.ToList();
                 TipiOrdineSelezionatiLanciPr = TipiOrdine.ToList();
                 BrandSelezionatiLibera = Brands.ToList();
                 StagioneSelezionatiLibera = Stagioni.ToList();
+                TipiSelezionatiLibera = TipiDisponibili.ToList();
                 MagazziniSelezionatiLibera = CodiciMag.ToList();
             }
             finally
@@ -954,6 +975,29 @@ else if (VistaAttiva == "LanciCommesse")
                 StateHasChanged();
             }
         }
+    }
+
+    private async Task ApplicaPermessiLettura()
+    {
+        if (AuthStateTask == null) return;
+
+        var authState = await AuthStateTask;
+        var utenteId = UserManager.GetUserId(authState.User);
+        if (utenteId == null) return;
+
+        // Una riga senza permesso esplicito NON è visibile: serve un permesso con Visualizza = true.
+        var visibili = await DbContext.PermessiLetturaTabelles.AsNoTracking()
+            .Where(p => p.UtenteId == utenteId && p.Visualizza
+                && (p.TabellaId == IdTabellaStagioni || p.TabellaId == IdTabellaBrand || p.TabellaId == IdTabellaTipo))
+            .ToListAsync();
+
+        var brandVisibili = visibili.Where(p => p.TabellaId == IdTabellaBrand).Select(p => p.RigaCod).ToHashSet();
+        var stagioniVisibili = visibili.Where(p => p.TabellaId == IdTabellaStagioni).Select(p => p.RigaCod).ToHashSet();
+        var tipiVisibili = visibili.Where(p => p.TabellaId == IdTabellaTipo).Select(p => p.RigaCod).ToHashSet();
+
+        Brands = Brands.Where(b => brandVisibili.Contains(b.Id.ToString())).ToList();
+        Stagioni = Stagioni.Where(s => stagioniVisibili.Contains(s.Id.ToString())).ToList();
+        TipiDisponibili = TipiDisponibili.Where(t => tipiVisibili.Contains(t)).ToList();
     }
 
     private async Task Cerca()
@@ -984,16 +1028,11 @@ else if (VistaAttiva == "LanciCommesse")
             using var context = await DbFactory.CreateDbContextAsync();
             var query = context.VPianifStatoModellis1.AsNoTracking().Where(x => x.IdMod > 0);
 
-            if (BrandSelezionatiLanciPr.Any())
-            {
-                var brandIds = BrandSelezionatiLanciPr.Select(b => b.Id).ToList();
-                query = query.Where(a => brandIds.Contains(a.IdContatto));
-            }
-            if (StagioneSelezionatiLanciPr.Any())
-            {
-                var stagioneIds = StagioneSelezionatiLanciPr.Select(s => s.Id).ToList();
-                query = query.Where(a => stagioneIds.Contains(a.IdStag));
-            }
+            var brandIds = BrandSelezionatiLanciPr.Select(b => b.Id).ToList();
+            query = query.Where(a => brandIds.Contains(a.IdContatto));
+
+            var stagioneIds = StagioneSelezionatiLanciPr.Select(s => s.Id).ToList();
+            query = query.Where(a => stagioneIds.Contains(a.IdStag));
 
             DataSourceLanciPr = await query.ToListAsync();
         }
@@ -1129,7 +1168,11 @@ else if (VistaAttiva == "LanciCommesse")
             void AddInClause(string column, IEnumerable<object> values)
             {
                 var valueList = values.ToList();
-                if (valueList.Count == 0) return;
+                if (valueList.Count == 0)
+                {
+                    whereClauses.Add("1=0");
+                    return;
+                }
                 var names = new List<string>();
                 foreach (var v in valueList)
                 {
@@ -1273,21 +1316,14 @@ else if (VistaAttiva == "LanciCommesse")
         var query = context.VProduzGeneCommesseTesta2s.AsNoTracking()
             .Where(a => TipiSelezionati.Contains(a.Tipo));
 
-        if (BrandSelezionati.Any())
-        {
-            var brandIds = BrandSelezionati.Select(b => b.Id).ToList();
-            query = query.Where(a => brandIds.Contains(a.IdContatto));
-        }
-        if (StagioneSelezionati.Any())
-        {
-            var stagioneIds = StagioneSelezionati.Select(s => s.Id).ToList();
-            query = query.Where(a => stagioneIds.Contains(a.IdStag));
-        }
-        if (TipiOrdineSelezionati.Any())
-        {
-            var ordTipoCodes = TipiOrdineSelezionati.Select(t => t.Cod).ToList();
-            query = query.Where(a => ordTipoCodes.Contains(a.OrdTipo));
-        }
+        var brandIds = BrandSelezionati.Select(b => b.Id).ToList();
+        query = query.Where(a => brandIds.Contains(a.IdContatto));
+
+        var stagioneIds = StagioneSelezionati.Select(s => s.Id).ToList();
+        query = query.Where(a => stagioneIds.Contains(a.IdStag));
+
+        var ordTipoCodes = TipiOrdineSelezionati.Select(t => t.Cod).ToList();
+        query = query.Where(a => ordTipoCodes.Contains(a.OrdTipo));
 
         DataSource = await query.OrderByDescending(a => a.NrScheda).ToListAsync();
 

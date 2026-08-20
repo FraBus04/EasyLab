@@ -44,7 +44,6 @@
         </button>
     }
     <div class="d-flex align-items-end gap-2">
-        <button type="button" class="btn btn-sm btn-outline-orange" @onclick="@(() => myColumnChooser.Visible = !myColumnChooser.Visible)">Colonne</button>
         <div class="btn-group" role="group">
             <button type="button" class="btn btn-sm @(!ListPaneCollapsed && DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowListOnly">Lista</button>
             <button type="button" class="btn btn-sm @(!ListPaneCollapsed && !DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowSplitView">Split</button>
@@ -120,7 +119,17 @@
                     FocusedRowEnabled="true"
                     FocusedRowChanged="RigaSelezionataCambiata">
                 <Columns>
-                    <DxGridCommandColumn Width="110px" NewButtonVisible="true" EditButtonVisible="true" DeleteButtonVisible="true" ShowInColumnChooser="false" />
+                    <DxGridCommandColumn Width="90px" EditButtonVisible="true" DeleteButtonVisible="true" ShowInColumnChooser="false">
+                        <HeaderTemplate Context="hdr">
+                            <DxButton RenderStyle="ButtonRenderStyle.None"
+                                      Click="@(() => myColumnChooser.Visible = !myColumnChooser.Visible)"
+                                      Tooltip="Colonne">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#ff8c00" viewBox="0 0 16 16" class="Image-Command-Column">
+                                    <path d="M0 1.5A1.5 1.5 0 0 1 1.5 0h13A1.5 1.5 0 0 1 16 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13zM1.5 1a.5.5 0 0 0-.5.5V14a.5.5 0 0 0 .5.5H5v-14H1.5zM6 1v14h4V1H6zm5 0v14h3.5a.5.5 0 0 0 .5-.5v-13a.5.5 0 0 0-.5-.5H11z" />
+                                </svg>
+                            </DxButton>
+                        </HeaderTemplate>
+                    </DxGridCommandColumn>
                     <DxGridDataColumn FieldName="Cd" Caption="Codice" />
                     <DxGridDataColumn FieldName="Tipo" Caption="Tipo" Width="70px" />
                     <DxGridDataColumn FieldName="Contatto" Caption="Brand" />

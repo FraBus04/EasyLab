@@ -102,9 +102,6 @@
                     <div class="header-divider"></div>
 
                     <div class="d-flex align-items-center gap-2 flex-shrink-0">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="@(() => ShowCustomColumnChooser())">
-                            Colonne
-                        </button>
                         <button type="button"
                                 class="btn btn-sm @(MostraColori ? "btn-toggle-active" : "btn-outline-secondary")"
                                 @onclick="@(() => OnCheckedChanged2(!MostraColori))">
@@ -186,6 +183,18 @@
             <Columns>
                 <DxGridBandColumn Caption="" FixedPosition="GridColumnFixedPosition.Left">
                     <Columns>
+                        <DxGridCommandColumn Width="50px" NewButtonVisible="false" EditButtonVisible="false" DeleteButtonVisible="false" ShowInColumnChooser="false">
+                            <HeaderTemplate Context="hdr">
+                                <DxButton RenderStyle="ButtonRenderStyle.None"
+                                          Click="@(() => ShowCustomColumnChooser())"
+                                          Tooltip="Colonne">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#ff8c00" viewBox="0 0 16 16" class="Image-Command-Column">
+                                        <path d="M0 1.5A1.5 1.5 0 0 1 1.5 0h13A1.5 1.5 0 0 1 16 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13zM1.5 1a.5.5 0 0 0-.5.5V14a.5.5 0 0 0 .5.5H5v-14H1.5zM6 1v14h4V1H6zm5 0v14h3.5a.5.5 0 0 0 .5-.5v-13a.5.5 0 0 0-.5-.5H11z" />
+                                    </svg>
+                                </DxButton>
+                            </HeaderTemplate>
+                        </DxGridCommandColumn>
+
                         <DxGridDataColumn FieldName="Seq" Caption="Seq" Width="60px" />
 
                         <DxGridDataColumn Caption="Componente" Width="100px">
