@@ -648,7 +648,7 @@
 
             var laboratorioIds = LaboratoriSelezionati.Select(l => l.Id).ToList();
 
-            query = query.Where(a => a.IdLabPrev == null || a.IdLabPrev == 0 || laboratorioIds.Contains(a.IdLabPrev.Value));
+            query = query.Where(a => laboratorioIds.Contains(a.IdLabPrev.Value));
 
             DataSource = await query.OrderBy(a => a.Cd).ToListAsync();
         }

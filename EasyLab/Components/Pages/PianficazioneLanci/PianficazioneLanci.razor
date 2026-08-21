@@ -62,7 +62,7 @@
                               Data="@Brands"
                               @bind-SelectedItems="BrandSelezionati"
                               TextFieldSelector="@(b => b.Societa1)"
-                              NullText="Tutti i brand"
+                              NullText="Nessun brand selezionato"
                               SelectAllText="Tutti i brand" />
         </div>
         <div style="min-width:220px;">
@@ -71,8 +71,17 @@
                               Data="@Stagioni"
                               @bind-SelectedItems="StagioneSelezionati"
                               TextFieldSelector="@(s => s.Cod)"
-                              NullText="Tutte le stagioni"
+                              NullText="Nessuna stagione selezionata"
                               SelectAllText="Tutte le stagioni" />
+        </div>
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Laboratorio</label>
+            <CheckboxDropdown TItem="TabAnagCliFor"
+                              Data="@Laboratori"
+                              @bind-SelectedItems="LaboratoriSelezionati"
+                              TextFieldSelector="@(l => l.Anag1)"
+                              NullText="Nessun laboratorio selezionato"
+                              SelectAllText="Tutti i laboratori" />
         </div>
         <div style="min-width:220px;">
             <label class="form-label small mb-0">TipoOrdine</label>
@@ -80,7 +89,7 @@
                               Data="@TipiOrdine"
                               @bind-SelectedItems="TipiOrdineSelezionati"
                               TextFieldSelector="@(s => s.Cod)"
-                              NullText="Tutti i tipi"
+                              NullText="Nessun tipo selezionato"
                               SelectAllText="Tutti i tipi" />
         </div>
         <div style="min-width:220px;">
@@ -89,7 +98,7 @@
                               Data="@TipiDisponibili"
                               @bind-SelectedItems="TipiSelezionati"
                               TextFieldSelector="@GetTipoLabel"
-                              NullText="Nessun tipo"
+                              NullText="Nessun tipo selezionato"
                               SelectAllText="Tutti i tipi" />
         </div>
         <button type="button" class="btn-icon-plain" @onclick="Cerca" title="Cerca">
@@ -869,8 +878,10 @@ else if (VistaAttiva == "LanciCommesse")
     // Deve combaciare con i TabellaId usati in UtentiDatabase.razor (permessi di lettura per utente).
     private const int IdTabellaStagioni = 1;
     private const int IdTabellaBrand = 2;
+    private const int IdTabellaLaboratori = 3;
     // Il "Tipo" non ha una tabella a database: le righe sono le sigle PR/MP/SM.
     private const int IdTabellaTipo = 4;
+    private const int IdTipoAnagLaboratorio = 4;
 
     [CascadingParameter]
     private Task<AuthenticationState>? AuthStateTask { get; set; }
@@ -924,6 +935,7 @@ else if (VistaAttiva == "LanciCommesse")
 
     private List<Contatti> Brands = new();
     private List<TabStagioni> Stagioni = new();
+    private List<TabAnagCliFor> Laboratori = new();
     private List<TabTipoOrdineCl> TipiOrdine = new();
     private List<TabFasiLavorazione> FasiLavorazione = new();
     private List<TabValute> Valute = new();
@@ -935,6 +947,7 @@ else if (VistaAttiva == "LanciCommesse")
 
     private List<Contatti> BrandSelezionati = new();
     private List<TabStagioni> StagioneSelezionati = new();
+    private List<TabAnagCliFor> LaboratoriSelezionati = new();
     private List<TabTipoOrdineCl> TipiOrdineSelezionati = new();
     private List<string> TipiSelezionati = new() { "PR", "MP", "SM" };
 
@@ -949,6 +962,7 @@ else if (VistaAttiva == "LanciCommesse")
                 using var context = await DbFactory.CreateDbContextAsync();
                 Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
                 Stagioni = await context.TabStagionis.AsNoTracking().Where(x => x.Stato == "A").OrderByDescending(s => s.OrdPm).ToListAsync();
+                Laboratori = await context.TabAnagCliFors.AsNoTracking().Where(x => x.IdTipoAnag == IdTipoAnagLaboratorio).OrderBy(x => x.Anag1).ToListAsync();
                 TipiOrdine = await context.TabTipoOrdineCls.AsNoTracking().OrderBy(x => x.OrdPm).ToListAsync();
                 FasiLavorazione = await context.TabFasiLavoraziones.AsNoTracking().OrderBy(x => x.OrdPm).ToListAsync();
                 Valute = await context.TabValutes.AsNoTracking().Where(x => x.Stato == "A").OrderBy(x => x.CdValuta).ToListAsync();
@@ -959,6 +973,7 @@ else if (VistaAttiva == "LanciCommesse")
                 await ApplicaPermessiLettura();
                 BrandSelezionati = Brands.ToList();
                 StagioneSelezionati = Stagioni.ToList();
+                LaboratoriSelezionati = Laboratori.ToList();
                 TipiOrdineSelezionati = TipiOrdine.ToList();
                 TipiSelezionati = TipiDisponibili.ToList();
                 BrandSelezionatiLanciPr = Brands.ToList();
@@ -988,15 +1003,17 @@ else if (VistaAttiva == "LanciCommesse")
         // Una riga senza permesso esplicito NON è visibile: serve un permesso con Visualizza = true.
         var visibili = await DbContext.PermessiLetturaTabelles.AsNoTracking()
             .Where(p => p.UtenteId == utenteId && p.Visualizza
-                && (p.TabellaId == IdTabellaStagioni || p.TabellaId == IdTabellaBrand || p.TabellaId == IdTabellaTipo))
+                && (p.TabellaId == IdTabellaStagioni || p.TabellaId == IdTabellaBrand || p.TabellaId == IdTabellaLaboratori || p.TabellaId == IdTabellaTipo))
             .ToListAsync();
 
         var brandVisibili = visibili.Where(p => p.TabellaId == IdTabellaBrand).Select(p => p.RigaCod).ToHashSet();
         var stagioniVisibili = visibili.Where(p => p.TabellaId == IdTabellaStagioni).Select(p => p.RigaCod).ToHashSet();
+        var laboratoriVisibili = visibili.Where(p => p.TabellaId == IdTabellaLaboratori).Select(p => p.RigaCod).ToHashSet();
         var tipiVisibili = visibili.Where(p => p.TabellaId == IdTabellaTipo).Select(p => p.RigaCod).ToHashSet();
 
         Brands = Brands.Where(b => brandVisibili.Contains(b.Id.ToString())).ToList();
         Stagioni = Stagioni.Where(s => stagioniVisibili.Contains(s.Id.ToString())).ToList();
+        Laboratori = Laboratori.Where(l => laboratoriVisibili.Contains(l.Id.ToString())).ToList();
         TipiDisponibili = TipiDisponibili.Where(t => tipiVisibili.Contains(t)).ToList();
     }
 
@@ -1321,6 +1338,9 @@ else if (VistaAttiva == "LanciCommesse")
 
         var stagioneIds = StagioneSelezionati.Select(s => s.Id).ToList();
         query = query.Where(a => stagioneIds.Contains(a.IdStag));
+
+        var laboratorioIds = LaboratoriSelezionati.Select(l => l.Id).ToList();
+        query = query.Where(a => laboratorioIds.Contains(a.IdLab));
 
         var ordTipoCodes = TipiOrdineSelezionati.Select(t => t.Cod).ToList();
         query = query.Where(a => ordTipoCodes.Contains(a.OrdTipo));
