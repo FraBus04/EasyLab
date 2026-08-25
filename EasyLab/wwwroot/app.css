@@ -667,7 +667,9 @@ h1:focus {
 
 .checkbox-dropdown-arrow {
     margin-left: 8px;
-    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
     color: #6c757d;
 }
 

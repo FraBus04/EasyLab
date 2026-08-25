@@ -1,0 +1,579 @@
+@page "/FasiCommesse"
+@attribute [Authorize]
+@using EasyLab.Models
+@using Microsoft.EntityFrameworkCore
+@rendermode InteractiveServer
+@inject IDbContextFactory<SeaseTstContext> DbFactory
+
+<PageTitle>Fasi Commesse</PageTitle>
+
+<div class="articoli-page">
+
+@if (loading)
+{
+    <Loading></Loading>
+}
+
+<div class="articoli-toolbar d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+    @if (MostraFiltri)
+    {
+        <button type="button" class="btn btn-sm d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:28px;height:28px;background:transparent;color:#ff8c00;border:1px solid #ff8c00;border-radius:50%;padding:0;"
+                title="Nascondi filtri"
+                @onclick="@(() => MostraFiltri = false)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z" />
+            </svg>
+        </button>
+    }
+    else
+    {
+        <button type="button" class="btn btn-sm d-flex align-items-center gap-1"
+                style="background-color:#ff8c00;color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;opacity:0.85;"
+                @onclick="@(() => MostraFiltri = true)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
+            </svg>
+            Mostra filtri
+        </button>
+    }
+    <div class="d-flex align-items-end gap-2">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm @(!ListPaneCollapsed && DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowListOnly">Lista</button>
+            <button type="button" class="btn btn-sm @(!ListPaneCollapsed && !DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowSplitView">Split</button>
+            <button type="button" class="btn btn-sm @(ListPaneCollapsed && !DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowDetailsOnly">Dettaglio</button>
+        </div>
+    </div>
+</div>
+
+@if (MostraFiltri)
+{
+    <div class="articoli-filtri p-2 mb-2 border rounded d-flex flex-wrap gap-3 align-items-end">
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Brand</label>
+            <CheckboxDropdown TItem="Contatti"
+                              Data="@Brands"
+                              @bind-SelectedItems="BrandSelezionati"
+                              TextFieldSelector="@(b => b.Societa1)"
+                              NullText="Nessun brand selezionato"
+                              SelectAllText="Tutti i brand" />
+        </div>
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Stagione</label>
+            <CheckboxDropdown TItem="TabStagioni"
+                              Data="@Stagioni"
+                              @bind-SelectedItems="StagioneSelezionati"
+                              TextFieldSelector="@(s => s.Cod)"
+                              NullText="Nessuna stagione selezionata"
+                              SelectAllText="Tutte le stagioni" />
+        </div>
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Laboratorio</label>
+            <CheckboxDropdown TItem="TabAnagCliFor"
+                              Data="@Laboratori"
+                              @bind-SelectedItems="LaboratoriSelezionati"
+                              TextFieldSelector="@(l => l.Anag1)"
+                              NullText="Nessun laboratorio selezionato"
+                              SelectAllText="Tutti i laboratori" />
+        </div>
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Fase</label>
+            <CheckboxDropdown TItem="TabFasiLavorazione"
+                              Data="@Fasi"
+                              @bind-SelectedItems="FasiSelezionati"
+                              TextFieldSelector="@(f => f.Cod)"
+                              NullText="Nessuna fase selezionata"
+                              SelectAllText="Tutte le fasi" />
+        </div>
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Tipo Commessa</label>
+            <CheckboxDropdown TItem="TabTipoOrdineCl"
+                              Data="@TipiOrdine"
+                              @bind-SelectedItems="TipiOrdineSelezionati"
+                              TextFieldSelector="@(t => t.Cod)"
+                              NullText="Nessun tipo commessa selezionato"
+                              SelectAllText="Tutti i tipi commessa" />
+        </div>
+        <button type="button" class="btn-icon-plain" @onclick="Cerca" title="Cerca">
+            <img src="images/RefreshOranSVG1.svg" class="btn-icon-search" alt="Cerca" />
+        </button>
+    </div>
+}
+
+<DxSplitter Height="@(MostraFiltri ? "calc(100vh - 300px)" : "calc(100vh - 212px)")">
+    <Panes>
+        <DxSplitterPane Size="60%" MinSize="300px" @bind-Collapsed="@ListPaneCollapsed">
+<DxGrid @ref="MyGrid"
+        Data="@DataSource"
+        KeyFieldName="IdComm"
+        ShowSearchBox="true"
+        ColumnResizeMode="GridColumnResizeMode.NextColumn"
+        PagerVisible="false"
+        VirtualScrollingEnabled="true"
+        CssClass="h-100"
+        HighlightRowOnHover="true"
+        FocusedRowEnabled="true"
+        FocusedRowChanged="RigaSelezionataCambiata">
+    <Columns>
+        <DxGridDataColumn Caption="Img" Width="60px" AllowSort="false">
+            <CellDisplayTemplate Context="ctx">
+                @{
+                    var riga = (ProduzGeneCommesseAvanzFasiRiga)ctx.DataItem;
+                }
+                @if (riga.ImgMod != null)
+                {
+                    <img src="data:image/png;base64,@Convert.ToBase64String(riga.ImgMod)" style="height:32px;width:32px;object-fit:cover;border-radius:4px;" />
+                }
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+        <DxGridDataColumn FieldName="OrdTipo" Caption="Tp" Width="70px" MinWidth="60" />
+        <DxGridDataColumn FieldName="NrScheda" Caption="Comm." Width="90px" MinWidth="80" TextAlignment="GridTextAlignment.Center" />
+        <DxGridDataColumn FieldName="StagCod" Caption="Stag" Width="90px" MinWidth="80" />
+        <DxGridDataColumn FieldName="Parte" Caption="Parte" Width="120px" MinWidth="100" />
+        <DxGridDataColumn FieldName="ParteDesc" Caption="Parte Desc" Width="220px" MinWidth="160" />
+        <DxGridDataColumn FieldName="TotCapi" Caption="Tot Capi" Width="100px" MinWidth="90" TextAlignment="GridTextAlignment.Center" />
+        <DxGridDataColumn FieldName="TotCapiFin" Caption="Capi Fin" Width="100px" MinWidth="90" TextAlignment="GridTextAlignment.Center" />
+        <DxGridDataColumn FieldName="PercTotCapiFin" Caption="%" Width="100px" MinWidth="90" TextAlignment="GridTextAlignment.Center">
+            <CellDisplayTemplate Context="ctx">
+                @{
+                    var perc = ctx.Value as double? ?? 0;
+                    var percClamped = Math.Max(0, Math.Min(100, perc));
+                    var barColor = perc >= 100 ? "#28a745" : "#ffc107";
+                }
+                <div style="display:inline-flex;align-items:center;gap:4px;">
+                    <div style="width:50px;height:10px;border-radius:5px;background:#e9ecef;overflow:hidden;">
+                        <div style="width:@(percClamped.ToString(System.Globalization.CultureInfo.InvariantCulture))%;height:100%;background-color:@barColor;"></div>
+                    </div>
+                    <span style="font-size:0.75rem;">@perc.ToString("N0")%</span>
+                </div>
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+        <DxGridDataColumn FieldName="TortaAvanzFasi" Caption="Torta Avanz Fasi" Width="90px" MinWidth="80" TextAlignment="GridTextAlignment.Center">
+            <CellDisplayTemplate Context="ctx">
+                @{
+                    var riga = (ProduzGeneCommesseAvanzFasiRiga)ctx.DataItem;
+                    var percentuale = GetTortaPercent(ctx.Value as int?);
+                    var (coloreChiaro, coloreScuro) = GetColoriSaldo(riga.Saldo);
+                }
+                <div style="display:inline-block;width:20px;height:20px;border-radius:50%;background:conic-gradient(@coloreScuro 0% @(percentuale)%, @coloreChiaro @(percentuale)% 100%);"
+                     title="@($"{percentuale}%")"></div>
+            </CellDisplayTemplate>
+        </DxGridDataColumn>
+        <DxGridDataColumn FieldName="Forn" Caption="Forn" Width="180px" MinWidth="140" />
+        <DxGridDataColumn FieldName="Nota" Caption="Nota" Width="200px" MinWidth="140" />
+
+        @for (var i = 1; i <= 15; i++)
+        {
+            var idx = i;
+            <DxGridDataColumn FieldName="@($"Diff{idx}")" Caption="@GetFaseCaption(idx)" Width="80px" Visible="@(idx <= FasiColonneAttive)" TextAlignment="GridTextAlignment.Center">
+                <CellDisplayTemplate Context="ctx">
+                    @{
+                        var capi = ctx.Value as int?;
+                    }
+                    @if (capi.HasValue && capi.Value > 0)
+                    {
+                        <div style="display:inline-block;background-color:rgba(255,140,0,0.3);border-radius:4px;padding:2px 6px;">@capi</div>
+                    }
+                    else
+                    {
+                        @capi
+                    }
+                </CellDisplayTemplate>
+            </DxGridDataColumn>
+        }
+
+        <DxGridDataColumn FieldName="DataComm" Caption="Data Lancio" Width="120px" MinWidth="110" />
+        <DxGridDataColumn FieldName="DataConfRientro" Caption="Data Confermata" Width="130px" MinWidth="110" />
+          
+        <DxGridDataColumn FieldName="CkConf" Caption="Conf" Width="70px" MinWidth="60" Visible="false" />       
+        <DxGridDataColumn FieldName="StatoApp" Caption="Stato App" Width="120px" MinWidth="100" Visible="false" />
+        <DxGridDataColumn FieldName="Contatto" Caption="Brand" Visible="false" />
+        <DxGridDataColumn FieldName="AcdAll" Caption="Cod. Allocazione" Visible="false" />
+        <DxGridDataColumn FieldName="Mod" Caption="Modello" Visible="false" />
+        <DxGridDataColumn FieldName="Tess" Caption="Tessuto" Visible="false" />
+        <DxGridDataColumn FieldName="Nome" Caption="Nome Modello" Visible="false" />
+        <DxGridDataColumn FieldName="LabDesc" Caption="Laboratorio" Visible="false" />
+        <DxGridDataColumn FieldName="Saldo" Caption="Saldo" Visible="false" />
+        <DxGridDataColumn FieldName="StatoDesc" Caption="Stato" Visible="false" />
+        <DxGridDataColumn FieldName="FaseDesc" Caption="Fase" Visible="false" />
+        <DxGridDataColumn FieldName="CdValuta" Caption="Valuta" Visible="false" />
+        <DxGridDataColumn FieldName="Prezzo" Caption="Prezzo" Visible="false" />
+        <DxGridDataColumn FieldName="StatoExp" Caption="Stato Esportazione" Visible="false" />
+        <DxGridDataColumn FieldName="DataExp" Caption="Data Esportazione" Visible="false" />
+        <DxGridDataColumn FieldName="FornDest" Caption="Fornitore Destinazione" Visible="false" />
+        <DxGridDataColumn FieldName="TraspCura" Caption="Trasportatore Cura" Visible="false" />
+        <DxGridDataColumn FieldName="Vettore" Caption="Vettore" Visible="false" />
+        <DxGridDataColumn FieldName="Po" Caption="PO" Visible="false" />
+        <DxGridDataColumn FieldName="Pagamento" Caption="Pagamento" Visible="false" />
+        <DxGridDataColumn FieldName="DataApp" Caption="Data Approvazione" Visible="false" />
+        <DxGridDataColumn FieldName="NrAllegati" Caption="Nr. Allegati" Visible="false" />
+        <DxGridDataColumn FieldName="DataRicRientro" Caption="Data Ric. Rientro" Visible="false" />
+    </Columns>
+</DxGrid>
+        </DxSplitterPane>
+        <DxSplitterPane @bind-Collapsed="@DetailsPaneCollapsed">
+            <FasiCommesseDettaglio CommessaSelezionata="@CommessaSelezionata"></FasiCommesseDettaglio>
+        </DxSplitterPane>
+    </Panes>
+</DxSplitter>
+
+<DxPopup @bind-Visible="_dialogVisible"
+         CloseOnOutsideClick="false"
+         ShowCloseButton="false"
+         ShowFooter="true"
+         HeaderText="@_dialogTitle"
+         Width="420px"
+         Height="auto">
+    <BodyContentTemplate>
+        <div style="white-space: pre-line; padding: 4px 0;">@_dialogMessage</div>
+    </BodyContentTemplate>
+    <FooterContentTemplate>
+        <DxButton Text="OK" RenderStyle="ButtonRenderStyle.Primary" Click="@(() => _dialogVisible = false)" />
+    </FooterContentTemplate>
+</DxPopup>
+
+</div>
+
+@code {
+    private const int IdTabellaStagioni = 1;
+    private const int IdTabellaBrand = 2;
+    private const int IdTabellaLaboratori = 3;
+    private const int IdTipoAnagLaboratorio = 4;
+
+    // idClasse della schermata "Fasi Commesse" per la selezione memorizzata su Sel_ST (come da legacy EasyPLM).
+    private const int IdClasseFasiCommesse = 130;
+    private const string MatLavFasi = "L";
+    private const string ChiaveSelStContatti = "Contatti";
+    private const string ChiaveSelStStagioni = "Tab_Stagioni";
+    private const string ChiaveSelStFasi = "Tab_Fasi_Lavorazione";
+    private const string ChiaveSelStTipoOrdine = "Tab_TipoOrdineCL";
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private bool loading = true;
+    private bool MostraFiltri = true;
+
+    private List<Contatti> Brands = new();
+    private List<TabStagioni> Stagioni = new();
+    private List<TabAnagCliFor> Laboratori = new();
+    private List<TabFasiLavorazione> Fasi = new();
+    private List<TabTipoOrdineCl> TipiOrdine = new();
+
+    private List<Contatti> BrandSelezionati = new();
+    private List<TabStagioni> StagioneSelezionati = new();
+    private List<TabAnagCliFor> LaboratoriSelezionati = new();
+    private List<TabFasiLavorazione> FasiSelezionati = new();
+    private List<TabTipoOrdineCl> TipiOrdineSelezionati = new();
+
+    private DxGrid MyGrid = default!;
+    private List<ProduzGeneCommesseAvanzFasiRiga> DataSource = new();
+    private int FasiColonneAttive = 0;
+    private ProduzGeneCommesseAvanzFasiRiga? CommessaSelezionata;
+    private bool ListPaneCollapsed = false;
+    private bool DetailsPaneCollapsed = false;
+
+    private bool _dialogVisible;
+    private string _dialogTitle = "";
+    private string _dialogMessage = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            loading = true;
+            StateHasChanged();
+            try
+            {
+                using var context = await DbFactory.CreateDbContextAsync();
+                Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
+                Stagioni = await context.TabStagionis.AsNoTracking().Where(x => x.Stato == "A").OrderByDescending(s => s.OrdPm).ToListAsync();
+                Laboratori = await context.TabAnagCliFors.AsNoTracking().Where(x => x.IdTipoAnag == IdTipoAnagLaboratorio).OrderBy(x => x.Anag1).ToListAsync();
+                Fasi = await context.TabFasiLavoraziones.AsNoTracking().Where(f => f.MatLav == MatLavFasi).OrderBy(f => f.OrdPm).ToListAsync();
+                TipiOrdine = await context.TabTipoOrdineCls.AsNoTracking().OrderBy(t => t.OrdPm).ToListAsync();
+                await ApplicaPermessiLettura();
+                BrandSelezionati = Brands.ToList();
+                StagioneSelezionati = Stagioni.ToList();
+                LaboratoriSelezionati = Laboratori.ToList();
+                FasiSelezionati = Fasi.ToList();
+                TipiOrdineSelezionati = TipiOrdine.ToList();
+            }
+            finally
+            {
+                loading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task ApplicaPermessiLettura()
+    {
+        if (AuthStateTask == null) return;
+
+        var authState = await AuthStateTask;
+        var utenteId = UserManager.GetUserId(authState.User);
+        if (utenteId == null) return;
+
+        // Una riga senza permesso esplicito NON è visibile: serve un permesso con Visualizza = true.
+        var visibili = await DbContext.PermessiLetturaTabelles.AsNoTracking()
+            .Where(p => p.UtenteId == utenteId && p.Visualizza
+                && (p.TabellaId == IdTabellaStagioni || p.TabellaId == IdTabellaBrand || p.TabellaId == IdTabellaLaboratori))
+            .ToListAsync();
+
+        var brandVisibili = visibili.Where(p => p.TabellaId == IdTabellaBrand).Select(p => p.RigaCod).ToHashSet();
+        var stagioniVisibili = visibili.Where(p => p.TabellaId == IdTabellaStagioni).Select(p => p.RigaCod).ToHashSet();
+        var laboratoriVisibili = visibili.Where(p => p.TabellaId == IdTabellaLaboratori).Select(p => p.RigaCod).ToHashSet();
+
+        Brands = Brands.Where(b => brandVisibili.Contains(b.Id.ToString())).ToList();
+        Stagioni = Stagioni.Where(s => stagioniVisibili.Contains(s.Id.ToString())).ToList();
+        Laboratori = Laboratori.Where(l => laboratoriVisibili.Contains(l.Id.ToString())).ToList();
+    }
+
+    private async Task<int?> GetIdUteAsync()
+    {
+        if (AuthStateTask == null) return null;
+
+        var authState = await AuthStateTask;
+        var utente = await UserManager.GetUserAsync(authState.User);
+        return utente?.idEasyPLM;
+    }
+
+    private string GetFaseCaption(int posizione)
+    {
+        var fase = FasiSelezionati.OrderBy(f => f.OrdPm).ElementAtOrDefault(posizione - 1);
+        return fase?.Cod ?? $"Fase {posizione}";
+    }
+
+    // TortaAvanzFasi arriva dalla SP come bucket 0-4 (vedi CASE nella SP), non come percentuale esatta.
+    private static int GetTortaPercent(int? bucket) => bucket switch
+    {
+        1 => 25,
+        2 => 50,
+        3 => 75,
+        4 => 100,
+        _ => 0
+    };
+
+    private static (string Chiaro, string Scuro) GetColoriSaldo(string? saldo) => saldo switch
+    {
+        "A" => ("#fff3cd", "#e6ac00"),
+        "N" => ("#e9ecef", "#6c757d"),
+        "S" => ("#d4edda", "#28a745"),
+        _ => ("#e9ecef", "#6c757d")
+    };
+
+    private async Task Cerca()
+    {
+        loading = true;
+        StateHasChanged();
+        try
+        {
+            var idUte = await GetIdUteAsync();
+            if (idUte == null)
+            {
+                ShowDialog("Errore", "Impossibile determinare l'utente corrente.");
+                return;
+            }
+
+            using var context = await DbFactory.CreateDbContextAsync();
+
+            // Salva la selezione corrente su Sel_ST: la SP di report legge da lì i filtri da applicare.
+            await context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM Sel_ST WHERE idClasse={IdClasseFasiCommesse} AND idUte={idUte} AND Chiave IN ({ChiaveSelStContatti}, {ChiaveSelStStagioni}, {ChiaveSelStTipoOrdine}, {ChiaveSelStFasi})");
+
+            foreach (var brand in BrandSelezionati)
+            {
+                await context.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO Sel_ST (idClasse, idContatto, Chiave, idUte, id) VALUES ({IdClasseFasiCommesse}, 0, {ChiaveSelStContatti}, {idUte}, {brand.Id})");
+            }
+            foreach (var stagione in StagioneSelezionati)
+            {
+                await context.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO Sel_ST (idClasse, idContatto, Chiave, idUte, id) VALUES ({IdClasseFasiCommesse}, 0, {ChiaveSelStStagioni}, {idUte}, {stagione.Id})");
+            }
+            foreach (var tipoOrdine in TipiOrdineSelezionati)
+            {
+                await context.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO Sel_ST (idClasse, idContatto, Chiave, idUte, cd) VALUES ({IdClasseFasiCommesse}, 0, {ChiaveSelStTipoOrdine}, {idUte}, {tipoOrdine.Cod})");
+            }
+            foreach (var fase in FasiSelezionati)
+            {
+                await context.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO Sel_ST (idClasse, idContatto, Chiave, idUte, id) VALUES ({IdClasseFasiCommesse}, 0, {ChiaveSelStFasi}, {idUte}, {fase.IdFase})");
+            }
+
+            var connection = context.Database.GetDbConnection();
+            await connection.OpenAsync();
+
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "EXEC [Report].[SP_Produz_GeneCommesse_Testa_AvanzFasi3_CreaSelST] @idClasse, @idUte";
+            var pClasse = cmd.CreateParameter();
+            pClasse.ParameterName = "@idClasse";
+            pClasse.Value = IdClasseFasiCommesse;
+            cmd.Parameters.Add(pClasse);
+            var pUte = cmd.CreateParameter();
+            pUte.ParameterName = "@idUte";
+            pUte.Value = idUte;
+            cmd.Parameters.Add(pUte);
+
+            var righe = new List<ProduzGeneCommesseAvanzFasiRiga>();
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                righe.Add(new ProduzGeneCommesseAvanzFasiRiga
+                {
+                    IdComm = (int)reader["idComm"],
+                    NrScheda = reader["NrScheda"] as int?,
+                    OrdTipo = reader["OrdTipo"] as string,
+                    AcdAll = reader["A_cdALL"] as string,
+                    Parte = reader["Parte"] as string,
+                    ParteDesc = reader["ParteDesc"] as string,
+                    Mod = reader["Mod"] as string,
+                    Tess = reader["Tess"] as string,
+                    Nome = reader["Nome"] as string,
+                    IdLab = reader["idLab"] as int?,
+                    LabDesc = reader["LabDesc"] as string,
+                    Saldo = reader["Saldo"] as string,
+                    TotCapi = reader["TotCapi"] as int?,
+                    TotCapiFin = reader["TotCapiFin"] as int?,
+                    PercTotCapiFin = reader["PercTotCapiFin"] as double?,
+                    Stato = reader["Stato"] as string,
+                    StatoDesc = reader["StatoDesc"] as string,
+                    DataRicRientro = reader["DataRicRientro"] as DateTime?,
+                    DataConfRientro = reader["DataConfRientro"] as DateTime?,
+                    CkConf = reader["ckConf"] as bool?,
+                    CkInvMatLogist = reader["ckInvMatLogist"] as bool?,
+                    Nota = reader["Nota"] as string,
+                    Contatto = reader["Contatto"] as string,
+                    StagCod = reader["StagCod"] as string,
+                    NrAllegati = reader["NrAllegati"] as int?,
+                    FaseCod = reader["FaseCod"] as string,
+                    FaseDesc = reader["FaseDesc"] as string,
+                    CdValuta = reader["cdValuta"] as string,
+                    Prezzo = reader["Prezzo"] as double?,
+                    StatoExp = reader["StatoExp"] as string,
+                    DataExp = reader["DataExp"] as DateTime?,
+                    Forn = reader["Forn"] as string,
+                    FornDest = reader["FornDest"] as string,
+                    TraspCura = reader["TraspCura"] as string,
+                    Vettore = reader["Vettore"] as string,
+                    DataComm = reader["DataComm"] is DateTime dataComm ? DateOnly.FromDateTime(dataComm) : (DateOnly?)null,
+                    Po = reader["PO"] as string,
+                    Pagamento = reader["Pagamento"] as string,
+                    StatoApp = reader["StatoApp"] as string,
+                    DataApp = reader["DataApp"] as DateTime?,
+                    CkPrelTSaldo = (reader["ckPrel_T_Saldo"] as int?) == 1,
+                    CkPrelCSaldo = (reader["ckPrel_C_Saldo"] as int?) == 1,
+                    CkPrelSaldo = (reader["ckPrel_Saldo"] as int?) == 1,
+                    ImgMod = reader["ImgMod"] as byte[],
+                    TortaAvanzFasi = reader["TortaAvanzFasi"] as int?,
+
+                    Fase1 = reader["Fase1"] as string,
+                    Car1 = reader["Car1"] as int?,
+                    Scr1 = reader["Scr1"] as int?,
+                    Diff1 = reader["Diff1"] as int?,
+                    Fase2 = reader["Fase2"] as string,
+                    Car2 = reader["Car2"] as int?,
+                    Scr2 = reader["Scr2"] as int?,
+                    Diff2 = reader["Diff2"] as int?,
+                    Fase3 = reader["Fase3"] as string,
+                    Car3 = reader["Car3"] as int?,
+                    Scr3 = reader["Scr3"] as int?,
+                    Diff3 = reader["Diff3"] as int?,
+                    Fase4 = reader["Fase4"] as string,
+                    Car4 = reader["Car4"] as int?,
+                    Scr4 = reader["Scr4"] as int?,
+                    Diff4 = reader["Diff4"] as int?,
+                    Fase5 = reader["Fase5"] as string,
+                    Car5 = reader["Car5"] as int?,
+                    Scr5 = reader["Scr5"] as int?,
+                    Diff5 = reader["Diff5"] as int?,
+                    Fase6 = reader["Fase6"] as string,
+                    Car6 = reader["Car6"] as int?,
+                    Scr6 = reader["Scr6"] as int?,
+                    Diff6 = reader["Diff6"] as int?,
+                    Fase7 = reader["Fase7"] as string,
+                    Car7 = reader["Car7"] as int?,
+                    Scr7 = reader["Scr7"] as int?,
+                    Diff7 = reader["Diff7"] as int?,
+                    Fase8 = reader["Fase8"] as string,
+                    Car8 = reader["Car8"] as int?,
+                    Scr8 = reader["Scr8"] as int?,
+                    Diff8 = reader["Diff8"] as int?,
+                    Fase9 = reader["Fase9"] as string,
+                    Car9 = reader["Car9"] as int?,
+                    Scr9 = reader["Scr9"] as int?,
+                    Diff9 = reader["Diff9"] as int?,
+                    Fase10 = reader["Fase10"] as string,
+                    Car10 = reader["Car10"] as int?,
+                    Scr10 = reader["Scr10"] as int?,
+                    Diff10 = reader["Diff10"] as int?,
+                    Fase11 = reader["Fase11"] as string,
+                    Car11 = reader["Car11"] as int?,
+                    Scr11 = reader["Scr11"] as int?,
+                    Diff11 = reader["Diff11"] as int?,
+                    Fase12 = reader["Fase12"] as string,
+                    Car12 = reader["Car12"] as int?,
+                    Scr12 = reader["Scr12"] as int?,
+                    Diff12 = reader["Diff12"] as int?,
+                    Fase13 = reader["Fase13"] as string,
+                    Car13 = reader["Car13"] as int?,
+                    Scr13 = reader["Scr13"] as int?,
+                    Diff13 = reader["Diff13"] as int?,
+                    Fase14 = reader["Fase14"] as string,
+                    Car14 = reader["Car14"] as int?,
+                    Scr14 = reader["Scr14"] as int?,
+                    Diff14 = reader["Diff14"] as int?,
+                    Fase15 = reader["Fase15"] as string,
+                    Car15 = reader["Car15"] as int?,
+                    Scr15 = reader["Scr15"] as int?,
+                    Diff15 = reader["Diff15"] as int?,
+                });
+            }
+
+            // La SP non filtra per laboratorio: lo applichiamo lato client sul risultato.
+            var laboratorioIds = LaboratoriSelezionati.Select(l => l.Id).ToHashSet();
+            DataSource = righe.Where(r => r.IdLab != null && laboratorioIds.Contains(r.IdLab.Value)).ToList();
+            FasiColonneAttive = Math.Min(FasiSelezionati.Count, 15);
+        }
+        catch (Exception ex)
+        {
+            ShowDialog("Errore", $"Si è verificato un errore durante la ricerca: {ex.Message}");
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowDialog(string title, string message)
+    {
+        _dialogTitle = title;
+        _dialogMessage = message;
+        _dialogVisible = true;
+    }
+
+    private void RigaSelezionataCambiata(GridFocusedRowChangedEventArgs e)
+    {
+        CommessaSelezionata = e.DataItem as ProduzGeneCommesseAvanzFasiRiga;
+    }
+
+    private void ShowListOnly()
+    {
+        ListPaneCollapsed = false;
+        DetailsPaneCollapsed = true;
+    }
+
+    private void ShowSplitView()
+    {
+        ListPaneCollapsed = false;
+        DetailsPaneCollapsed = false;
+    }
+
+    private void ShowDetailsOnly()
+    {
+        ListPaneCollapsed = true;
+        DetailsPaneCollapsed = false;
+    }
+}

@@ -56,7 +56,7 @@
 @if (MostraFiltri)
 {
     <div class="articoli-filtri p-2 mb-2 border rounded d-flex flex-wrap gap-3 align-items-end">
-        <div style="min-width:220px;">
+        <div style="width:220px;">
             <label class="form-label small mb-0">Brand</label>
             <CheckboxDropdown TItem="Contatti"
                               Data="@Brands"
@@ -65,7 +65,7 @@
                               NullText="Nessun brand selezionato"
                               SelectAllText="Tutti i brand" />
         </div>
-        <div style="min-width:220px;">
+        <div style="width:220px;">
             <label class="form-label small mb-0">Stagione</label>
             <CheckboxDropdown TItem="TabStagioni"
                               Data="@Stagioni"
@@ -83,7 +83,7 @@
                               NullText="Nessun laboratorio selezionato"
                               SelectAllText="Tutti i laboratori" />
         </div>
-        <div style="min-width:220px;">
+        <div style="width:220px;">
             <label class="form-label small mb-0">TipoOrdine</label>
             <CheckboxDropdown TItem="TabTipoOrdineCl"
                               Data="@TipiOrdine"
@@ -92,7 +92,7 @@
                               NullText="Nessun tipo selezionato"
                               SelectAllText="Tutti i tipi" />
         </div>
-        <div style="min-width:220px;">
+        <div style="width:220px;">
             <label class="form-label small mb-0">Tipo</label>
             <CheckboxDropdown TItem="string"
                               Data="@TipiDisponibili"
@@ -536,7 +536,7 @@ else if (VistaAttiva == "LanciCommesse")
         @if (MostraFiltriLanciPr)
         {
             <div class="articoli-filtri p-2 mb-2 border rounded d-flex flex-wrap gap-3 align-items-end">
-                <div style="min-width:220px;">
+                <div style="width:220px;">
                     <label class="form-label small mb-0">Brand</label>
                     <CheckboxDropdown TItem="Contatti"
                                       Data="@Brands"
@@ -545,7 +545,7 @@ else if (VistaAttiva == "LanciCommesse")
                                       NullText="Tutti i brand"
                                       SelectAllText="Tutti i brand" />
                 </div>
-                <div style="min-width:220px;">
+                <div style="width:220px;">
                     <label class="form-label small mb-0">Stagione</label>
                     <CheckboxDropdown TItem="TabStagioni"
                                       Data="@Stagioni"
@@ -554,7 +554,7 @@ else if (VistaAttiva == "LanciCommesse")
                                       NullText="Tutte le stagioni"
                                       SelectAllText="Tutte le stagioni" />
                 </div>
-                <div style="min-width:220px;">
+                <div style="width:220px;">
                     <label class="form-label small mb-0">TipoOrdine</label>
                     <CheckboxDropdown TItem="TabTipoOrdineCl"
                                       Data="@TipiOrdine"
@@ -779,7 +779,7 @@ else if (VistaAttiva == "LanciCommesse")
         @if (MostraFiltriLibera)
         {
             <div class="articoli-filtri p-2 mb-2 border rounded d-flex flex-wrap gap-3 align-items-end">
-                <div style="min-width:220px;">
+                <div style="width:220px;">
                     <label class="form-label small mb-0">Brand</label>
                     <CheckboxDropdown TItem="Contatti"
                                       Data="@Brands"
@@ -788,7 +788,7 @@ else if (VistaAttiva == "LanciCommesse")
                                       NullText="Tutti i brand"
                                       SelectAllText="Tutti i brand" />
                 </div>
-                <div style="min-width:220px;">
+                <div style="width:220px;">
                     <label class="form-label small mb-0">Stagione</label>
                     <CheckboxDropdown TItem="TabStagioni"
                                       Data="@Stagioni"
@@ -797,7 +797,7 @@ else if (VistaAttiva == "LanciCommesse")
                                       NullText="Tutte le stagioni"
                                       SelectAllText="Tutte le stagioni" />
                 </div>
-                <div style="min-width:220px;">
+                <div style="width:220px;">
                     <label class="form-label small mb-0">Tipo</label>
                     <CheckboxDropdown TItem="string"
                                       Data="@TipiDisponibili"
@@ -806,7 +806,7 @@ else if (VistaAttiva == "LanciCommesse")
                                       NullText="Nessun tipo"
                                       SelectAllText="Tutti i tipi" />
                 </div>
-                <div style="min-width:220px;">
+                <div style="width:220px;">
                     <label class="form-label small mb-0">Magazzino</label>
                     <CheckboxDropdown TItem="string"
                                       Data="@CodiciMag"

@@ -26,6 +26,12 @@
             </button>
             <span>Pianficazione Lanci</span>
         </div>
+        <div @onclick="FasiCommesse">
+            <button>
+                <img src="/images/FasiSVG.svg" alt="Fasi Commesse" />
+            </button>
+            <span>Fasi Commesse</span>
+        </div>
         <div @onclick="Utenti">
             <button>
                 <img src="/images/UteSWG.svg" alt="Utenti" />
@@ -117,7 +123,18 @@
             NavManager.NavigateTo("/PianficazioneLanci");
         }
     }
-
+    
+    private async Task FasiCommesse(MouseEventArgs e)
+    {
+        if (e.ShiftKey)
+        {
+            await JSRuntime.InvokeVoidAsync("open", "/FasiCommesse", "_blank");
+        }
+        else
+        {
+            NavManager.NavigateTo("/FasiCommesse");
+        }
+    }
     private async Task Utenti(MouseEventArgs e)
     {
         if (e.ShiftKey)
