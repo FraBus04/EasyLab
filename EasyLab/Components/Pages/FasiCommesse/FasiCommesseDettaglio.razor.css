@@ -1,0 +1,126 @@
+.dettaglio-container {
+    padding: 12px;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.dettaglio-titolo {
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #ff8c00;
+}
+
+.dettaglio-divider {
+    border-top: 2px solid #ff8c00;
+    margin: 20px 0 14px;
+}
+
+.info-grid {
+    display: grid;
+    gap: 2px 16px;
+    margin-bottom: 14px;
+}
+
+.info-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.highlight-band {
+    background: #fff3cd;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-left: -12px;
+    margin-right: -12px;
+    width: calc(100% + 24px);
+}
+
+.info-field {
+    display: flex;
+    flex-direction: column;
+    padding: 6px 0;
+    min-height: 44px;
+}
+
+.info-label {
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: #868e96;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 3px;
+}
+
+.highlight-band .info-label {
+    color: #8a6d00;
+}
+
+.info-value {
+    font-size: 0.9rem;
+    color: #212529;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dettaglio-footer {
+    display: flex;
+    gap: 16px;
+    align-items: stretch;
+}
+
+.dettaglio-image-wrapper {
+    flex-shrink: 0;
+    width: 120px;
+    height: 120px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .dettaglio-image-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+.no-image-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
+    gap: 8px;
+}
+
+    .no-image-placeholder span {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 600;
+    }
+
+.dettaglio-nota {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+@media (max-width: 576px) {
+    .info-grid-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dettaglio-footer {
+        flex-direction: column;
+    }
+}

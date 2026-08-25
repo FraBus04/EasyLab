@@ -115,6 +115,17 @@
         FocusedRowEnabled="true"
         FocusedRowChanged="RigaSelezionataCambiata">
     <Columns>
+        <DxGridCommandColumn Width="40px" EditButtonVisible="false" DeleteButtonVisible="false" NewButtonVisible="false" ShowInColumnChooser="false">
+            <HeaderTemplate Context="hdr">
+                <DxButton RenderStyle="ButtonRenderStyle.None"
+                          Click="@(() => myColumnChooser.Visible = !myColumnChooser.Visible)"
+                          Tooltip="Colonne">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#ff8c00" viewBox="0 0 16 16" class="Image-Command-Column">
+                        <path d="M0 1.5A1.5 1.5 0 0 1 1.5 0h13A1.5 1.5 0 0 1 16 1.5v13a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 14.5v-13zM1.5 1a.5.5 0 0 0-.5.5V14a.5.5 0 0 0 .5.5H5v-14H1.5zM6 1v14h4V1H6zm5 0v14h3.5a.5.5 0 0 0 .5-.5v-13a.5.5 0 0 0-.5-.5H11z" />
+                    </svg>
+                </DxButton>
+            </HeaderTemplate>
+        </DxGridCommandColumn>
         <DxGridDataColumn Caption="Img" Width="60px" AllowSort="false">
             <CellDisplayTemplate Context="ctx">
                 @{
@@ -136,13 +147,14 @@
         <DxGridDataColumn FieldName="PercTotCapiFin" Caption="%" Width="100px" MinWidth="90" TextAlignment="GridTextAlignment.Center">
             <CellDisplayTemplate Context="ctx">
                 @{
+                    var riga = (ProduzGeneCommesseAvanzFasiRiga)ctx.DataItem;
                     var perc = ctx.Value as double? ?? 0;
                     var percClamped = Math.Max(0, Math.Min(100, perc));
-                    var barColor = perc >= 100 ? "#28a745" : "#ffc107";
+                    var (coloreChiaroPerc, coloreScuroPerc) = GetColoriSaldo(riga.Saldo);
                 }
                 <div style="display:inline-flex;align-items:center;gap:4px;">
-                    <div style="width:50px;height:10px;border-radius:5px;background:#e9ecef;overflow:hidden;">
-                        <div style="width:@(percClamped.ToString(System.Globalization.CultureInfo.InvariantCulture))%;height:100%;background-color:@barColor;"></div>
+                    <div style="width:50px;height:10px;border-radius:5px;background:@coloreChiaroPerc;overflow:hidden;">
+                        <div style="width:@(percClamped.ToString(System.Globalization.CultureInfo.InvariantCulture))%;height:100%;background-color:@coloreScuroPerc;"></div>
                     </div>
                     <span style="font-size:0.75rem;">@perc.ToString("N0")%</span>
                 </div>
@@ -168,15 +180,19 @@
             <DxGridDataColumn FieldName="@($"Diff{idx}")" Caption="@GetFaseCaption(idx)" Width="80px" Visible="@(idx <= FasiColonneAttive)" TextAlignment="GridTextAlignment.Center">
                 <CellDisplayTemplate Context="ctx">
                     @{
+                        var riga = (ProduzGeneCommesseAvanzFasiRiga)ctx.DataItem;
                         var capi = ctx.Value as int?;
+                        var carico = GetCarico(riga, idx);
+                        var scarico = GetScarico(riga, idx);
+                        var tooltip = $"Commessa: {riga.NrScheda}\nFase: {GetFaseCaption(idx)}\nCarico: {carico}\nScarico: {scarico}\nDifferenza: {capi}";
                     }
                     @if (capi.HasValue && capi.Value > 0)
                     {
-                        <div style="display:inline-block;background-color:rgba(255,140,0,0.3);border-radius:4px;padding:2px 6px;">@capi</div>
+                        <div style="display:inline-block;background-color:rgba(255,140,0,0.3);border-radius:4px;padding:2px 6px;" title="@tooltip">@capi</div>
                     }
                     else
                     {
-                        @capi
+                        <div style="display:inline-block;" title="@tooltip">@capi</div>
                     }
                 </CellDisplayTemplate>
             </DxGridDataColumn>
@@ -212,10 +228,31 @@
 </DxGrid>
         </DxSplitterPane>
         <DxSplitterPane @bind-Collapsed="@DetailsPaneCollapsed">
-            <FasiCommesseDettaglio CommessaSelezionata="@CommessaSelezionata"></FasiCommesseDettaglio>
+            <div class="detail-tabs-container" style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
+                <div class="art-tab-nav flex-shrink-0">
+                    <button class="@(ActiveTab == "generale" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "generale")">Generale</button>
+                    <button class="@(ActiveTab == "sintesi" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "sintesi")">Sintesi Movimenti</button>
+                </div>
+                <div class="p-2" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;">
+                    @if (ActiveTab == "generale")
+                    {
+                        <FasiCommesseDettaglio CommessaSelezionata="@CommessaSelezionata"></FasiCommesseDettaglio>
+                    }
+                    else if (ActiveTab == "sintesi")
+                    {
+                        <SintesiMovimenti CommessaSelezionata="@CommessaSelezionata"></SintesiMovimenti>
+                    }
+                </div>
+            </div>
         </DxSplitterPane>
     </Panes>
 </DxSplitter>
+
+<CustomColumnChooser @ref="myColumnChooser"
+                     dxGrid="MyGrid"
+                     Columns="@(MyGrid?.GetColumns().Where(c => c is DxGridDataColumn).ToList() ?? new())"
+                     StaticColumns="@(MyGrid?.GetColumns().Where(c => c is DxGridCommandColumn).ToList() ?? new())"
+                     SelectedColumns="@(MyGrid?.GetVisibleColumns().Where(c => c is DxGridDataColumn).ToList() ?? new())" />
 
 <DxPopup @bind-Visible="_dialogVisible"
          CloseOnOutsideClick="false"
@@ -267,9 +304,11 @@
     private List<TabTipoOrdineCl> TipiOrdineSelezionati = new();
 
     private DxGrid MyGrid = default!;
+    private CustomColumnChooser myColumnChooser = default!;
     private List<ProduzGeneCommesseAvanzFasiRiga> DataSource = new();
     private int FasiColonneAttive = 0;
     private ProduzGeneCommesseAvanzFasiRiga? CommessaSelezionata;
+    private string ActiveTab = "generale";
     private bool ListPaneCollapsed = false;
     private bool DetailsPaneCollapsed = false;
 
@@ -343,6 +382,22 @@
         var fase = FasiSelezionati.OrderBy(f => f.OrdPm).ElementAtOrDefault(posizione - 1);
         return fase?.Cod ?? $"Fase {posizione}";
     }
+
+    private static int? GetCarico(ProduzGeneCommesseAvanzFasiRiga riga, int posizione) => posizione switch
+    {
+        1 => riga.Car1, 2 => riga.Car2, 3 => riga.Car3, 4 => riga.Car4, 5 => riga.Car5,
+        6 => riga.Car6, 7 => riga.Car7, 8 => riga.Car8, 9 => riga.Car9, 10 => riga.Car10,
+        11 => riga.Car11, 12 => riga.Car12, 13 => riga.Car13, 14 => riga.Car14, 15 => riga.Car15,
+        _ => null
+    };
+
+    private static int? GetScarico(ProduzGeneCommesseAvanzFasiRiga riga, int posizione) => posizione switch
+    {
+        1 => riga.Scr1, 2 => riga.Scr2, 3 => riga.Scr3, 4 => riga.Scr4, 5 => riga.Scr5,
+        6 => riga.Scr6, 7 => riga.Scr7, 8 => riga.Scr8, 9 => riga.Scr9, 10 => riga.Scr10,
+        11 => riga.Scr11, 12 => riga.Scr12, 13 => riga.Scr13, 14 => riga.Scr14, 15 => riga.Scr15,
+        _ => null
+    };
 
     // TortaAvanzFasi arriva dalla SP come bucket 0-4 (vedi CASE nella SP), non come percentuale esatta.
     private static int GetTortaPercent(int? bucket) => bucket switch

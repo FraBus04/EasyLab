@@ -1,0 +1,203 @@
+@using EasyLab.Models
+@using System.Data.Common
+
+@if (loading)
+{
+    <Loading></Loading>
+}
+else if (Righe != null)
+{
+    @foreach (var gruppo in Gruppi)
+    {
+        <div class="fase-group-header">
+            <span class="fase-group-title">@gruppo.Key</span>
+            <span class="fase-group-totals">
+                Tot Car: <strong>@gruppo.Sum(r => r.TotCapiC ?? 0)</strong>
+                &nbsp;&nbsp;
+                Tot Ric: <strong>@gruppo.Sum(r => r.TotCapiR ?? 0)</strong>
+            </span>
+        </div>
+        <DxGrid Data="@gruppo.ToList()"
+                KeyFieldName="IdRiga"
+                ShowSearchBox="false"
+                ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                PagerVisible="false"
+                VirtualScrollingEnabled="true"
+                CssClass="mb-3"
+                HighlightRowOnHover="true">
+            <Columns>
+                <DxGridDataColumn FieldName="MovCod" Caption="Mov" Width="70px" />
+                <DxGridDataColumn FieldName="FaseCod" Caption="Cod. Fase" Width="90px" />
+                <DxGridDataColumn FieldName="IdRiga" Caption="Id Riga" Width="80px" TextAlignment="GridTextAlignment.Center" />
+                <DxGridDataColumn FieldName="NrDoc" Caption="Nr. Doc" Width="100px" />
+                <DxGridDataColumn FieldName="DataMov" Caption="Data Mov" Width="100px" />
+                <DxGridDataColumn FieldName="ParteCol" Caption="Colore" Width="90px" />
+                <DxGridDataColumn FieldName="ParteColDesc" Caption="Descr. Colore" Width="150px" />
+                <DxGridDataColumn FieldName="Anag1" Caption="Anag" Width="180px" />
+                <DxGridDataColumn FieldName="TotCapiC" Caption="Tot Car" Width="80px" TextAlignment="GridTextAlignment.Center" />
+                <DxGridDataColumn FieldName="TotCapiR" Caption="Tot Ric" Width="80px" TextAlignment="GridTextAlignment.Center" />
+                <DxGridDataColumn FieldName="TotCapiDiff" Caption="Diff" Width="80px" TextAlignment="GridTextAlignment.Center" />
+                @for (var i = 1; i <= 16; i++)
+                {
+                    var idx = i;
+                    <DxGridDataColumn FieldName="@($"Nr{idx}")" Caption="@GetTagliaCaption(idx)" Width="60px" TextAlignment="GridTextAlignment.Center" Visible="@TagliaPerPosizione.ContainsKey(idx)" />
+                }
+                <DxGridDataColumn FieldName="CkSaldo" Caption="Saldo" Width="70px" TextAlignment="GridTextAlignment.Center" />
+                <DxGridDataColumn FieldName="DataRicRientro" Caption="Ric. Rientro" Width="110px" />
+                <DxGridDataColumn FieldName="DataConfRientro" Caption="Data Conf" Width="110px">
+                    <CellDisplayTemplate Context="ctx">
+                        @{
+                            var riga = (Doc3MovFasiSintesiRiga)ctx.DataItem;
+                        }
+                        @if (riga.CkConfRientro == true)
+                        {
+                            <div style="background-color:#d4edda;margin:-6px -8px;padding:6px 8px;height:100%;">@ctx.Value</div>
+                        }
+                        else
+                        {
+                            @ctx.Value
+                        }
+                    </CellDisplayTemplate>
+                </DxGridDataColumn>
+                <DxGridDataColumn FieldName="CkConfRientro" Caption="Ck" Width="60px" TextAlignment="GridTextAlignment.Center" />
+                <DxGridDataColumn FieldName="PzArt" Caption="Prezzo" Width="90px" TextAlignment="GridTextAlignment.Center" />
+                <DxGridDataColumn FieldName="Nota" Caption="Nota" Width="180px" />
+            </Columns>
+        </DxGrid>
+    }
+}
+
+@code {
+    [Parameter] public ProduzGeneCommesseAvanzFasiRiga? CommessaSelezionata { get; set; }
+
+    private List<Doc3MovFasiSintesiRiga>? Righe;
+    private Dictionary<int, string> TagliaPerPosizione = new();
+    private bool loading;
+    private int? _idCommCaricato;
+
+    // I movimenti arrivano dalla SP già ordinati per OrdFase: raggrupparli qui basta a mantenere l'ordine per fase,
+    // senza dover usare il raggruppamento nativo della DxGrid (che permetteva di chiudere le sezioni in modo incoerente).
+    private IEnumerable<IGrouping<string, Doc3MovFasiSintesiRiga>> Gruppi =>
+        Righe?.GroupBy(r => r.FaseDesc ?? "Fase") ?? Enumerable.Empty<IGrouping<string, Doc3MovFasiSintesiRiga>>();
+
+    private string GetTagliaCaption(int posizione) =>
+        TagliaPerPosizione.TryGetValue(posizione, out var tg) ? tg : $"Tg {posizione}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (CommessaSelezionata == null)
+        {
+            _idCommCaricato = null;
+            Righe = null;
+            TagliaPerPosizione = new();
+            return;
+        }
+
+        if (_idCommCaricato == CommessaSelezionata.IdComm)
+        {
+            return;
+        }
+
+        _idCommCaricato = CommessaSelezionata.IdComm;
+        Righe = null;
+        loading = true;
+        StateHasChanged();
+
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var connection = context.Database.GetDbConnection();
+            await connection.OpenAsync();
+
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "EXEC [doc].[SP_Doc3_MovFasi_SelectSintesi_idComm] @idComm";
+            var p = cmd.CreateParameter();
+            p.ParameterName = "@idComm";
+            p.Value = CommessaSelezionata.IdComm;
+            cmd.Parameters.Add(p);
+
+            var righe = new List<Doc3MovFasiSintesiRiga>();
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                righe.Add(new Doc3MovFasiSintesiRiga
+                {
+                    IdRiga = reader["idRiga"] as int?,
+                    IdContatto = reader["idContatto"] as int?,
+                    IdCausale = reader["idCausale"] as int?,
+                    IdStag = reader["idStag"] as int?,
+                    IdDoc = reader["idDoc"] as int?,
+                    IdComm = reader["idComm"] as int?,
+                    IdCCli = reader["idCCli"] as int?,
+                    IdFase = reader["idFase"] as int?,
+                    IdMov = reader["idMov"] as int?,
+                    MovCod = reader["MovCod"] as string,
+                    FaseCod = reader["FaseCod"] as string,
+                    FaseDesc = reader["FaseDesc"] as string,
+                    DataMov = reader["DataMov"] is DateTime dataMov ? DateOnly.FromDateTime(dataMov) : (DateOnly?)null,
+                    CdAll = reader["cdALL"] as string,
+                    CdAllCol = reader["cdALLCol"] as string,
+                    Parte = reader["Parte"] as string,
+                    ParteDesc = reader["ParteDesc"] as string,
+                    ParteCol = reader["ParteCol"] as string,
+                    ParteColDesc = reader["ParteColDesc"] as string,
+                    TotCapiC = reader["TotCapi_C"] as int?,
+                    TotCapiR = reader["TotCapi_R"] as int?,
+                    TotCapiDiff = reader["TotCapi_Diff"] as int?,
+                    CkSaldo = reader["ckSaldo"] as bool?,
+                    NrDoc = reader["NrDoc"] as string,
+                    DataDoc = reader["DataDoc"] is DateTime dataDoc ? DateOnly.FromDateTime(dataDoc) : (DateOnly?)null,
+                    DataRicRientro = reader["DataRicRientro"] is DateTime dataRic ? DateOnly.FromDateTime(dataRic) : (DateOnly?)null,
+                    DataConfRientro = reader["DataConfRientro"] is DateTime dataConf ? DateOnly.FromDateTime(dataConf) : (DateOnly?)null,
+                    CkConfRientro = reader["ckConfRientro"] as bool?,
+                    Nota = reader["Nota"] as string,
+                    Anag1 = reader["Anag1"] as string,
+                    OrdFase = reader["OrdFase"] as int?,
+                    CdValuta = reader["cdValuta"] as string,
+                    PzArt = reader["PzArt"] as double?,
+                    Nr1 = reader["Nr1"] as int?,
+                    Nr2 = reader["Nr2"] as int?,
+                    Nr3 = reader["Nr3"] as int?,
+                    Nr4 = reader["Nr4"] as int?,
+                    Nr5 = reader["Nr5"] as int?,
+                    Nr6 = reader["Nr6"] as int?,
+                    Nr7 = reader["Nr7"] as int?,
+                    Nr8 = reader["Nr8"] as int?,
+                    Nr9 = reader["Nr9"] as int?,
+                    Nr10 = reader["Nr10"] as int?,
+                    Nr11 = reader["Nr11"] as int?,
+                    Nr12 = reader["Nr12"] as int?,
+                    Nr13 = reader["Nr13"] as int?,
+                    Nr14 = reader["Nr14"] as int?,
+                    Nr15 = reader["Nr15"] as int?,
+                    Nr16 = reader["Nr16"] as int?,
+                });
+            }
+            await reader.CloseAsync();
+            Righe = righe;
+
+            // Le taglie (Nr1..Nr16) sono posizionali: la SP non restituisce le etichette,
+            // quindi le recuperiamo separatamente dal set taglie usato dai movimenti di questa commessa.
+            var idSet = await context.Database.SqlQuery<int?>(
+                $"SELECT TOP 1 idSet AS Value FROM doc.Doc3 WHERE idClasseDoc = 129 AND idComm = {CommessaSelezionata.IdComm} AND idSet IS NOT NULL")
+                .FirstOrDefaultAsync();
+
+            if (idSet != null)
+            {
+                var taglie = await context.SetTaglieDetts.AsNoTracking()
+                    .Where(s => s.IdSetTaglie == idSet && s.Ord != null)
+                    .ToListAsync();
+                TagliaPerPosizione = taglie.ToDictionary(t => t.Ord!.Value, t => t.Tg);
+            }
+            else
+            {
+                TagliaPerPosizione = new();
+            }
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+}

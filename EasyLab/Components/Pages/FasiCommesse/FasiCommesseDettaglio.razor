@@ -1,6 +1,249 @@
 @using EasyLab.Models
 
+@if (CommessaSelezionata != null)
+{
+    <div class="dettaglio-container">
+        <h5 class="dettaglio-titolo">Testata Ordine CF (Commessa)</h5>
+
+        <div class="info-grid info-grid-4">
+            <div class="info-field">
+                <span class="info-label">Tipo</span>
+                <span class="info-value">@CommessaSelezionata.OrdTipo</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Data</span>
+                <span class="info-value">@CommessaSelezionata.DataComm</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Nr Commessa</span>
+                <span class="info-value">@CommessaSelezionata.NrScheda</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Stato App</span>
+                <span class="info-value">@CommessaSelezionata.StatoApp</span>
+            </div>
+        </div>
+
+        <div class="info-grid info-grid-4 highlight-band">
+            <div class="info-field">
+                <span class="info-label">Stag</span>
+                <span class="info-value">@CommessaSelezionata.StagCod</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Modello</span>
+                <span class="info-value">@CommessaSelezionata.Mod</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Tessuto</span>
+                <span class="info-value">@CommessaSelezionata.Tess</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Nome</span>
+                <span class="info-value">@CommessaSelezionata.Nome</span>
+            </div>
+        </div>
+
+        <div class="info-grid info-grid-4">
+            <div class="info-field">
+                <span class="info-label">Stato</span>
+                <span class="info-value">@CommessaSelezionata.StatoDesc</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Fornitore</span>
+                <span class="info-value">@CommessaSelezionata.Forn</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Laboratorio</span>
+                <span class="info-value">@CommessaSelezionata.LabDesc</span>
+            </div>
+            <div class="info-field">
+                <span class="info-label">Fase Lavorazione</span>
+                <span class="info-value">@CommessaSelezionata.FaseDesc</span>
+            </div>
+        </div>
+
+        <div class="dettaglio-footer">
+            <div class="dettaglio-image-wrapper">
+                @if (CommessaSelezionata.ImgMod != null)
+                {
+                    <img src="data:image/png;base64,@Convert.ToBase64String(CommessaSelezionata.ImgMod)" alt="Immagine modello" />
+                }
+                else
+                {
+                    <div class="no-image-placeholder">
+                        <span>N/D</span>
+                    </div>
+                }
+            </div>
+            <div class="dettaglio-nota">
+                <span class="info-label">Nota</span>
+                <DxMemo Enabled="false" Rows="4" MaxRows="4" Text="@(CommessaSelezionata.Nota ?? "")"></DxMemo>
+            </div>
+        </div>
+
+        <div class="dettaglio-divider"></div>
+
+        @if (loadingTotali)
+        {
+            <Loading></Loading>
+        }
+        else if (RigheTotali != null)
+        {
+            <DxGrid Data="@RigheTotali"
+                    KeyFieldName="Id"
+                    ShowSearchBox="false"
+                    ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                    PagerVisible="false"
+                    VirtualScrollingEnabled="true"
+                    Height="280px"
+                    HighlightRowOnHover="true">
+                <Columns>
+                    <DxGridDataColumn FieldName="CodCol" Caption="Cod" Width="90px" />
+                    <DxGridDataColumn FieldName="DescCol" Caption="Colore" Width="150px" />
+                    <DxGridDataColumn Caption="Img" Width="60px" AllowSort="false">
+                        <CellDisplayTemplate Context="ctx">
+                            @{
+                                var riga = (ProduzGeneOrdDaProdurreTotaliRiga)ctx.DataItem;
+                            }
+                            @if (riga.ImgModCol != null)
+                            {
+                                <img src="data:image/png;base64,@Convert.ToBase64String(riga.ImgModCol)" style="height:28px;width:28px;object-fit:cover;border-radius:4px;" />
+                            }
+                        </CellDisplayTemplate>
+                    </DxGridDataColumn>
+                    <DxGridDataColumn FieldName="TotCapi" Caption="Tot. Col" Width="80px" TextAlignment="GridTextAlignment.Center" />
+                    @for (var i = 1; i <= 16; i++)
+                    {
+                        var idx = i;
+                        <DxGridDataColumn FieldName="@($"Nr{idx}")" Caption="@GetTagliaCaption(idx)" Width="60px" TextAlignment="GridTextAlignment.Center" Visible="@TagliaPerPosizione.ContainsKey(idx)" />
+                    }
+                </Columns>
+                <TotalSummary>
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="TotCapi" FooterColumnName="TotCapi" DisplayFormat="{0:N0}" />
+                    @for (var i = 1; i <= 16; i++)
+                    {
+                        var idx = i;
+                        <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="@($"Nr{idx}")" FooterColumnName="@($"Nr{idx}")" DisplayFormat="{0:N0}" />
+                    }
+                </TotalSummary>
+            </DxGrid>
+        }
+    </div>
+}
+else
+{
+    <div class="d-flex align-items-center justify-content-center text-muted" style="height: 120px;">
+        <p class="mb-0">Seleziona una commessa dall'elenco per vedere il dettaglio.</p>
+    </div>
+}
+
 @code {
     [Parameter]
     public ProduzGeneCommesseAvanzFasiRiga? CommessaSelezionata { get; set; }
+
+    private List<ProduzGeneOrdDaProdurreTotaliRiga>? RigheTotali;
+    private Dictionary<int, string> TagliaPerPosizione = new();
+    private bool loadingTotali;
+    private int? _idCommCaricato;
+
+    private string GetTagliaCaption(int posizione) =>
+        TagliaPerPosizione.TryGetValue(posizione, out var tg) ? tg : $"Tg {posizione}";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (CommessaSelezionata == null)
+        {
+            _idCommCaricato = null;
+            RigheTotali = null;
+            TagliaPerPosizione = new();
+            return;
+        }
+
+        if (_idCommCaricato == CommessaSelezionata.IdComm)
+        {
+            return;
+        }
+
+        _idCommCaricato = CommessaSelezionata.IdComm;
+        RigheTotali = null;
+        loadingTotali = true;
+        StateHasChanged();
+
+        try
+        {
+            using var context = await DbFactory.CreateDbContextAsync();
+            var connection = context.Database.GetDbConnection();
+            await connection.OpenAsync();
+
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "EXEC [Report].[SP_Produz_GeneOrd_DaProdurre_Totali_Select_id] @id";
+            var p = cmd.CreateParameter();
+            p.ParameterName = "@id";
+            p.Value = CommessaSelezionata.IdComm;
+            cmd.Parameters.Add(p);
+
+            var righe = new List<ProduzGeneOrdDaProdurreTotaliRiga>();
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                righe.Add(new ProduzGeneOrdDaProdurreTotaliRiga
+                {
+                    Id = (int)reader["id"],
+                    IdContatto = reader["idContatto"] as int?,
+                    IdComm = reader["idComm"] as int?,
+                    NrCommessa = reader["NrCommessa"] as int?,
+                    IdStag = reader["idStag"] as int?,
+                    IdMod = reader["idMod"] as int?,
+                    IdModCol = reader["idModCol"] as int?,
+                    Mod = reader["Mod"] as string,
+                    Tess = reader["Tess"] as string,
+                    CodCol = reader["CodCol"] as string,
+                    DescCol = reader["DescCol"] as string,
+                    ImgModCol = reader["imgModCol"] as byte[],
+                    TotCapi = reader["TotCapi"] as int?,
+                    Nr1 = reader["Nr1"] as int?,
+                    Nr2 = reader["Nr2"] as int?,
+                    Nr3 = reader["Nr3"] as int?,
+                    Nr4 = reader["Nr4"] as int?,
+                    Nr5 = reader["Nr5"] as int?,
+                    Nr6 = reader["Nr6"] as int?,
+                    Nr7 = reader["Nr7"] as int?,
+                    Nr8 = reader["Nr8"] as int?,
+                    Nr9 = reader["Nr9"] as int?,
+                    Nr10 = reader["Nr10"] as int?,
+                    Nr11 = reader["Nr11"] as int?,
+                    Nr12 = reader["Nr12"] as int?,
+                    Nr13 = reader["Nr13"] as int?,
+                    Nr14 = reader["Nr14"] as int?,
+                    Nr15 = reader["Nr15"] as int?,
+                    Nr16 = reader["Nr16"] as int?,
+                });
+            }
+            await reader.CloseAsync();
+            RigheTotali = righe;
+
+            // Nr1..Nr16 sono posizionali: recuperiamo le etichette taglia dal set usato dai movimenti di questa commessa
+            // (stesso meccanismo usato in SintesiMovimenti.razor).
+            var idSet = await context.Database.SqlQuery<int?>(
+                $"SELECT TOP 1 idSet AS Value FROM doc.Doc3 WHERE idClasseDoc = 129 AND idComm = {CommessaSelezionata.IdComm} AND idSet IS NOT NULL")
+                .FirstOrDefaultAsync();
+
+            if (idSet != null)
+            {
+                var taglie = await context.SetTaglieDetts.AsNoTracking()
+                    .Where(s => s.IdSetTaglie == idSet && s.Ord != null)
+                    .ToListAsync();
+                TagliaPerPosizione = taglie.ToDictionary(t => t.Ord!.Value, t => t.Tg);
+            }
+            else
+            {
+                TagliaPerPosizione = new();
+            }
+        }
+        finally
+        {
+            loadingTotali = false;
+            StateHasChanged();
+        }
+    }
 }
