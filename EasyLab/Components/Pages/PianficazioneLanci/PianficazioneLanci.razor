@@ -18,20 +18,9 @@
     <Loading></Loading>
 }
 
-<div class="articoli-toolbar d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
-    @if (MostraFiltri)
-    {
-        <button type="button" class="btn btn-sm d-flex align-items-center justify-content-center flex-shrink-0"
-                style="width:28px;height:28px;background:transparent;color:#ff8c00;border:1px solid #ff8c00;border-radius:50%;padding:0;"
-                title="Nascondi filtri"
-                @onclick="@(() => MostraFiltri = false)">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                <path d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z" />
-            </svg>
-        </button>
-    }
-    else
-    {
+@if (!MostraFiltri)
+{
+    <div class="articoli-toolbar d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
         <button type="button" class="btn btn-sm d-flex align-items-center gap-1"
                 style="background-color:#ff8c00;color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;opacity:0.85;"
                 @onclick="@(() => MostraFiltri = true)">
@@ -40,24 +29,59 @@
             </svg>
             Mostra filtri
         </button>
-    }
-    <div class="d-flex align-items-end gap-2">
-        <div class="btn-group" role="group">
-            <button type="button" class="btn btn-sm @(!ListPaneCollapsed && DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowListOnly">Lista</button>
-            <button type="button" class="btn btn-sm @(!ListPaneCollapsed && !DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowSplitView">Split</button>
-            <button type="button" class="btn btn-sm @(ListPaneCollapsed && !DetailsPaneCollapsed ? "btn-orange-active" : "btn-outline-orange")" @onclick="ShowDetailsOnly">Dettaglio</button>
+        <div class="d-flex align-items-end gap-2">
+            <div class="header-divider"></div>
+            <button type="button" class="btn-icon-plain" @onclick="SelectSplitView" title="Tabella e Dettaglio" style="@(!DetailsPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
+                <img src="images/SplitCollps32.png" class="btn-icon-search" alt="Tabella e Dettaglio" />
+            </button>
+            <button type="button" class="btn-icon-plain" @onclick="SelectListOnly" title="Solo Tabella" style="@(DetailsPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
+                <img src="images/SplitOpen32.png" class="btn-icon-search" alt="Solo Tabella" />
+            </button>
+            <div class="header-divider"></div>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm @(VistaAttiva == "SituazioneCommesse" ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => VistaAttiva = "SituazioneCommesse")">Situazione Commesse</button>
+                <button type="button" class="btn btn-sm @(VistaAttiva == "LanciCommesse" ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => VistaAttiva = "LanciCommesse")">Lanci Commesse</button>
+            </div>
+            <DxMenu CssClass="modern-menu" Title="">
+                <Items>
+                    <DxMenuItem CssClass="border-0">
+                        <TextTemplate>
+                            <img src="images/print_32x323.png" class="btn-icon-search" alt="Funzioni" />
+                        </TextTemplate>
+                        <Items>
+                            <DxMenuItem Click="ExportToExcel">
+                                <TextTemplate>
+                                    <img src="images/excel.png" style="width:16px;height:16px;" class="me-1" /> Esporta Excel
+                                </TextTemplate>
+                            </DxMenuItem>
+                        </Items>
+                    </DxMenuItem>
+                </Items>
+            </DxMenu>
         </div>
+    </div>
+}
+else
+{
+    <div class="articoli-toolbar d-flex align-items-center justify-content-end mb-2 flex-wrap gap-2">
         <div class="btn-group" role="group">
             <button type="button" class="btn btn-sm @(VistaAttiva == "SituazioneCommesse" ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => VistaAttiva = "SituazioneCommesse")">Situazione Commesse</button>
             <button type="button" class="btn btn-sm @(VistaAttiva == "LanciCommesse" ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => VistaAttiva = "LanciCommesse")">Lanci Commesse</button>
         </div>
-        <button type="button" class="btn btn-sm btn-outline-orange" @onclick="ExportToExcel">Esporta Excel</button>
     </div>
-</div>
+}
 
 @if (MostraFiltri)
 {
     <div class="articoli-filtri p-2 mb-2 border rounded d-flex flex-wrap gap-3 align-items-end">
+        <button type="button" class="btn btn-sm d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:28px;height:28px;background:transparent;color:#ff8c00;border:1px solid #ff8c00;border-radius:50%;padding:0;"
+                title="Nascondi filtri"
+                @onclick="@(() => MostraFiltri = false)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z" />
+            </svg>
+        </button>
         <div style="width:220px;">
             <label class="form-label small mb-0">Brand</label>
             <CheckboxDropdown TItem="Contatti"
@@ -110,6 +134,32 @@
         <button type="button" class="btn-icon-plain" @onclick="SalvaParametri" disabled="@isDbBusy" title="Salva Parametri" style="@(isDbBusy ? "opacity:0.5;cursor:default;" : null)">
             <img src="images/Param32.png" class="btn-icon-search" alt="Salva Parametri" />
         </button>
+
+        <div class="header-divider"></div>
+        <button type="button" class="btn-icon-plain" @onclick="SelectSplitView" title="Tabella e Dettaglio" style="@(!DetailsPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
+            <img src="images/SplitCollps32.png" class="btn-icon-search" alt="Tabella e Dettaglio" />
+        </button>
+        <button type="button" class="btn-icon-plain" @onclick="SelectListOnly" title="Solo Tabella" style="@(DetailsPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
+            <img src="images/SplitOpen32.png" class="btn-icon-search" alt="Solo Tabella" />
+        </button>
+        <div class="header-divider"></div>
+
+        <DxMenu CssClass="modern-menu" Title="">
+            <Items>
+                <DxMenuItem CssClass="border-0">
+                    <TextTemplate>
+                        <img src="images/print_32x323.png" class="btn-icon-search" alt="Funzioni" />
+                    </TextTemplate>
+                    <Items>
+                        <DxMenuItem Click="ExportToExcel">
+                            <TextTemplate>
+                                <img src="images/excel.png" style="width:16px;height:16px;" class="me-1" /> Esporta Excel
+                            </TextTemplate>
+                        </DxMenuItem>
+                    </Items>
+                </DxMenuItem>
+            </Items>
+        </DxMenu>
     </div>
 }
 
@@ -133,7 +183,7 @@
                     FocusedRowEnabled="true"
                     FocusedRowChanged="RigaSelezionataCambiata">
                 <Columns>
-                    <DxGridCommandColumn Width="90px" EditButtonVisible="true" DeleteButtonVisible="true" NewButtonVisible="false" ShowInColumnChooser="false">
+                    <DxGridCommandColumn Width="90px" EditButtonVisible="false" DeleteButtonVisible="false" NewButtonVisible="false" ShowInColumnChooser="false">
                         <HeaderTemplate Context="hdr">
                             <DxButton RenderStyle="ButtonRenderStyle.None"
                                       Click="@(() => myColumnChooser.Visible = !myColumnChooser.Visible)"
@@ -1513,22 +1563,16 @@ else if (VistaAttiva == "LanciCommesse")
         MostraDettagli = false;
     }
 
-    private void ShowListOnly()
+    private void SelectSplitView()
+    {
+        ListPaneCollapsed = false;
+        DetailsPaneCollapsed = false;
+    }
+
+    private void SelectListOnly()
     {
         ListPaneCollapsed = false;
         DetailsPaneCollapsed = true;
-    }
-
-    private void ShowSplitView()
-    {
-        ListPaneCollapsed = false;
-        DetailsPaneCollapsed = false;
-    }
-
-    private void ShowDetailsOnly()
-    {
-        ListPaneCollapsed = true;
-        DetailsPaneCollapsed = false;
     }
 
     private async Task ExportToExcel()

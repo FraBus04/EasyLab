@@ -41,6 +41,36 @@
     background: #f8f9fa;
 }
 
+.articoli-toolbar,
+.articoli-filtri {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #ced4da transparent;
+}
+
+    .articoli-toolbar > *,
+    .articoli-filtri > * {
+        flex-shrink: 0;
+    }
+
+    .articoli-toolbar::-webkit-scrollbar,
+    .articoli-filtri::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .articoli-toolbar::-webkit-scrollbar-track,
+    .articoli-filtri::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .articoli-toolbar::-webkit-scrollbar-thumb,
+    .articoli-filtri::-webkit-scrollbar-thumb {
+        background: #ced4da;
+        border-radius: 3px;
+    }
+
 .detail-card {
     background: #ffffff;
     border-left: 4px solid #ff8c00;
