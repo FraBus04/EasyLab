@@ -2,8 +2,10 @@
 @attribute [Authorize]
 @using EasyLab.Models
 @using Microsoft.EntityFrameworkCore
+@using System.Text.Json
 @rendermode InteractiveServer
 @inject IDbContextFactory<SeaseTstContext> DbFactory
+@inject IToastNotificationService ToastService
 
 <PageTitle>Fasi Commesse</PageTitle>
 
@@ -96,6 +98,10 @@
         </div>
         <button type="button" class="btn-icon-plain" @onclick="Cerca" title="Cerca">
             <img src="images/RefreshOranSVG1.svg" class="btn-icon-search" alt="Cerca" />
+        </button>
+
+        <button type="button" class="btn-icon-plain" @onclick="SalvaParametri" disabled="@isDbBusy" title="Salva Parametri" style="@(isDbBusy ? "opacity:0.5;cursor:default;" : null)">
+            <img src="images/Param32.png" class="btn-icon-search" alt="Salva Parametri" />
         </button>
     </div>
 }
@@ -285,8 +291,14 @@
     private const string ChiaveSelStFasi = "Tab_Fasi_Lavorazione";
     private const string ChiaveSelStTipoOrdine = "Tab_TipoOrdineCL";
 
+    // TabellaId usato per salvare/caricare filtri e layout griglia in ParametriUtente.
+    private const int IdTabellaParametri = 4;
+
     [CascadingParameter]
     private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private string? UtentId;
+    private bool isDbBusy = false;
 
     private bool loading = true;
     private bool MostraFiltri = true;
@@ -324,6 +336,12 @@
             StateHasChanged();
             try
             {
+                if (AuthStateTask != null)
+                {
+                    var authState = await AuthStateTask;
+                    UtentId = UserManager.GetUserId(authState.User);
+                }
+
                 using var context = await DbFactory.CreateDbContextAsync();
                 Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
                 Stagioni = await context.TabStagionis.AsNoTracking().Where(x => x.Stato == "A").OrderByDescending(s => s.OrdPm).ToListAsync();
@@ -331,11 +349,16 @@
                 Fasi = await context.TabFasiLavoraziones.AsNoTracking().Where(f => f.MatLav == MatLavFasi).OrderBy(f => f.OrdPm).ToListAsync();
                 TipiOrdine = await context.TabTipoOrdineCls.AsNoTracking().OrderBy(t => t.OrdPm).ToListAsync();
                 await ApplicaPermessiLettura();
-                BrandSelezionati = Brands.ToList();
-                StagioneSelezionati = Stagioni.ToList();
-                LaboratoriSelezionati = Laboratori.ToList();
-                FasiSelezionati = Fasi.ToList();
-                TipiOrdineSelezionati = TipiOrdine.ToList();
+
+                var parametriCaricati = await CaricaParametriSalvati();
+                if (!parametriCaricati)
+                {
+                    BrandSelezionati = Brands.ToList();
+                    StagioneSelezionati = Stagioni.ToList();
+                    LaboratoriSelezionati = Laboratori.ToList();
+                    FasiSelezionati = Fasi.ToList();
+                    TipiOrdineSelezionati = TipiOrdine.ToList();
+                }
             }
             finally
             {
@@ -347,15 +370,11 @@
 
     private async Task ApplicaPermessiLettura()
     {
-        if (AuthStateTask == null) return;
-
-        var authState = await AuthStateTask;
-        var utenteId = UserManager.GetUserId(authState.User);
-        if (utenteId == null) return;
+        if (UtentId == null) return;
 
         // Una riga senza permesso esplicito NON è visibile: serve un permesso con Visualizza = true.
         var visibili = await DbContext.PermessiLetturaTabelles.AsNoTracking()
-            .Where(p => p.UtenteId == utenteId && p.Visualizza
+            .Where(p => p.UtenteId == UtentId && p.Visualizza
                 && (p.TabellaId == IdTabellaStagioni || p.TabellaId == IdTabellaBrand || p.TabellaId == IdTabellaLaboratori))
             .ToListAsync();
 
@@ -366,6 +385,132 @@
         Brands = Brands.Where(b => brandVisibili.Contains(b.Id.ToString())).ToList();
         Stagioni = Stagioni.Where(s => stagioniVisibili.Contains(s.Id.ToString())).ToList();
         Laboratori = Laboratori.Where(l => laboratoriVisibili.Contains(l.Id.ToString())).ToList();
+    }
+
+    private async Task<bool> CaricaParametriSalvati()
+    {
+        if (UtentId == null) return false;
+
+        var parametroRecord = await DbContext.ParametriUtente.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.UtenteId == UtentId && p.TabellaId == IdTabellaParametri);
+
+        if (parametroRecord?.Parametri == null || parametroRecord.Parametri.Count == 0)
+            return false;
+
+        var brandsString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Brands:"))?["Brands:".Length..];
+        if (!string.IsNullOrEmpty(brandsString))
+        {
+            var ids = brandsString.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            BrandSelezionati = Brands.Where(b => ids.Contains(b.Id.ToString())).ToList();
+        }
+
+        var stagString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Stagioni:"))?["Stagioni:".Length..];
+        if (!string.IsNullOrEmpty(stagString))
+        {
+            var ids = stagString.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            StagioneSelezionati = Stagioni.Where(s => ids.Contains(s.Id.ToString())).ToList();
+        }
+
+        var labString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Laboratori:"))?["Laboratori:".Length..];
+        if (!string.IsNullOrEmpty(labString))
+        {
+            var ids = labString.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            LaboratoriSelezionati = Laboratori.Where(l => ids.Contains(l.Id.ToString())).ToList();
+        }
+
+        var fasiString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Fasi:"))?["Fasi:".Length..];
+        if (!string.IsNullOrEmpty(fasiString))
+        {
+            var codici = fasiString.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            FasiSelezionati = Fasi.Where(f => codici.Contains(f.Cod)).ToList();
+        }
+
+        var tipiOrdineString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("TipiOrdine:"))?["TipiOrdine:".Length..];
+        if (!string.IsNullOrEmpty(tipiOrdineString))
+        {
+            var codici = tipiOrdineString.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            TipiOrdineSelezionati = TipiOrdine.Where(t => codici.Contains(t.Cod)).ToList();
+        }
+
+        var layoutString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Layout:"))?["Layout:".Length..];
+        if (!string.IsNullOrEmpty(layoutString) && MyGrid != null)
+        {
+            var layout = JsonSerializer.Deserialize<GridPersistentLayout>(layoutString);
+            if (layout != null)
+            {
+                MyGrid.LoadLayout(layout);
+            }
+        }
+
+        return true;
+    }
+
+    private async Task SalvaParametri()
+    {
+        if (isDbBusy || UtentId == null) return;
+
+        isDbBusy = true;
+        StateHasChanged();
+
+        try
+        {
+            string brands = "Brands:" + string.Join("-", BrandSelezionati.Select(b => b.Id));
+            string stagioni = "Stagioni:" + string.Join("-", StagioneSelezionati.Select(s => s.Id));
+            string laboratori = "Laboratori:" + string.Join("-", LaboratoriSelezionati.Select(l => l.Id));
+            string fasi = "Fasi:" + string.Join("-", FasiSelezionati.Select(f => f.Cod));
+            string tipiOrdine = "TipiOrdine:" + string.Join("-", TipiOrdineSelezionati.Select(t => t.Cod));
+
+            var layout = MyGrid.SaveLayout();
+            string jsonLayout = "Layout:" + JsonSerializer.Serialize(layout);
+
+            var parametri = new List<string> { brands, stagioni, laboratori, fasi, tipiOrdine, jsonLayout };
+
+            var parametroEsistente = await DbContext.ParametriUtente
+                .FirstOrDefaultAsync(p => p.UtenteId == UtentId && p.TabellaId == IdTabellaParametri);
+
+            if (parametroEsistente != null)
+            {
+                parametroEsistente.NomeTabella = "FasiCommesse";
+                parametroEsistente.Parametri = parametri;
+                parametroEsistente.DataUpd = DateTime.Now;
+            }
+            else
+            {
+                DbContext.ParametriUtente.Add(new ParametroUtente
+                {
+                    UtenteId = UtentId,
+                    TabellaId = IdTabellaParametri,
+                    NomeTabella = "FasiCommesse",
+                    Parametri = parametri,
+                    DataUpd = DateTime.Now
+                });
+            }
+
+            await DbContext.SaveChangesAsync();
+            ToastService.ShowToast(new ToastOptions
+            {
+                Title = "Parametri salvati",
+                Text = "Filtri e layout tabella salvati correttamente.",
+                RenderStyle = ToastRenderStyle.Success,
+                CssClass = "toast-brand-orange",
+                ProviderName = "MainToastProvider"
+            });
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowToast(new ToastOptions
+            {
+                Title = "Errore",
+                Text = $"Si è verificato un errore durante il salvataggio dei parametri: {ex.Message}",
+                RenderStyle = ToastRenderStyle.Danger,
+                ProviderName = "MainToastProvider"
+            });
+        }
+        finally
+        {
+            isDbBusy = false;
+            StateHasChanged();
+        }
     }
 
     private async Task<int?> GetIdUteAsync()

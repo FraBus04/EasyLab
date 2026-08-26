@@ -5,9 +5,11 @@
 @using EasyLab.Models
 @using EasyLab.Components.Utils
 @using Microsoft.EntityFrameworkCore
+@using System.Text.Json
 @rendermode InteractiveServer
 @inject NavigationManager NavigationManager
 @inject IDbContextFactory<SeaseTstContext> DbFactory
+@inject IToastNotificationService ToastService
 @implements IDisposable
 
 <PageTitle>Articoli</PageTitle>
@@ -96,6 +98,10 @@
         <button type="button" class="btn-icon-plain" @onclick="Cerca" title="Cerca">
             <img src="images/RefreshOranSVG1.svg" class="btn-icon-search" alt="Cerca" />
         </button>
+
+        <button type="button" class="btn-icon-plain" @onclick="SalvaParametri" disabled="@isDbBusy" title="Salva Parametri" style="@(isDbBusy ? "opacity:0.5;cursor:default;" : null)">
+            <img src="images/Param32.png" class="btn-icon-search" alt="Salva Parametri" />
+        </button>
     </div>
 }
 
@@ -130,91 +136,91 @@
                             </DxButton>
                         </HeaderTemplate>
                     </DxGridCommandColumn>
-                    <DxGridDataColumn FieldName="Cd" Caption="Codice" />
-                    <DxGridDataColumn FieldName="Tipo" Caption="Tipo" Width="70px" />
-                    <DxGridDataColumn FieldName="Contatto" Caption="Brand" />
-                    <DxGridDataColumn FieldName="Stag" Caption="Stagione" Width="90px" />
-                    <DxGridDataColumn FieldName="Parte" Caption="Parte" />
-                    <DxGridDataColumn FieldName="ParteDesc" Caption="Descrizione" />
-                    <DxGridDataColumn FieldName="Mod" Caption="Modello" />
-                    <DxGridDataColumn FieldName="Tess" Caption="Tessuto" />
-                    <DxGridDataColumn FieldName="Nota" Caption="Note" Visible="false" />
-                    <DxGridDataColumn FieldName="Guid" Caption="Guid" Visible="false" />
-                    <DxGridDataColumn FieldName="IdModNoStag" Caption="Modello No Stag" Visible="false">
+                    <DxGridDataColumn FieldName="Cd" Caption="Codice" Width="110px" MinWidth="100" />
+                    <DxGridDataColumn FieldName="Tipo" Caption="Tipo" Width="70px" MinWidth="60" />
+                    <DxGridDataColumn FieldName="Contatto" Caption="Brand" Width="160px" MinWidth="120" />
+                    <DxGridDataColumn FieldName="Stag" Caption="Stagione" Width="90px" MinWidth="80" />
+                    <DxGridDataColumn FieldName="Parte" Caption="Parte" Width="110px" MinWidth="100" />
+                    <DxGridDataColumn FieldName="ParteDesc" Caption="Descrizione" Width="220px" MinWidth="160" />
+                    <DxGridDataColumn FieldName="Mod" Caption="Modello" Width="120px" MinWidth="100" />
+                    <DxGridDataColumn FieldName="Tess" Caption="Tessuto" Width="140px" MinWidth="110" />
+                    <DxGridDataColumn FieldName="Nota" Caption="Note" Width="200px" MinWidth="140" Visible="false" />
+                    <DxGridDataColumn FieldName="Guid" Caption="Guid" Width="220px" MinWidth="160" Visible="false" />
+                    <DxGridDataColumn FieldName="IdModNoStag" Caption="Modello No Stag" Width="150px" MinWidth="120" Visible="false">
                         <CellDisplayTemplate Context="ctx">@GetText("Modello", ctx.Value)</CellDisplayTemplate>
                     </DxGridDataColumn>
-                    <DxGridDataColumn FieldName="IdMod" Caption="Modello" Visible="false">
+                    <DxGridDataColumn FieldName="IdMod" Caption="Modello" Width="150px" MinWidth="120" Visible="false">
                         <CellDisplayTemplate Context="ctx">@GetText("Modello", ctx.Value)</CellDisplayTemplate>
                     </DxGridDataColumn>
-                    <DxGridDataColumn FieldName="IdMat" Caption="Materiale" Visible="false">
+                    <DxGridDataColumn FieldName="IdMat" Caption="Materiale" Width="150px" MinWidth="120" Visible="false">
                         <CellDisplayTemplate Context="ctx">@GetText("Materiale", ctx.Value)</CellDisplayTemplate>
                     </DxGridDataColumn>
-                    <DxGridDataColumn FieldName="SetTaglie.Cod" Caption="Set Taglie" Visible="false" />
-                    <DxGridDataColumn FieldName="SetTaglieDettBase.Tg" Caption="Taglia Base" Visible="false" />
-                    <DxGridDataColumn FieldName="SetTaglieDettDa.Tg" Caption="Taglia Da" Visible="false" />
-                    <DxGridDataColumn FieldName="SetTaglieDettA.Tg" Caption="Taglia A" Visible="false" />
-                    <DxGridDataColumn FieldName="IdNazione" Caption="Nazione" Visible="false">
+                    <DxGridDataColumn FieldName="SetTaglie.Cod" Caption="Set Taglie" Width="110px" MinWidth="100" Visible="false" />
+                    <DxGridDataColumn FieldName="SetTaglieDettBase.Tg" Caption="Taglia Base" Width="110px" MinWidth="100" Visible="false" />
+                    <DxGridDataColumn FieldName="SetTaglieDettDa.Tg" Caption="Taglia Da" Width="100px" MinWidth="90" Visible="false" />
+                    <DxGridDataColumn FieldName="SetTaglieDettA.Tg" Caption="Taglia A" Width="100px" MinWidth="90" Visible="false" />
+                    <DxGridDataColumn FieldName="IdNazione" Caption="Nazione" Width="130px" MinWidth="110" Visible="false">
                         <CellDisplayTemplate Context="ctx">@GetText("Nazione", ctx.Value)</CellDisplayTemplate>
                     </DxGridDataColumn>
-                    <DxGridDataColumn FieldName="TabKw.Descr" Caption="KW" Visible="false" />
-                    <DxGridDataColumn FieldName="ContattiFornPref.Societa1" Caption="Fornitore Pref." Visible="false" />
-                    <DxGridDataColumn FieldName="LaboratorioPrev.Anag1" Caption="Laboratorio Prev." Visible="false" />
-                    <DxGridDataColumn FieldName="CodArtFornitore" Caption="Cod. Art. Fornitore" Visible="false" />
-                    <DxGridDataColumn FieldName="CdOp" Caption="CdOp" Visible="false" />
-                    <DxGridDataColumn FieldName="Um" Caption="UM" Visible="false" />
-                    <DxGridDataColumn FieldName="Umutil" Caption="UM Utile" Visible="false" />
-                    <DxGridDataColumn FieldName="UmutilConv" Caption="UM Utile Conv." Visible="false" />
-                    <DxGridDataColumn FieldName="Umpeso" Caption="UM Peso" Visible="false" />
-                    <DxGridDataColumn FieldName="Peso" Caption="Peso" Visible="false" />
-                    <DxGridDataColumn FieldName="TabComposizione1.Composizione" Caption="Composizione 1" Visible="false" />
-                    <DxGridDataColumn FieldName="TabComposizione2.Composizione" Caption="Composizione 2" Visible="false" />
-                    <DxGridDataColumn FieldName="TabComposizione3.Composizione" Caption="Composizione 3" Visible="false" />
-                    <DxGridDataColumn FieldName="TabComposizione4.Composizione" Caption="Composizione 4" Visible="false" />
-                    <DxGridDataColumn FieldName="TabComposizione5.Composizione" Caption="Composizione 5" Visible="false" />
-                    <DxGridDataColumn FieldName="TabComposizionePo1.Posizione" Caption="Posizione 1" Visible="false" />
-                    <DxGridDataColumn FieldName="TabComposizionePo2.Posizione" Caption="Posizione 2" Visible="false" />
-                    <DxGridDataColumn FieldName="TabComposizionePo3.Posizione" Caption="Posizione 3" Visible="false" />
-                    <DxGridDataColumn FieldName="TabComposizionePo4.Posizione" Caption="Posizione 4" Visible="false" />
-                    <DxGridDataColumn FieldName="TabComposizionePo5.Posizione" Caption="Posizione 5" Visible="false" />
-                    <DxGridDataColumn FieldName="TabSimboliLav1.Descrizione" Caption="Lavaggio 1" Visible="false" />
-                    <DxGridDataColumn FieldName="TabSimboliLav2.Descrizione" Caption="Lavaggio 2" Visible="false" />
-                    <DxGridDataColumn FieldName="TabSimboliLav3.Descrizione" Caption="Lavaggio 3" Visible="false" />
-                    <DxGridDataColumn FieldName="TabSimboliLav4.Descrizione" Caption="Lavaggio 4" Visible="false" />
-                    <DxGridDataColumn FieldName="TabSimboliLav5.Descrizione" Caption="Lavaggio 5" Visible="false" />
-                    <DxGridDataColumn FieldName="TabSimboliLav6.Descrizione" Caption="Lavaggio 6" Visible="false" />
-                    <DxGridDataColumn FieldName="TabSimboliLav11.Descrizione" Caption="Lavaggio 11" Visible="false" />
-                    <DxGridDataColumn FieldName="TabSimboliLav12.Descrizione" Caption="Lavaggio 12" Visible="false" />
-                    <DxGridDataColumn FieldName="TabSimboliLav13.Descrizione" Caption="Lavaggio 13" Visible="false" />
-                    <DxGridDataColumn FieldName="TabSimboliLav14.Descrizione" Caption="Lavaggio 14" Visible="false" />
-                    <DxGridDataColumn FieldName="TabSimboliLav15.Descrizione" Caption="Lavaggio 15" Visible="false" />
-                    <DxGridDataColumn FieldName="TabSimboliLav16.Descrizione" Caption="Lavaggio 16" Visible="false" />
-                    <DxGridDataColumn FieldName="TabRagg1.Descr" Caption="Raggruppamento 1" Visible="false" />
-                    <DxGridDataColumn FieldName="TabRagg2.Descr" Caption="Raggruppamento 2" Visible="false" />
-                    <DxGridDataColumn FieldName="TabRagg3.Descr" Caption="Raggruppamento 3" Visible="false" />
-                    <DxGridDataColumn FieldName="TabRagg4.Descr" Caption="Raggruppamento 4" Visible="false" />
-                    <DxGridDataColumn FieldName="TabRagg5.Descr" Caption="Raggruppamento 5" Visible="false" />
-                    <DxGridDataColumn FieldName="Cad" Caption="Cad" Visible="false" />
-                    <DxGridDataColumn FieldName="BaseProv" Caption="Base Provincia" Visible="false" />
-                    <DxGridDataColumn FieldName="LeadTimeGg" Caption="Lead Time (gg)" Visible="false" />
-                    <DxGridDataColumn FieldName="CkMatMis" Caption="Ck Mat. Misura" Visible="false" />
-                    <DxGridDataColumn FieldName="CkSemilav" Caption="Ck Semilavorato" Visible="false" />
-                    <DxGridDataColumn FieldName="TabCatMerceologica.Descrizione" Caption="Categoria Merc." Visible="false" />
-                    <DxGridDataColumn FieldName="TabGender.Descr" Caption="Gender" Visible="false" />
-                    <DxGridDataColumn FieldName="VociDoganali" Caption="Voci Doganali" Visible="false" />
-                    <DxGridDataColumn FieldName="TabTipoMpScar.Descr" Caption="Mat. Prima Scarico" Visible="false" />
-                    <DxGridDataColumn FieldName="PathImg" Caption="Path Immagine" Visible="false" />
-                    <DxGridDataColumn FieldName="Tp" Caption="TP" Visible="false" />
-                    <DxGridDataColumn FieldName="IdTipoMat" Caption="Tipo Materiale" Visible="false">
+                    <DxGridDataColumn FieldName="TabKw.Descr" Caption="KW" Width="140px" MinWidth="110" Visible="false" />
+                    <DxGridDataColumn FieldName="ContattiFornPref.Societa1" Caption="Fornitore Pref." Width="180px" MinWidth="140" Visible="false" />
+                    <DxGridDataColumn FieldName="LaboratorioPrev.Anag1" Caption="Laboratorio Prev." Width="180px" MinWidth="140" Visible="false" />
+                    <DxGridDataColumn FieldName="CodArtFornitore" Caption="Cod. Art. Fornitore" Width="160px" MinWidth="130" Visible="false" />
+                    <DxGridDataColumn FieldName="CdOp" Caption="CdOp" Width="90px" MinWidth="80" Visible="false" />
+                    <DxGridDataColumn FieldName="Um" Caption="UM" Width="80px" MinWidth="70" Visible="false" />
+                    <DxGridDataColumn FieldName="Umutil" Caption="UM Utile" Width="100px" MinWidth="90" Visible="false" />
+                    <DxGridDataColumn FieldName="UmutilConv" Caption="UM Utile Conv." Width="130px" MinWidth="110" Visible="false" />
+                    <DxGridDataColumn FieldName="Umpeso" Caption="UM Peso" Width="100px" MinWidth="90" Visible="false" />
+                    <DxGridDataColumn FieldName="Peso" Caption="Peso" Width="90px" MinWidth="80" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizione1.Composizione" Caption="Composizione 1" Width="160px" MinWidth="130" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizione2.Composizione" Caption="Composizione 2" Width="160px" MinWidth="130" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizione3.Composizione" Caption="Composizione 3" Width="160px" MinWidth="130" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizione4.Composizione" Caption="Composizione 4" Width="160px" MinWidth="130" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizione5.Composizione" Caption="Composizione 5" Width="160px" MinWidth="130" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizionePo1.Posizione" Caption="Posizione 1" Width="130px" MinWidth="110" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizionePo2.Posizione" Caption="Posizione 2" Width="130px" MinWidth="110" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizionePo3.Posizione" Caption="Posizione 3" Width="130px" MinWidth="110" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizionePo4.Posizione" Caption="Posizione 4" Width="130px" MinWidth="110" Visible="false" />
+                    <DxGridDataColumn FieldName="TabComposizionePo5.Posizione" Caption="Posizione 5" Width="130px" MinWidth="110" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav1.Descrizione" Caption="Lavaggio 1" Width="150px" MinWidth="120" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav2.Descrizione" Caption="Lavaggio 2" Width="150px" MinWidth="120" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav3.Descrizione" Caption="Lavaggio 3" Width="150px" MinWidth="120" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav4.Descrizione" Caption="Lavaggio 4" Width="150px" MinWidth="120" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav5.Descrizione" Caption="Lavaggio 5" Width="150px" MinWidth="120" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav6.Descrizione" Caption="Lavaggio 6" Width="150px" MinWidth="120" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav11.Descrizione" Caption="Lavaggio 11" Width="150px" MinWidth="120" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav12.Descrizione" Caption="Lavaggio 12" Width="150px" MinWidth="120" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav13.Descrizione" Caption="Lavaggio 13" Width="150px" MinWidth="120" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav14.Descrizione" Caption="Lavaggio 14" Width="150px" MinWidth="120" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav15.Descrizione" Caption="Lavaggio 15" Width="150px" MinWidth="120" Visible="false" />
+                    <DxGridDataColumn FieldName="TabSimboliLav16.Descrizione" Caption="Lavaggio 16" Width="150px" MinWidth="120" Visible="false" />
+                    <DxGridDataColumn FieldName="TabRagg1.Descr" Caption="Raggruppamento 1" Width="170px" MinWidth="140" Visible="false" />
+                    <DxGridDataColumn FieldName="TabRagg2.Descr" Caption="Raggruppamento 2" Width="170px" MinWidth="140" Visible="false" />
+                    <DxGridDataColumn FieldName="TabRagg3.Descr" Caption="Raggruppamento 3" Width="170px" MinWidth="140" Visible="false" />
+                    <DxGridDataColumn FieldName="TabRagg4.Descr" Caption="Raggruppamento 4" Width="170px" MinWidth="140" Visible="false" />
+                    <DxGridDataColumn FieldName="TabRagg5.Descr" Caption="Raggruppamento 5" Width="170px" MinWidth="140" Visible="false" />
+                    <DxGridDataColumn FieldName="Cad" Caption="Cad" Width="80px" MinWidth="70" Visible="false" />
+                    <DxGridDataColumn FieldName="BaseProv" Caption="Base Provincia" Width="140px" MinWidth="110" Visible="false" />
+                    <DxGridDataColumn FieldName="LeadTimeGg" Caption="Lead Time (gg)" Width="120px" MinWidth="100" Visible="false" />
+                    <DxGridDataColumn FieldName="CkMatMis" Caption="Ck Mat. Misura" Width="120px" MinWidth="100" Visible="false" />
+                    <DxGridDataColumn FieldName="CkSemilav" Caption="Ck Semilavorato" Width="130px" MinWidth="110" Visible="false" />
+                    <DxGridDataColumn FieldName="TabCatMerceologica.Descrizione" Caption="Categoria Merc." Width="160px" MinWidth="130" Visible="false" />
+                    <DxGridDataColumn FieldName="TabGender.Descr" Caption="Gender" Width="100px" MinWidth="90" Visible="false" />
+                    <DxGridDataColumn FieldName="VociDoganali" Caption="Voci Doganali" Width="150px" MinWidth="120" Visible="false" />
+                    <DxGridDataColumn FieldName="TabTipoMpScar.Descr" Caption="Mat. Prima Scarico" Width="170px" MinWidth="140" Visible="false" />
+                    <DxGridDataColumn FieldName="PathImg" Caption="Path Immagine" Width="220px" MinWidth="160" Visible="false" />
+                    <DxGridDataColumn FieldName="Tp" Caption="TP" Width="70px" MinWidth="60" Visible="false" />
+                    <DxGridDataColumn FieldName="IdTipoMat" Caption="Tipo Materiale" Width="140px" MinWidth="110" Visible="false">
                         <CellDisplayTemplate Context="ctx">@GetText("TipoMateriale", ctx.Value)</CellDisplayTemplate>
                     </DxGridDataColumn>
-                    <DxGridDataColumn FieldName="CdFamMat" Caption="Cod. Famiglia Mat." Visible="false" />
-                    <DxGridDataColumn FieldName="StatoAppBol" Caption="Stato Appr. Bol" Visible="false" />
-                    <DxGridDataColumn FieldName="StatoAppDiBa" Caption="Stato Appr. DiBa" Visible="false" />
-                    <DxGridDataColumn FieldName="StatoApp" Caption="Stato Approvazione" Visible="false" />
-                    <DxGridDataColumn FieldName="Hutile" Caption="H Utile" Visible="false" />
-                    <DxGridDataColumn FieldName="CkMp" Caption="Ck MP" Visible="false" />
-                    <DxGridDataColumn FieldName="CkMrp" Caption="Ck MRP" Visible="false" />
-                    <DxGridDataColumn FieldName="CkFabb" Caption="Ck Fabbisogno" Visible="false" />
+                    <DxGridDataColumn FieldName="CdFamMat" Caption="Cod. Famiglia Mat." Width="160px" MinWidth="130" Visible="false" />
+                    <DxGridDataColumn FieldName="StatoAppBol" Caption="Stato Appr. Bol" Width="140px" MinWidth="110" Visible="false" />
+                    <DxGridDataColumn FieldName="StatoAppDiBa" Caption="Stato Appr. DiBa" Width="140px" MinWidth="110" Visible="false" />
+                    <DxGridDataColumn FieldName="StatoApp" Caption="Stato Approvazione" Width="160px" MinWidth="130" Visible="false" />
+                    <DxGridDataColumn FieldName="Hutile" Caption="H Utile" Width="90px" MinWidth="80" Visible="false" />
+                    <DxGridDataColumn FieldName="CkMp" Caption="Ck MP" Width="90px" MinWidth="80" Visible="false" />
+                    <DxGridDataColumn FieldName="CkMrp" Caption="Ck MRP" Width="90px" MinWidth="80" Visible="false" />
+                    <DxGridDataColumn FieldName="CkFabb" Caption="Ck Fabbisogno" Width="120px" MinWidth="100" Visible="false" />
                 </Columns>
                 <TotalSummary>
                     <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="Cd" FooterColumnName="ParteDesc" />
@@ -495,8 +501,14 @@
     private const int IdTabellaTipo = 4;
     private const int IdTipoAnagLaboratorio = 4;
 
+    // TabellaId usato per salvare/caricare filtri e layout griglia in ParametriUtente.
+    private const int IdTabellaParametri = 1;
+
     [CascadingParameter]
     private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private string? UtentId;
+    private bool isDbBusy = false;
 
     private DxGrid MyGrid = default!;
     private List<BasiAll>? DataSource;
@@ -541,15 +553,27 @@
             StateHasChanged();
             try
             {
+                if (AuthStateTask != null)
+                {
+                    var authState = await AuthStateTask;
+                    UtentId = UserManager.GetUserId(authState.User);
+                }
+
                 using var context = await DbFactory.CreateDbContextAsync();
                 Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
                 Stagioni = await context.TabStagionis.AsNoTracking().Where(x => x.Stato == "A").OrderByDescending(s => s.OrdPm).ToListAsync();
                 Laboratori = await context.TabAnagCliFors.AsNoTracking().Where(x => x.IdTipoAnag == IdTipoAnagLaboratorio).OrderBy(x => x.Anag1).ToListAsync();
                 await ApplicaPermessiLettura();
-                BrandSelezionati = Brands.ToList();
-                StagioneSelezionati = Stagioni.ToList();
-                LaboratoriSelezionati = Laboratori.ToList();
-                TipiSelezionati = TipiDisponibili.ToList();
+
+                var parametriCaricati = await CaricaParametriSalvati();
+                if (!parametriCaricati)
+                {
+                    BrandSelezionati = Brands.ToList();
+                    StagioneSelezionati = Stagioni.ToList();
+                    LaboratoriSelezionati = Laboratori.ToList();
+                    TipiSelezionati = TipiDisponibili.ToList();
+                }
+
                 await CaricaLookups();
             }
             finally
@@ -562,15 +586,11 @@
 
     private async Task ApplicaPermessiLettura()
     {
-        if (AuthStateTask == null) return;
-
-        var authState = await AuthStateTask;
-        var utenteId = UserManager.GetUserId(authState.User);
-        if (utenteId == null) return;
+        if (UtentId == null) return;
 
         // Una riga senza permesso esplicito NON è visibile: serve un permesso con Visualizza = true.
         var visibili = await DbContext.PermessiLetturaTabelles.AsNoTracking()
-            .Where(p => p.UtenteId == utenteId && p.Visualizza
+            .Where(p => p.UtenteId == UtentId && p.Visualizza
                 && (p.TabellaId == IdTabellaStagioni || p.TabellaId == IdTabellaBrand || p.TabellaId == IdTabellaLaboratori || p.TabellaId == IdTabellaTipo))
             .ToListAsync();
 
@@ -894,5 +914,122 @@
                 NavManager.NavigateTo($"/DiBa/{ArticoloSelezionato.Cd}");
             }
         }  
+    }
+
+    private async Task<bool> CaricaParametriSalvati()
+    {
+        if (UtentId == null) return false;
+
+        var parametroRecord = await DbContext.ParametriUtente.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.UtenteId == UtentId && p.TabellaId == IdTabellaParametri);
+
+        if (parametroRecord?.Parametri == null || parametroRecord.Parametri.Count == 0)
+            return false;
+
+        var brandsString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Brands:"))?["Brands:".Length..];
+        if (!string.IsNullOrEmpty(brandsString))
+        {
+            var ids = brandsString.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            BrandSelezionati = Brands.Where(b => ids.Contains(b.Id.ToString())).ToList();
+        }
+
+        var stagString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Stagioni:"))?["Stagioni:".Length..];
+        if (!string.IsNullOrEmpty(stagString))
+        {
+            var ids = stagString.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            StagioneSelezionati = Stagioni.Where(s => ids.Contains(s.Id.ToString())).ToList();
+        }
+
+        var labString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Laboratori:"))?["Laboratori:".Length..];
+        if (!string.IsNullOrEmpty(labString))
+        {
+            var ids = labString.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            LaboratoriSelezionati = Laboratori.Where(l => ids.Contains(l.Id.ToString())).ToList();
+        }
+
+        var tipiString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Tipi:"))?["Tipi:".Length..];
+        if (!string.IsNullOrEmpty(tipiString))
+        {
+            TipiSelezionati = tipiString.Split('-', StringSplitOptions.RemoveEmptyEntries).ToList();
+        }
+
+        var layoutString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Layout:"))?["Layout:".Length..];
+        if (!string.IsNullOrEmpty(layoutString) && MyGrid != null)
+        {
+            var layout = JsonSerializer.Deserialize<GridPersistentLayout>(layoutString);
+            if (layout != null)
+            {
+                MyGrid.LoadLayout(layout);
+            }
+        }
+
+        return true;
+    }
+
+    private async Task SalvaParametri()
+    {
+        if (isDbBusy || UtentId == null) return;
+
+        isDbBusy = true;
+        StateHasChanged();
+
+        try
+        {
+            string brands = "Brands:" + string.Join("-", BrandSelezionati.Select(b => b.Id));
+            string stagioni = "Stagioni:" + string.Join("-", StagioneSelezionati.Select(s => s.Id));
+            string laboratori = "Laboratori:" + string.Join("-", LaboratoriSelezionati.Select(l => l.Id));
+            string tipi = "Tipi:" + string.Join("-", TipiSelezionati);
+
+            var layout = MyGrid.SaveLayout();
+            string jsonLayout = "Layout:" + JsonSerializer.Serialize(layout);
+
+            var parametri = new List<string> { brands, stagioni, laboratori, tipi, jsonLayout };
+
+            var parametroEsistente = await DbContext.ParametriUtente
+                .FirstOrDefaultAsync(p => p.UtenteId == UtentId && p.TabellaId == IdTabellaParametri);
+
+            if (parametroEsistente != null)
+            {
+                parametroEsistente.NomeTabella = "Articoli";
+                parametroEsistente.Parametri = parametri;
+                parametroEsistente.DataUpd = DateTime.Now;
+            }
+            else
+            {
+                DbContext.ParametriUtente.Add(new ParametroUtente
+                {
+                    UtenteId = UtentId,
+                    TabellaId = IdTabellaParametri,
+                    NomeTabella = "Articoli",
+                    Parametri = parametri,
+                    DataUpd = DateTime.Now
+                });
+            }
+
+            await DbContext.SaveChangesAsync();
+            ToastService.ShowToast(new ToastOptions
+            {
+                Title = "Parametri salvati",
+                Text = "Filtri e layout tabella salvati correttamente.",
+                RenderStyle = ToastRenderStyle.Success,
+                CssClass = "toast-brand-orange",
+                ProviderName = "MainToastProvider"
+            });
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowToast(new ToastOptions
+            {
+                Title = "Errore",
+                Text = $"Si è verificato un errore durante il salvataggio dei parametri: {ex.Message}",
+                RenderStyle = ToastRenderStyle.Danger,
+                ProviderName = "MainToastProvider"
+            });
+        }
+        finally
+        {
+            isDbBusy = false;
+            StateHasChanged();
+        }
     }
 }

@@ -1524,3 +1524,8 @@ dxbl-window,
     font-weight: 400;
     color: #6c757d;
 }
+
+.dxbl-toast-render-success.toast-brand-orange {
+    --dxbl-toast-accent-line-color: #ff8c00 !important;
+    --dxbl-toast-icon-color: #ff8c00 !important;
+}

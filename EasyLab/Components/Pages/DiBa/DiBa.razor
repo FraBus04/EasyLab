@@ -3,6 +3,7 @@
 @using System.Text.Json
 @rendermode InteractiveServer
 @inject NavigationManager NavManager
+@inject IToastNotificationService ToastService
 @* TABELLAID = 3 *@
 
 <style>
@@ -120,9 +121,8 @@
                             <img src="images/Centimetro Sarto3.png" style="width:14px;height:14px;" class="me-1" />
                             Consumi
                         </button>
-                        <button type="button" class="btn d-flex align-items-center text-white" style="height: 32px; background-color: #ff8c00;" @onclick="SalvaParametri">
-                            <img class="Img-Search me-1" src="\images\Param32.png" alt="Salva Parametri" style="width:16px; height:16px; filter: brightness(0) invert(1);" />
-                            Salva Parametri
+                        <button type="button" class="btn-icon-plain" @onclick="SalvaParametri" disabled="@isDbBusy" title="Salva Parametri" style="@(isDbBusy ? "opacity:0.5;cursor:default;" : null)">
+                            <img src="images/Param32.png" class="btn-icon-search" alt="Salva Parametri" />
                         </button>
 
                         <div class="header-btn-container" title="Report">
@@ -432,6 +432,15 @@
 </DxPopup>
 
 @code {
+    private const int IdTabellaParametri = 3;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private string? UtentId;
+    private bool isDbBusy = false;
+    private GridPersistentLayout? _pendingLayout;
+
     [Parameter]
     public string? Cd { get; set; }
 
@@ -509,13 +518,63 @@
 
     private List<VersioneItem> VersioniItems { get; set; } = new();
 
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthStateTask != null)
+        {
+            var authState = await AuthStateTask;
+            UtentId = UserManager.GetUserId(authState.User);
+        }
+
+        await CaricaParametriSalvati();
+    }
+
+    private async Task CaricaParametriSalvati()
+    {
+        if (UtentId == null) return;
+
+        try
+        {
+            var parametroRecord = await DbContext.ParametriUtente.AsNoTracking()
+                .FirstOrDefaultAsync(p => p.UtenteId == UtentId && p.TabellaId == IdTabellaParametri);
+
+            if (parametroRecord?.Parametri == null || parametroRecord.Parametri.Count == 0)
+                return;
+
+            var mostraTaglieString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("MostraTaglie:"))?["MostraTaglie:".Length..];
+            if (mostraTaglieString != null)
+                MostraTaglie = mostraTaglieString == "1";
+
+            var mostraColoriString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("MostraColori:"))?["MostraColori:".Length..];
+            if (mostraColoriString != null)
+                MostraColori = mostraColoriString == "1";
+
+            var mostraConsumiString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("MostraConsumi:"))?["MostraConsumi:".Length..];
+            if (mostraConsumiString != null)
+                MostraConsumi = mostraConsumiString == "1";
+
+            var layoutString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Layout:"))?["Layout:".Length..];
+            if (!string.IsNullOrEmpty(layoutString))
+            {
+                _pendingLayout = JsonSerializer.Deserialize<GridPersistentLayout>(layoutString);
+            }
+        }
+        catch (Exception)
+        {
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             try
             {
-
+                if (_pendingLayout != null && MyGrid != null)
+                {
+                    MyGrid.LoadLayout(_pendingLayout);
+                    _pendingLayout = null;
+                }
             }
             catch (Exception e)
             {
@@ -699,20 +758,66 @@
 
     private async Task SalvaParametri()
     {
-        loading = true;
+        if (isDbBusy || UtentId == null) return;
+
+        isDbBusy = true;
         StateHasChanged();
 
         try
         {
-            MyGrid.SaveLayout();
-            await Task.CompletedTask;
+            string mostraTaglie = "MostraTaglie:" + (MostraTaglie ? "1" : "0");
+            string mostraColori = "MostraColori:" + (MostraColori ? "1" : "0");
+            string mostraConsumi = "MostraConsumi:" + (MostraConsumi ? "1" : "0");
+
+            var layout = MyGrid.SaveLayout();
+            string jsonLayout = "Layout:" + JsonSerializer.Serialize(layout);
+
+            var parametri = new List<string> { mostraTaglie, mostraColori, mostraConsumi, jsonLayout };
+
+            var parametroEsistente = await DbContext.ParametriUtente
+                .FirstOrDefaultAsync(p => p.UtenteId == UtentId && p.TabellaId == IdTabellaParametri);
+
+            if (parametroEsistente != null)
+            {
+                parametroEsistente.NomeTabella = "DiBa";
+                parametroEsistente.Parametri = parametri;
+                parametroEsistente.DataUpd = DateTime.Now;
+            }
+            else
+            {
+                DbContext.ParametriUtente.Add(new ParametroUtente
+                {
+                    UtenteId = UtentId,
+                    TabellaId = IdTabellaParametri,
+                    NomeTabella = "DiBa",
+                    Parametri = parametri,
+                    DataUpd = DateTime.Now
+                });
+            }
+
+            await DbContext.SaveChangesAsync();
+            ToastService.ShowToast(new ToastOptions
+            {
+                Title = "Parametri salvati",
+                Text = "Visualizzazione e layout tabella salvati correttamente.",
+                RenderStyle = ToastRenderStyle.Success,
+                CssClass = "toast-brand-orange",
+                ProviderName = "MainToastProvider"
+            });
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            ToastService.ShowToast(new ToastOptions
+            {
+                Title = "Errore",
+                Text = $"Si è verificato un errore durante il salvataggio dei parametri: {ex.Message}",
+                RenderStyle = ToastRenderStyle.Danger,
+                ProviderName = "MainToastProvider"
+            });
         }
         finally
         {
-            loading = false;
+            isDbBusy = false;
             StateHasChanged();
         }
     }
