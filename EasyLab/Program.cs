@@ -1,5 +1,6 @@
 using DevExpress.Blazor;
 using EasyLab.Components;
+using EasyLab.Components.Utils;
 using EasyLab.Models;
 using EasyLab.Models.Local;
 using EasyLab.Servizi;
@@ -20,6 +21,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddDevExpressBlazor();
 
 builder.Services.AddSingleton<StateKeeperService>();
+builder.Services.AddScoped<DropdownPortalService>();
 
 
 

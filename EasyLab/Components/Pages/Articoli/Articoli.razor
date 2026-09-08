@@ -181,9 +181,12 @@
                             @{
                                 var riga = (BasiAll)ctx.DataItem;
                             }
-                            <button type="button" class="btn-icon-plain" @onclick="@(e => OpenDiBaFromRow(riga, e))" title="DiBa">
-                                <img src="images/DiBaSVG.svg" class="btn-icon-search" alt="DiBa" />
-                            </button>
+                            @if (ArticoliConDiBa.Contains(riga.Cd))
+                            {
+                                <button type="button" class="btn-icon-plain" @onclick="@(e => OpenDiBaFromRow(riga, e))" title="DiBa">
+                                    <img src="images/DiBaSVG.svg" class="btn-icon-search" alt="DiBa" />
+                                </button>
+                            }
                         </CellDisplayTemplate>
                     </DxGridDataColumn>
                     <DxGridDataColumn FieldName="Cd" Caption="Codice" Width="110px" MinWidth="100" />
@@ -562,6 +565,7 @@
 
     private DxGrid MyGrid = default!;
     private List<BasiAll>? DataSource;
+    private HashSet<string> ArticoliConDiBa = new();
     private List<Contatti> Brands = new();
     private List<TabStagioni> Stagioni = new();
     private List<TabAnagCliFor> Laboratori = new();
@@ -721,6 +725,13 @@
             query = query.Where(a => laboratorioIds.Contains(a.IdLabPrev.Value));
 
             DataSource = await query.OrderBy(a => a.Cd).ToListAsync();
+
+            var codici = DataSource.Select(a => a.Cd).ToList();
+            ArticoliConDiBa = (await context.Bom3Reticolos.AsNoTracking()
+                .Where(x => codici.Contains(x.ACdAll))
+                .Select(x => x.ACdAll)
+                .Distinct()
+                .ToListAsync()).ToHashSet();
         }
         catch (Exception ex)
         {

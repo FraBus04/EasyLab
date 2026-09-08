@@ -1,13 +1,10 @@
 @typeparam TItem
 @implements IDisposable
-
-@if (isOpen)
-{
-    <div class="checkbox-dropdown-overlay" @onclick="OnOverlayClick" @onclick:stopPropagation></div>
-}
+@inject IJSRuntime JS
+@inject DropdownPortalService Portal
 
 <div class="checkbox-dropdown">
-    <div class="checkbox-dropdown-toggle" @onclick="ToggleDropdown" @onclick:stopPropagation>
+    <div class="checkbox-dropdown-toggle" @ref="toggleRef" @onclick="ToggleDropdown" @onclick:stopPropagation>
         <span class="checkbox-dropdown-text" title="@GetToggleText()">
             @if (SelectedItems.Count == 0)
             {
@@ -28,26 +25,6 @@
             </svg>
         </span>
     </div>
-
-    @if (isOpen)
-    {
-        <div class="checkbox-dropdown-menu" @onclick:stopPropagation>
-            <div class="checkbox-dropdown-item checkbox-dropdown-select-all" @onclick="ToggleSelectAll">
-                <input type="checkbox" checked="@IsAllSelected" @onchange="ToggleSelectAll" @onclick:stopPropagation />
-                <span class="fw-bold">@SelectAllText</span>
-            </div>
-            <div class="checkbox-dropdown-divider"></div>
-            @foreach (var item in GetAvailableItems())
-            {
-                var currentItem = item;
-                var isChecked = SelectedItems.Contains(currentItem);
-                <div class="checkbox-dropdown-item" @onclick="() => ToggleItem(currentItem)">
-                    <input type="checkbox" checked="@isChecked" @onchange="() => ToggleItem(currentItem)" @onclick:stopPropagation />
-                    <span>@GetDisplayText(currentItem)</span>
-                </div>
-            }
-        </div>
-    }
 </div>
 
 @code {
@@ -58,7 +35,10 @@
     [Parameter] public string NullText { get; set; } = "Select...";
     [Parameter] public string SelectAllText { get; set; } = "Select All";
 
+    private ElementReference toggleRef;
     private bool isOpen = false;
+    private double menuLeft, menuTop, menuWidth;
+    private DotNetObjectReference<CheckboxDropdown<TItem>>? selfRef;
 
     private bool IsAllSelected => GetAvailableItems().Any() && SelectedItems.Count == GetAvailableItems().Count();
 
@@ -70,13 +50,20 @@
     public void Dispose()
     {
         CheckboxDropdownInterop.OnCloseAll -= HandleCloseAll;
+        if (isOpen)
+        {
+            isOpen = false;
+            Portal.Hide();
+        }
+        selfRef?.Dispose();
+        _ = JS.InvokeVoidAsync("checkboxDropdownInterop.unwatchClose");
     }
 
     private void HandleCloseAll()
     {
         if (isOpen)
         {
-            isOpen = false;
+            CloseInternal();
             InvokeAsync(StateHasChanged);
         }
     }
@@ -100,22 +87,49 @@
         return string.Join(", ", SelectedItems.Select(GetDisplayText));
     }
 
-    private void ToggleDropdown()
+    private async Task ToggleDropdown()
     {
         if (isOpen)
         {
-            isOpen = false;
+            CloseInternal();
+            return;
         }
-        else
+
+        CheckboxDropdownInterop.CloseAll();
+
+        var rect = await JS.InvokeAsync<BoundingRect?>("checkboxDropdownInterop.getRect", toggleRef);
+        if (rect != null)
         {
-            CheckboxDropdownInterop.CloseAll();
-            isOpen = true;
+            menuLeft = rect.Left;
+            menuTop = rect.Top;
+            menuWidth = rect.Width;
         }
+
+        isOpen = true;
+        Portal.Show(BuildMenu());
+
+        selfRef ??= DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("checkboxDropdownInterop.watchClose", selfRef);
     }
 
-    private void OnOverlayClick()
+    private void CloseInternal()
     {
-        CheckboxDropdownInterop.CloseAll();
+        isOpen = false;
+        Portal.Hide();
+        _ = JS.InvokeVoidAsync("checkboxDropdownInterop.unwatchClose");
+    }
+
+    [JSInvokable]
+    public void OnOutsideScrollOrResize()
+    {
+        if (!isOpen) return;
+        CloseInternal();
+        StateHasChanged();
+    }
+
+    private void RefreshMenu()
+    {
+        if (isOpen) Portal.Show(BuildMenu());
     }
 
     private async Task ToggleSelectAll()
@@ -129,6 +143,7 @@
             SelectedItems = GetAvailableItems().ToList();
         }
         await SelectedItemsChanged.InvokeAsync(SelectedItems);
+        RefreshMenu();
     }
 
     private async Task ToggleItem(TItem item)
@@ -144,5 +159,45 @@
         }
         SelectedItems = list;
         await SelectedItemsChanged.InvokeAsync(SelectedItems);
+        RefreshMenu();
+    }
+
+    private void OnOverlayClick()
+    {
+        CheckboxDropdownInterop.CloseAll();
+    }
+
+    private string GetMenuStyle()
+    {
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
+        return $"position:fixed; left:{menuLeft.ToString(inv)}px; top:{menuTop.ToString(inv)}px; width:{menuWidth.ToString(inv)}px;";
+    }
+
+    private RenderFragment BuildMenu() =>
+    @<text>
+        <div class="checkbox-dropdown-overlay" @onclick="OnOverlayClick" @onclick:stopPropagation></div>
+        <div class="checkbox-dropdown-menu" style="@GetMenuStyle()" @onclick:stopPropagation>
+            <div class="checkbox-dropdown-item checkbox-dropdown-select-all" @onclick="ToggleSelectAll">
+                <input type="checkbox" checked="@IsAllSelected" @onchange="ToggleSelectAll" @onclick:stopPropagation />
+                <span class="fw-bold">@SelectAllText</span>
+            </div>
+            <div class="checkbox-dropdown-divider"></div>
+            @foreach (var item in GetAvailableItems())
+            {
+                var currentItem = item;
+                var isChecked = SelectedItems.Contains(currentItem);
+                <div class="checkbox-dropdown-item" @onclick="() => ToggleItem(currentItem)">
+                    <input type="checkbox" checked="@isChecked" @onchange="() => ToggleItem(currentItem)" @onclick:stopPropagation />
+                    <span>@GetDisplayText(currentItem)</span>
+                </div>
+            }
+        </div>
+    </text>;
+
+    private class BoundingRect
+    {
+        public double Left { get; set; }
+        public double Top { get; set; }
+        public double Width { get; set; }
     }
 }

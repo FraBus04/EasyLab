@@ -273,6 +273,9 @@
         <DxGridDataColumn FieldName="NrAllegati" Caption="Nr. Allegati" Visible="false" />
         <DxGridDataColumn FieldName="DataRicRientro" Caption="Data Ric. Rientro" Visible="false" />
     </Columns>
+    <TotalSummary>
+        <DxGridSummaryItem SummaryType="GridSummaryItemType.Count" FieldName="NrScheda" FooterColumnName="ParteDesc" />
+    </TotalSummary>
 </DxGrid>
         </DxSplitterPane>
         <DxSplitterPane @bind-Collapsed="@DetailsPaneCollapsed">

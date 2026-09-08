@@ -1,0 +1,18 @@
+@implements IDisposable
+@inject DropdownPortalService Portal
+
+@Portal.Content
+
+@code {
+    protected override void OnInitialized()
+    {
+        Portal.OnChange += Refresh;
+    }
+
+    private void Refresh() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Portal.OnChange -= Refresh;
+    }
+}
