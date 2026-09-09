@@ -75,7 +75,15 @@ else if (RigheGantt != null)
     {
         <div class="gantt-scroll">
             <div class="gantt-header-row">
-                <div class="gantt-label-col gantt-corner"></div>
+                <div class="gantt-label-col gantt-corner gantt-header-cols">
+                    <span class="gantt-col-descr">Descrizione</span>
+                    <span class="gantt-col-car">Car</span>
+                    <span class="gantt-col-scar">Scar</span>
+                    <span class="gantt-col-perc">%</span>
+                    <span class="gantt-col-torta">Torta</span>
+                    <span class="gantt-col-datacomm">Data Comm.</span>
+                    <span class="gantt-col-rientro">Rientro</span>
+                </div>
                 <div class="gantt-timeline-header" style="width:@(TimelineWidthPx.ToString(CultureInfo.InvariantCulture))px;">
                     @foreach (var marker in MonthMarkers)
                     {
@@ -113,8 +121,25 @@ else if (RigheGantt != null)
                                     <path d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z" />
                                 </svg>
                             </span>
-                            <span class="gantt-commessa-desc" title="@comm.Descr">@comm.Descr</span>
-                            <span class="gantt-commessa-perc">@((comm.Progress ?? 0).ToString("N0"))%</span>
+                            <span class="gantt-col-descr" title="@comm.Descr">@comm.Descr</span>
+                            <span class="gantt-col-car">@comm.TotCar</span>
+                            <span class="gantt-col-scar">@comm.TotScar</span>
+                            <span class="gantt-col-perc">
+                                @{ var (percChiaroComm, percScuroComm) = GetColoriAvanzamento(comm.CkSaldo); }
+                                <span class="gantt-perc-bar" style="background:@percChiaroComm;">
+                                    <span class="gantt-perc-fill" style="width:@((comm.Progress ?? 0).ToString(CultureInfo.InvariantCulture))%; background-color:@percScuroComm;"></span>
+                                </span>
+                                <span class="gantt-perc-text">@((comm.Progress ?? 0).ToString("N0"))%</span>
+                            </span>
+                            <span class="gantt-col-torta">
+                                @{
+                                    var tortaPercComm = GetTortaPercent(comm.TortaAvanzFasi);
+                                    var (tortaChiaroComm, tortaScuroComm) = GetColoriAvanzamento(comm.CkSaldo);
+                                }
+                                <span class="gantt-torta-circle" style="background:conic-gradient(@tortaScuroComm 0% @(tortaPercComm)%, @tortaChiaroComm @(tortaPercComm)% 100%);" title="@($"{tortaPercComm}%")"></span>
+                            </span>
+                            <span class="gantt-col-datacomm">@FormatDataCommerciale(comm)</span>
+                            <span class="gantt-col-rientro">@(comm.DataConfRientro?.ToString("dd/MM/yyyy"))</span>
                         </div>
                         <div class="gantt-timeline-cell" style="width:@(TimelineWidthPx.ToString(CultureInfo.InvariantCulture))px;">
                             @if (TodayX is double txComm)
@@ -144,7 +169,21 @@ else if (RigheGantt != null)
                         @foreach (var fase in FasiDiCommessa(comm.Id))
                         {
                             <div class="gantt-row gantt-row-fase">
-                                <div class="gantt-label-col gantt-label-fase">@fase.Descr</div>
+                                <div class="gantt-label-col gantt-label-fase">
+                                    <span class="gantt-col-descr" title="@fase.Descr">@fase.Descr</span>
+                                    <span class="gantt-col-car">@fase.TotCar</span>
+                                    <span class="gantt-col-scar">@fase.TotScar</span>
+                                    <span class="gantt-col-perc">
+                                        @{ var (percChiaroFase, percScuroFase) = GetColoriAvanzamento(fase.CkSaldo); }
+                                        <span class="gantt-perc-bar" style="background:@percChiaroFase;">
+                                            <span class="gantt-perc-fill" style="width:@((fase.Progress ?? 0).ToString(CultureInfo.InvariantCulture))%; background-color:@percScuroFase;"></span>
+                                        </span>
+                                        <span class="gantt-perc-text">@((fase.Progress ?? 0).ToString("N0"))%</span>
+                                    </span>
+                                    <span class="gantt-col-torta"></span>
+                                    <span class="gantt-col-datacomm"></span>
+                                    <span class="gantt-col-rientro">@(fase.DataConfRientro?.ToString("dd/MM/yyyy"))</span>
+                                </div>
                                 <div class="gantt-timeline-cell" style="width:@(TimelineWidthPx.ToString(CultureInfo.InvariantCulture))px;">
                                     @if (TodayX is double txFase)
                                     {
@@ -642,6 +681,32 @@ else if (RigheGantt != null)
 
         var perc = (oggi.DayNumber - dataDa.Value.DayNumber) * 100.0 / totaleCelle;
         return Math.Max(0, Math.Min(100, perc));
+    }
+
+    // Coppia chiaro/scuro per barra % e torta avanzamento: verde se a saldo, ambra se ancora in corso.
+    private static (string Chiaro, string Scuro) GetColoriAvanzamento(bool? saldo) => saldo == true
+        ? ("#d4edda", "#28a745")
+        : ("#fff3cd", "#e6ac00");
+
+    // Stesso bucket 0-4 usato in FasiCommesse.razor per la "Torta Avanz Fasi".
+    private static int GetTortaPercent(int? bucket) => bucket switch
+    {
+        1 => 25,
+        2 => 50,
+        3 => 75,
+        4 => 100,
+        _ => 0
+    };
+
+    private static string FormatDataCommerciale(PlnProdGanttRiga c)
+    {
+        if (c.DateCommercMin.HasValue && c.DateCommercMax.HasValue && c.DateCommercMin != c.DateCommercMax)
+        {
+            return $"{c.DateCommercMin:dd/MM/yy} → {c.DateCommercMax:dd/MM/yy}";
+        }
+        if (c.DateCommercMin.HasValue) return c.DateCommercMin.Value.ToString("dd/MM/yyyy");
+        if (c.DateCommercMax.HasValue) return c.DateCommercMax.Value.ToString("dd/MM/yyyy");
+        return "";
     }
 
     private static string GetCommTooltip(PlnProdGanttRiga c) =>
