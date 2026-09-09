@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>EasyPLM — Palette colori</title>
+    <style>
+        :root {
+            --bg: #fafafa;
+            --card: #ffffff;
+            --border: #e2e2e2;
+            --text: #1a1a1a;
+            --text-muted: #666;
+        }
+
+        body {
+            font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 32px;
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 0 0 4px;
+        }
+
+        .sub {
+            color: var(--text-muted);
+            font-size: 13px;
+            margin: 0 0 32px;
+        }
+
+        section {
+            margin-bottom: 36px;
+        }
+
+        h2 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 0 4px;
+        }
+
+        .note {
+            color: var(--text-muted);
+            font-size: 12px;
+            margin: 0 0 14px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 14px;
+        }
+
+        .swatch-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .swatch-split {
+            display: flex;
+            height: 56px;
+        }
+
+            .swatch-split div {
+                flex: 1;
+            }
+
+        .swatch-info {
+            padding: 8px 10px;
+        }
+
+        .swatch-name {
+            font-weight: 600;
+            font-size: 13px;
+            margin: 0 0 2px;
+        }
+
+        .swatch-hex {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin: 0;
+            font-family: Consolas, monospace;
+        }
+
+        .ramp {
+            display: flex;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+            .ramp div {
+                flex: 1;
+                height: 64px;
+                position: relative;
+            }
+
+        .ramp-labels {
+            display: flex;
+            margin-top: 4px;
+        }
+
+            .ramp-labels span {
+                flex: 1;
+                text-align: center;
+                font-size: 11px;
+                color: var(--text-muted);
+                font-family: Consolas, monospace;
+            }
+
+        .hex-tag {
+            position: absolute;
+            bottom: 4px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 9px;
+            font-family: Consolas, monospace;
+            opacity: 0;
+            transition: opacity .15s;
+        }
+
+        .ramp div:hover .hex-tag {
+            opacity: 1;
+        }
+
+        .copied {
+            outline: 2px solid #333 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>EasyPLM — Palette colori</h1>
+    <p class="sub">Generata da palette.json · click sinistro copia l'hex · click destro copia lo snippet VB.NET</p>
+
+    <div id="content"></div>
+
+    <script>
+        // Copia incollata da palette.json — apri questo file con doppio click (nessun server richiesto)
+        // e tienilo aperto come riferimento visivo mentre scegli i colori nel designer.
+        // Quando aggiorni palette.json, incolla qui sotto il nuovo contenuto e risalva.
+        const data = {
+            "palette": {
+                "brand": {
+                    "_note": "Scala colori del brand EasyPLM, estratta dal logo (primary 500 = colore esatto del logo)",
+                    "primary": {
+                        "50": "#fdf3e7", "100": "#fbe3c4", "200": "#f6c987", "300": "#f1af4a", "400": "#ec9c30",
+                        "500": "#e88e24", "600": "#c9741a", "700": "#9c5a15", "800": "#6f3f0f", "900": "#432508"
+                    },
+                    "neutral": {
+                        "50": "#f7f7f7", "100": "#e5e5e5", "300": "#b0b0b0", "500": "#737373", "700": "#333333", "900": "#000000"
+                    }
+                },
+                "semantico": {
+                    "_note": "Usato per stati/alert/validazioni",
+                    "SUCCESS": { "light": "#A5D6A7", "dark": "#2E7D32" },
+                    "WARNING": { "light": "#FFCC80", "dark": "#ED6C02" },
+                    "ERROR": { "light": "#EF9A9A", "dark": "#D32F2F" },
+                    "INFO": { "light": "#81D4FA", "dark": "#0288D1" }
+                },
+                "saldo": {
+                    "_note": "Usato per colorare torta avanzamento fasi",
+                    "S": { "light": "#DCF5DC", "dark": "#006400" },
+                    "A": { "light": "#FFFFE0", "dark": "#B4A000" },
+                    "default": { "light": "#EBEBEB", "dark": "#5A5A5A" }
+                },
+                "generico": {
+                    "_note": "Usato per colorare task del gantt delle fasi",
+                    "GREEN": { "light": "#4CAF50", "dark": "#1C591E" },
+                    "YELLOW": { "light": "#F2EA07", "dark": "#B3AD04" },
+                    "GRAY": { "light": "#727572", "dark": "#505250" }
+                },
+                "GanttReparto": {
+                    "_note": "Usato per colorare le task di MovFasi3",
+                    "DataScaduta": { "light": "#EF9A9A", "dark": "#D32F2F" },
+                    "FaseChiusa": { "light": "#A5D6A7", "dark": "#2E7D32" },
+                    "InLavoro": { "light": "#F5ED53", "dark": "#B4AB00" },
+                    "SenzaCarico": { "light": "#D9D8D0", "dark": "#737373" }
+                }
+            }
+        };
+
+        function hexToVb(hex) {
+            const clean = hex.replace('#', '').toUpperCase();
+            return 'ColorTranslator.FromHtml("#' + clean + '")';
+        }
+
+        function copyHex(hex, el) {
+            navigator.clipboard.writeText(hex).catch(() => { });
+            el.classList.add('copied');
+            setTimeout(() => el.classList.remove('copied'), 300);
+        }
+
+        function copyVb(hex, el, evt) {
+            evt.preventDefault();
+            navigator.clipboard.writeText(hexToVb(hex)).catch(() => { });
+            el.classList.add('copied');
+            setTimeout(() => el.classList.remove('copied'), 300);
+            return false;
+        }
+
+        function renderLightDarkGroup(title, note, group) {
+            let html = `<section><h2>${title}</h2>`;
+            if (note) html += `<p class="note">${note}</p>`;
+            html += `<div class="grid">`;
+            for (const key in group) {
+                if (key === '_note') continue;
+                const { light, dark } = group[key];
+                html += `
+          <div class="swatch-card">
+            <div class="swatch-split">
+              <div style="background:${light}" onclick="copyHex('${light}', this)" oncontextmenu="return copyVb('${light}', this, event)" title="${light}"></div>
+              <div style="background:${dark}" onclick="copyHex('${dark}', this)" oncontextmenu="return copyVb('${dark}', this, event)" title="${dark}"></div>
+            </div>
+            <div class="swatch-info">
+              <p class="swatch-name">${key}</p>
+              <p class="swatch-hex">${light} / ${dark}</p>
+            </div>
+          </div>`;
+            }
+            html += `</div></section>`;
+            return html;
+        }
+
+        function renderRamp(title, note, ramp) {
+            let html = `<section><h2>${title}</h2>`;
+            if (note) html += `<p class="note">${note}</p>`;
+            html += `<div class="ramp">`;
+            for (const stop in ramp) {
+                html += `<div style="background:${ramp[stop]}" onclick="copyHex('${ramp[stop]}', this)" oncontextmenu="return copyVb('${ramp[stop]}', this, event)"><span class="hex-tag">${ramp[stop]}</span></div>`;
+            }
+            html += `</div><div class="ramp-labels">`;
+            for (const stop in ramp) {
+                html += `<span>${stop}</span>`;
+            }
+            html += `</div></section>`;
+            return html;
+        }
+
+        function render() {
+            const p = data.palette;
+            let out = '';
+            out += renderRamp('brand.primary', p.brand._note, p.brand.primary);
+            out += renderRamp('brand.neutral', null, p.brand.neutral);
+            out += renderLightDarkGroup('semantico — stati/alert', p.semantico._note, p.semantico);
+            out += renderLightDarkGroup('saldo — avanzamento fasi', p.saldo._note, p.saldo);
+            out += renderLightDarkGroup('generico — gantt fasi', p.generico._note, p.generico);
+            out += renderLightDarkGroup('GanttReparto — task MovFasi3', p.GanttReparto._note, p.GanttReparto);
+            document.getElementById('content').innerHTML = out;
+        }
+
+        render();
+    </script>
+
+</body>
+</html>

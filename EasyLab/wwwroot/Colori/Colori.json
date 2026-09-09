@@ -1,0 +1,95 @@
+﻿{
+    "palette": {
+        "brand": {
+            "_note": "Scala colori del brand EasyPLM, estratta dal logo (primary 500 = colore esatto del logo)",
+            "primary": {
+                "50": "#fdf3e7",
+                "100": "#fbe3c4",
+                "200": "#f6c987",
+                "300": "#f1af4a",
+                "400": "#ec9c30",
+                "500": "#e88e24",
+                "600": "#c9741a",
+                "700": "#9c5a15",
+                "800": "#6f3f0f",
+                "900": "#432508"
+            },
+            "neutral": {
+                "50": "#f7f7f7",
+                "100": "#e5e5e5",
+                "300": "#b0b0b0",
+                "500": "#737373",
+                "700": "#333333",
+                "900": "#000000"
+            }
+        },
+        "semantico": {
+            "_note": "Usato per stati/alert/validazioni",
+            "SUCCESS": {
+                "light": "#A5D6A7",
+                "dark": "#2E7D32"
+            },
+            "WARNING": {
+                "light": "#FFCC80",
+                "dark": "#ED6C02"
+            },
+            "ERROR": {
+                "light": "#EF9A9A",
+                "dark": "#D32F2F"
+            },
+            "INFO": {
+                "light": "#81D4FA",
+                "dark": "#0288D1"
+            }
+        },
+        "saldo": {
+            "_note": "Usato per colorare torta avanzamento fasi",
+            "S": {
+                "light": "#DCF5DC",
+                "dark": "#006400"
+            },
+            "A": {
+                "light": "#FFFFE0",
+                "dark": "#B4A000"
+            },
+            "default": {
+                "light": "#EBEBEB",
+                "dark": "#5A5A5A"
+            }
+        },
+        "generico": {
+            "_note": "Usato per colorare task del gantt delle fasi",
+            "GREEN": {
+                "light": "#4CAF50",
+                "dark": "#1C591E"
+            },
+            "YELLOW": {
+                "light": "#F2EA07",
+                "dark": "#B3AD04"
+            },
+            "GRAY": {
+                "light": "#727572",
+                "dark": "#505250"
+            }
+        },
+        "GanttReparto": {
+            "_note": "Usato per colorare le task di MovFasi3",
+            "DataScaduta": {
+                "light": "#EF9A9A",
+                "dark": "#D32F2F"
+            },
+            "FaseChiusa": {
+                "light": "#A5D6A7",
+                "dark": "#2E7D32"
+            },
+            "InLavoro": {
+                "light": "#F5ED53",
+                "dark": "#B4AB00"
+            },
+            "SenzaCarico": {
+                "light": "#D9D8D0",
+                "dark": "#737373"
+            }
+        }
+    }
+}

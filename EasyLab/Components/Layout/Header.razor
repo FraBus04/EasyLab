@@ -26,11 +26,25 @@
             </button>
             <span>Pianficazione Lanci</span>
         </div>
-        <div @onclick="FasiCommesse">
+        <div @onclick="ToggleAvanzamentoFasiMenu" style="position:relative;">
             <button>
-                <img src="/images/FasiSVG.svg" alt="Fasi Commesse" />
+                <img src="/images/FasiSVG.svg" alt="Avanzamento Fasi" />
             </button>
-            <span>Fasi Commesse</span>
+            <span>Avanzamento Fasi</span>
+            @if (AvanzamentoFasiMenuOpen)
+            {
+                <div class="Header-Dropdown-Overlay" @onclick="CloseAvanzamentoFasiMenu" @onclick:stopPropagation="true"></div>
+                <div class="Header-Dropdown-Menu" @onclick:stopPropagation="true">
+                    <div class="Header-Dropdown-MenuItem" @onclick="FasiCommesse">
+                        <img src="/images/FasiSVG.svg" alt="Fasi Commesse" />
+                        <span>Fasi Commesse</span>
+                    </div>
+                    <div class="Header-Dropdown-MenuItem" @onclick="Gantt">
+                        <img src="/images/GANTTSVG.svg" alt="Gantt" />
+                        <span>Gantt</span>
+                    </div>
+                </div>
+            }
         </div>
         <div @onclick="Utenti">
             <button>
@@ -124,8 +138,21 @@
         }
     }
     
+    private bool AvanzamentoFasiMenuOpen = false;
+
+    private void ToggleAvanzamentoFasiMenu()
+    {
+        AvanzamentoFasiMenuOpen = !AvanzamentoFasiMenuOpen;
+    }
+
+    private void CloseAvanzamentoFasiMenu()
+    {
+        AvanzamentoFasiMenuOpen = false;
+    }
+
     private async Task FasiCommesse(MouseEventArgs e)
     {
+        AvanzamentoFasiMenuOpen = false;
         if (e.ShiftKey)
         {
             await JSRuntime.InvokeVoidAsync("open", "/FasiCommesse", "_blank");
@@ -133,6 +160,19 @@
         else
         {
             NavManager.NavigateTo("/FasiCommesse");
+        }
+    }
+
+    private async Task Gantt(MouseEventArgs e)
+    {
+        AvanzamentoFasiMenuOpen = false;
+        if (e.ShiftKey)
+        {
+            await JSRuntime.InvokeVoidAsync("open", "/Gantt", "_blank");
+        }
+        else
+        {
+            NavManager.NavigateTo("/Gantt");
         }
     }
     private async Task Utenti(MouseEventArgs e)

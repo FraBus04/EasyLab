@@ -81,6 +81,83 @@
             </div>
         </div>
 
+        <h5 class="dettaglio-titolo" style="margin-top:24px;">Fasi Lavorazione</h5>
+
+        @if (loadingFasi)
+        {
+            <Loading></Loading>
+        }
+        else if (RigheFasi != null)
+        {
+            <DxGrid Data="@RigheFasi"
+                    KeyFieldName="Id"
+                    ShowSearchBox="false"
+                    ColumnResizeMode="GridColumnResizeMode.NextColumn"
+                    PagerVisible="false"
+                    VirtualScrollingEnabled="true"
+                    Height="280px"
+                    CssClass="mb-3"
+                    HighlightRowOnHover="true"
+                    CustomizeElement="OnFasiCustomizeElement">
+                <Columns>
+                    <DxGridDataColumn FieldName="Id" Caption="Id" Width="60px" TextAlignment="GridTextAlignment.Center" />
+                    <DxGridDataColumn FieldName="OrdPm" Caption="Ord" Width="60px" TextAlignment="GridTextAlignment.Center" />
+                    <DxGridDataColumn Caption="Fase Desc" Width="140px">
+                        <CellDisplayTemplate Context="ctx">
+                            @{
+                                var riga = (ProduzGeneCommesseFasiDettaglioRiga)ctx.DataItem;
+                            }
+                            <div style="display:inline-flex;align-items:center;gap:6px;">
+                                @if (!string.IsNullOrEmpty(riga.FaseCol))
+                                {
+                                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background-color:@riga.FaseCol;"></span>
+                                }
+                                <span>@riga.FaseDesc</span>
+                            </div>
+                        </CellDisplayTemplate>
+                    </DxGridDataColumn>
+                    <DxGridDataColumn FieldName="Lab" Caption="Laboratorio" Width="160px" />
+                    <DxGridDataColumn FieldName="CkInBol" Caption="Bol" Width="60px" TextAlignment="GridTextAlignment.Center" />
+                    <DxGridDataColumn FieldName="DataCarMin" Caption="Data Carico" Width="110px" />
+                    <DxGridDataColumn FieldName="DataScrMax" Caption="Data Scarico" Width="110px" />
+                    <DxGridDataColumn FieldName="TotCar" Caption="Car" Width="70px" TextAlignment="GridTextAlignment.Center" />
+                    <DxGridDataColumn FieldName="TotScr" Caption="Scar" Width="70px" TextAlignment="GridTextAlignment.Center" />
+                    <DxGridDataColumn FieldName="TotDiff" Caption="Diff" Width="70px" TextAlignment="GridTextAlignment.Center" />
+                    <DxGridDataColumn FieldName="Perc" Caption="%" Width="90px" TextAlignment="GridTextAlignment.Center">
+                        <CellDisplayTemplate Context="ctx">
+                            @{
+                                var riga = (ProduzGeneCommesseFasiDettaglioRiga)ctx.DataItem;
+                                var perc = ctx.Value as double? ?? 0;
+                                var percClamped = Math.Max(0, Math.Min(100, perc));
+                                var (coloreChiaro, coloreScuro) = GetColoriSaldoFase(riga.CkSaldo);
+                            }
+                            <div style="display:inline-flex;align-items:center;gap:4px;">
+                                <div style="width:50px;height:10px;border-radius:5px;background:@coloreChiaro;overflow:hidden;">
+                                    <div style="width:@(percClamped.ToString(System.Globalization.CultureInfo.InvariantCulture))%;height:100%;background-color:@coloreScuro;"></div>
+                                </div>
+                                <span style="font-size:0.75rem;">@perc.ToString("N0")%</span>
+                            </div>
+                        </CellDisplayTemplate>
+                    </DxGridDataColumn>
+                    <DxGridDataColumn FieldName="CkSaldo" Caption="Saldo" Width="60px" TextAlignment="GridTextAlignment.Center" />
+                    <DxGridDataColumn FieldName="Gg" Caption="GG" Width="60px" TextAlignment="GridTextAlignment.Center" />
+                    <DxGridDataColumn FieldName="DateDaDes" Caption="Data Da" Width="100px" />
+                    <DxGridDataColumn FieldName="DateADes" Caption="Data A" Width="100px">
+                        <CellDisplayTemplate Context="ctx">
+                            @{
+                                var riga = (ProduzGeneCommesseFasiDettaglioRiga)ctx.DataItem;
+                            }
+                            @if (riga.CkSaldo != true)
+                            {
+                                @ctx.Value
+                            }
+                        </CellDisplayTemplate>
+                    </DxGridDataColumn>
+                    <DxGridDataColumn FieldName="CkConfRientro" Caption="Conf" Width="60px" TextAlignment="GridTextAlignment.Center" />
+                </Columns>
+            </DxGrid>
+        }
+
         <div class="dettaglio-divider"></div>
 
         @if (loadingTotali)
@@ -141,13 +218,43 @@ else
     [Parameter]
     public ProduzGeneCommesseAvanzFasiRiga? CommessaSelezionata { get; set; }
 
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
     private List<ProduzGeneOrdDaProdurreTotaliRiga>? RigheTotali;
+    private List<ProduzGeneCommesseFasiDettaglioRiga>? RigheFasi;
     private Dictionary<int, string> TagliaPerPosizione = new();
     private bool loadingTotali;
+    private bool loadingFasi;
     private int? _idCommCaricato;
 
     private string GetTagliaCaption(int posizione) =>
         TagliaPerPosizione.TryGetValue(posizione, out var tg) ? tg : $"Tg {posizione}";
+
+    private static (string Chiaro, string Scuro) GetColoriSaldoFase(bool? saldo) => saldo == true
+        ? ("#d4edda", "#28a745")
+        : ("#fff3cd", "#e6ac00");
+
+    private void OnFasiCustomizeElement(GridCustomizeElementEventArgs e)
+    {
+        if (e.ElementType == GridElementType.DataRow)
+        {
+            var riga = e.Grid.GetDataItem(e.VisibleIndex) as ProduzGeneCommesseFasiDettaglioRiga;
+            if (riga?.CkSaldo == true)
+            {
+                e.CssClass = "fase-row-saldata";
+            }
+        }
+    }
+
+    private async Task<int?> GetIdUteAsync()
+    {
+        if (AuthStateTask == null) return null;
+
+        var authState = await AuthStateTask;
+        var utente = await UserManager.GetUserAsync(authState.User);
+        return utente?.idEasyPLM;
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -155,6 +262,7 @@ else
         {
             _idCommCaricato = null;
             RigheTotali = null;
+            RigheFasi = null;
             TagliaPerPosizione = new();
             return;
         }
@@ -166,7 +274,9 @@ else
 
         _idCommCaricato = CommessaSelezionata.IdComm;
         RigheTotali = null;
+        RigheFasi = null;
         loadingTotali = true;
+        loadingFasi = true;
         StateHasChanged();
 
         try
@@ -174,6 +284,63 @@ else
             using var context = await DbFactory.CreateDbContextAsync();
             var connection = context.Database.GetDbConnection();
             await connection.OpenAsync();
+
+            var idUte = await GetIdUteAsync();
+            if (idUte != null)
+            {
+                using var cmdFasi = connection.CreateCommand();
+                cmdFasi.CommandText = "EXEC [dbo].[SP_Produz_GeneCommesseFasi_Ricalcola_idComm] @idComm, @idUte";
+                var pIdComm = cmdFasi.CreateParameter();
+                pIdComm.ParameterName = "@idComm";
+                pIdComm.Value = CommessaSelezionata.IdComm;
+                cmdFasi.Parameters.Add(pIdComm);
+                var pIdUte = cmdFasi.CreateParameter();
+                pIdUte.ParameterName = "@idUte";
+                pIdUte.Value = idUte.Value;
+                cmdFasi.Parameters.Add(pIdUte);
+
+                var righeFasi = new List<ProduzGeneCommesseFasiDettaglioRiga>();
+                using var readerFasi = await cmdFasi.ExecuteReaderAsync();
+                while (await readerFasi.ReadAsync())
+                {
+                    righeFasi.Add(new ProduzGeneCommesseFasiDettaglioRiga
+                    {
+                        Id = (int)readerFasi["id"],
+                        IdComm = readerFasi["idComm"] as int?,
+                        IdMod = readerFasi["idMod"] as int?,
+                        ACdAll = readerFasi["A_cdALL"] as string,
+                        IdFase = readerFasi["idFase"] as int?,
+                        IdForn = readerFasi["idForn"] as int?,
+                        Um = readerFasi["UM"] as string,
+                        Qt = readerFasi["Qt"] == DBNull.Value ? null : Convert.ToDouble(readerFasi["Qt"]),
+                        OrdPm = readerFasi["OrdPM"] as int?,
+                        Tempo = readerFasi["Tempo"] == DBNull.Value ? null : Convert.ToDouble(readerFasi["Tempo"]),
+                        Prz = readerFasi["Prz"] == DBNull.Value ? null : Convert.ToDouble(readerFasi["Prz"]),
+                        TotCar = readerFasi["TotCAR"] as int?,
+                        TotScr = readerFasi["TotSCR"] as int?,
+                        TotDiff = readerFasi["TotDIFF"] as int?,
+                        CkSaldo = readerFasi["ckSaldo"] as bool?,
+                        CkInBol = readerFasi["ckInBol"] as bool?,
+                        CkConfRientro = readerFasi["ckConfRientro"] as bool?,
+                        DateDaDes = readerFasi["DateDaDes"] is DateTime dDa ? DateOnly.FromDateTime(dDa) : (DateOnly?)null,
+                        DateADes = readerFasi["DateADes"] is DateTime dA ? DateOnly.FromDateTime(dA) : (DateOnly?)null,
+                        Perc = readerFasi["Perc"] == DBNull.Value ? null : Convert.ToDouble(readerFasi["Perc"]),
+                        Tipo = readerFasi["TIPO"] as string,
+                        FaseCod = readerFasi["FaseCod"] as string,
+                        FaseDesc = readerFasi["FaseDesc"] as string,
+                        Lab = readerFasi["Lab"] as string,
+                        Gg = readerFasi["GG"] as int?,
+                        FaseCol = readerFasi["FaseCol"] as string,
+                        CkFaseCar = readerFasi["ckFaseCar"] as bool?,
+                        DataCarMin = readerFasi["DataCarMin"] is DateTime dCar ? DateOnly.FromDateTime(dCar) : (DateOnly?)null,
+                        DataScrMax = readerFasi["DataScrMax"] is DateTime dScr ? DateOnly.FromDateTime(dScr) : (DateOnly?)null,
+                    });
+                }
+                await readerFasi.CloseAsync();
+                RigheFasi = righeFasi;
+            }
+            loadingFasi = false;
+            StateHasChanged();
 
             using var cmd = connection.CreateCommand();
             cmd.CommandText = "EXEC [Report].[SP_Produz_GeneOrd_DaProdurre_Totali_Select_id] @id";
@@ -243,6 +410,7 @@ else
         finally
         {
             loadingTotali = false;
+            loadingFasi = false;
             StateHasChanged();
         }
     }
