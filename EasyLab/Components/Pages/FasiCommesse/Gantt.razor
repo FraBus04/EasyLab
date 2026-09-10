@@ -16,50 +16,75 @@
     <Loading></Loading>
 }
 
-<div class="articoli-filtri p-2 mb-2 border rounded d-flex flex-wrap gap-3 align-items-end">
-    <div style="width:220px;">
-        <label class="form-label small mb-0">Brand</label>
-        <CheckboxDropdown TItem="Contatti"
-                          Data="@Brands"
-                          @bind-SelectedItems="BrandSelezionati"
-                          TextFieldSelector="@(b => b.Societa1)"
-                          NullText="Nessun brand selezionato"
-                          SelectAllText="Tutti i brand" />
+@if (!MostraFiltri)
+{
+    <div class="articoli-toolbar d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+        <button type="button" class="btn btn-sm d-flex align-items-center gap-1"
+                style="background-color:#ff8c00;color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;opacity:0.85;"
+                @onclick="@(() => MostraFiltri = true)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
+            </svg>
+            Mostra filtri
+        </button>
     </div>
-    <div style="width:220px;">
-        <label class="form-label small mb-0">Stagione</label>
-        <CheckboxDropdown TItem="TabStagioni"
-                          Data="@Stagioni"
-                          @bind-SelectedItems="StagioneSelezionati"
-                          TextFieldSelector="@(s => s.Cod)"
-                          NullText="Nessuna stagione selezionata"
-                          SelectAllText="Tutte le stagioni" />
-    </div>
-    <div style="width:220px;">
-        <label class="form-label small mb-0">Tipo Commessa</label>
-        <CheckboxDropdown TItem="TabTipoOrdineCl"
-                          Data="@TipiOrdine"
-                          @bind-SelectedItems="TipiOrdineSelezionati"
-                          TextFieldSelector="@(t => t.Cod)"
-                          NullText="Nessun tipo commessa selezionato"
-                          SelectAllText="Tutti i tipi commessa" />
-    </div>
-    <div>
-        <label class="form-label small mb-0 d-block">Stato Commessa</label>
-        <div class="btn-group" role="group">
-            <button type="button" class="btn btn-sm @(SoloCommesseAperte ? "btn-outline-orange" : "btn-orange-active")" @onclick="@(() => SoloCommesseAperte = false)">Tutte</button>
-            <button type="button" class="btn btn-sm @(SoloCommesseAperte ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => SoloCommesseAperte = true)">Solo Aperte</button>
+}
+
+@if (MostraFiltri)
+{
+    <div class="articoli-filtri p-2 mb-2 border rounded d-flex flex-wrap gap-3 align-items-end">
+        <button type="button" class="btn btn-sm d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:28px;height:28px;background:transparent;color:#ff8c00;border:1px solid #ff8c00;border-radius:50%;padding:0;"
+                title="Nascondi filtri"
+                @onclick="@(() => MostraFiltri = false)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z" />
+            </svg>
+        </button>
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Brand</label>
+            <CheckboxDropdown TItem="Contatti"
+                              Data="@Brands"
+                              @bind-SelectedItems="BrandSelezionati"
+                              TextFieldSelector="@(b => b.Societa1)"
+                              NullText="Nessun brand selezionato"
+                              SelectAllText="Tutti i brand" />
         </div>
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Stagione</label>
+            <CheckboxDropdown TItem="TabStagioni"
+                              Data="@Stagioni"
+                              @bind-SelectedItems="StagioneSelezionati"
+                              TextFieldSelector="@(s => s.Cod)"
+                              NullText="Nessuna stagione selezionata"
+                              SelectAllText="Tutte le stagioni" />
+        </div>
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Tipo Commessa</label>
+            <CheckboxDropdown TItem="TabTipoOrdineCl"
+                              Data="@TipiOrdine"
+                              @bind-SelectedItems="TipiOrdineSelezionati"
+                              TextFieldSelector="@(t => t.Cod)"
+                              NullText="Nessun tipo commessa selezionato"
+                              SelectAllText="Tutti i tipi commessa" />
+        </div>
+        <div>
+            <label class="form-label small mb-0 d-block">Stato Commessa</label>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-sm @(SoloCommesseAperte ? "btn-outline-orange" : "btn-orange-active")" @onclick="@(() => SoloCommesseAperte = false)">Tutte</button>
+                <button type="button" class="btn btn-sm @(SoloCommesseAperte ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => SoloCommesseAperte = true)">Solo Aperte</button>
+            </div>
+        </div>
+
+        <button type="button" class="btn-icon-plain" @onclick="Cerca" title="Cerca">
+            <img src="images/RefreshOranSVG1.svg" class="btn-icon-search" alt="Cerca" />
+        </button>
+
+        <button type="button" class="btn-icon-plain" @onclick="SalvaParametri" disabled="@isDbBusy" title="Salva Parametri" style="@(isDbBusy ? "opacity:0.5;cursor:default;" : null)">
+            <img src="images/Param32.png" class="btn-icon-search" alt="Salva Parametri" />
+        </button>
     </div>
-
-    <button type="button" class="btn-icon-plain" @onclick="Cerca" title="Cerca">
-        <img src="images/RefreshOranSVG1.svg" class="btn-icon-search" alt="Cerca" />
-    </button>
-
-    <button type="button" class="btn-icon-plain" @onclick="SalvaParametri" disabled="@isDbBusy" title="Salva Parametri" style="@(isDbBusy ? "opacity:0.5;cursor:default;" : null)">
-        <img src="images/Param32.png" class="btn-icon-search" alt="Salva Parametri" />
-    </button>
-</div>
+}
 
 @if (loadingGantt)
 {
@@ -260,6 +285,7 @@ else if (RigheGantt != null)
     private List<TabTipoOrdineCl> TipiOrdineSelezionati = new();
 
     private bool SoloCommesseAperte = false;
+    private bool MostraFiltri = true;
 
     private List<PlnProdGanttRiga>? RigheGantt;
     private HashSet<int> ExpandedCommesse = new();
@@ -310,7 +336,6 @@ else if (RigheGantt != null)
     {
         if (UtentId == null) return;
 
-        // Una riga senza permesso esplicito NON è visibile: serve un permesso con Visualizza = true.
         var visibili = await DbContext.PermessiLetturaTabelles.AsNoTracking()
             .Where(p => p.UtenteId == UtentId && p.Visualizza
                 && (p.TabellaId == IdTabellaStagioni || p.TabellaId == IdTabellaBrand))
@@ -581,7 +606,6 @@ else if (RigheGantt != null)
     private double BarLeft(DateOnly? d) =>
         (!d.HasValue || !_minDate.HasValue) ? 0 : (d.Value.DayNumber - _minDate.Value.DayNumber) * PxPerDay;
 
-    // Centro della colonna del giorno (BarLeft è il bordo sinistro, cioè il confine tra un giorno e il precedente).
     private double DayCenterX(DateOnly d) => BarLeft(d) + PxPerDay / 2.0;
 
     private double BarWidth(DateOnly? from, DateOnly? to)
@@ -638,7 +662,6 @@ else if (RigheGantt != null)
         }
     }
 
-    // DateCommercAll arriva dalla SP come date separate da '|' (spesso una sola), in formato yyyy-MM-dd.
     private static List<DateOnly> ParseDateCommercAll(string? raw)
     {
         var result = new List<DateOnly>();
@@ -656,8 +679,6 @@ else if (RigheGantt != null)
         return result.Distinct().OrderBy(d => d).ToList();
     }
 
-    // Stessa logica di colorazione delle task usata nel Gantt WinForms di EasyPLM (CreaGANTT):
-    // GREEN se la fase è a saldo, YELLOW se ha carico ma non è saldata, GRAY se non ha ancora carico.
     private static string GetBaseColoreFase(PlnProdGanttRiga fase)
     {
         if (fase.CkSaldo == true) return "GREEN";
@@ -665,9 +686,6 @@ else if (RigheGantt != null)
         return "GRAY";
     }
 
-    // Percentuale della durata della fase già trascorsa rispetto a oggi: 100 se già finita, 0 se non ancora iniziata.
-    // Il denominatore usa lo stesso conteggio "a celle" di BarWidth (giorni inclusivi, non l'intervallo continuo),
-    // altrimenti il punto di taglio scuro/chiaro nella barra non coincide con la linea rossa di "oggi".
     private static double GetPercPassato(DateOnly? dataDa, DateOnly? dataA)
     {
         if (!dataDa.HasValue || !dataA.HasValue) return 0;
@@ -683,12 +701,12 @@ else if (RigheGantt != null)
         return Math.Max(0, Math.Min(100, perc));
     }
 
-    // Coppia chiaro/scuro per barra % e torta avanzamento: verde se a saldo, ambra se ancora in corso.
-    private static (string Chiaro, string Scuro) GetColoriAvanzamento(bool? saldo) => saldo == true
-        ? ("#d4edda", "#28a745")
-        : ("#fff3cd", "#e6ac00");
+    private static (string Chiaro, string Scuro) GetColoriAvanzamento(bool? saldo)
+    {
+        var chiave = saldo == true ? "S" : "A";
+        return (PaletteEasyPLM.GetColor("saldo", chiave, "light"), PaletteEasyPLM.GetColor("saldo", chiave, "dark"));
+    }
 
-    // Stesso bucket 0-4 usato in FasiCommesse.razor per la "Torta Avanz Fasi".
     private static int GetTortaPercent(int? bucket) => bucket switch
     {
         1 => 25,

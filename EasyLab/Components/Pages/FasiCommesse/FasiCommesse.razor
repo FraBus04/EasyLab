@@ -1,6 +1,7 @@
 @page "/FasiCommesse"
 @attribute [Authorize]
 @using EasyLab.Models
+@using EasyLab.Colori
 @using Microsoft.EntityFrameworkCore
 @using System.Text.Json
 @rendermode InteractiveServer
@@ -599,13 +600,17 @@
         _ => 0
     };
 
-    private static (string Chiaro, string Scuro) GetColoriSaldo(string? saldo) => saldo switch
+    // Coppia chiaro/scuro per barra % e torta avanzamento, presa da Colori.json (palette "saldo").
+    private static (string Chiaro, string Scuro) GetColoriSaldo(string? saldo)
     {
-        "A" => ("#fff3cd", "#e6ac00"),
-        "N" => ("#e9ecef", "#6c757d"),
-        "S" => ("#d4edda", "#28a745"),
-        _ => ("#e9ecef", "#6c757d")
-    };
+        var chiave = saldo switch
+        {
+            "A" => "A",
+            "S" => "S",
+            _ => "default"
+        };
+        return (PaletteEasyPLM.GetColor("saldo", chiave, "light"), PaletteEasyPLM.GetColor("saldo", chiave, "dark"));
+    }
 
     private async Task Cerca()
     {

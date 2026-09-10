@@ -43,6 +43,10 @@
                         <img src="/images/GANTTSVG.svg" alt="Gantt" />
                         <span>Gantt</span>
                     </div>
+                    <div class="Header-Dropdown-MenuItem" @onclick="GestisciFasi">
+                        <img src="/images/FasiSVG.svg" alt="Gestisci Fasi" />
+                        <span>Gestisci Fasi</span>
+                    </div>
                 </div>
             }
         </div>
@@ -173,6 +177,19 @@
         else
         {
             NavManager.NavigateTo("/Gantt");
+        }
+    }
+
+    private async Task GestisciFasi(MouseEventArgs e)
+    {
+        AvanzamentoFasiMenuOpen = false;
+        if (e.ShiftKey)
+        {
+            await JSRuntime.InvokeVoidAsync("open", "/GestisciFasi", "_blank");
+        }
+        else
+        {
+            NavManager.NavigateTo("/GestisciFasi");
         }
     }
     private async Task Utenti(MouseEventArgs e)
