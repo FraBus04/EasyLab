@@ -196,11 +196,11 @@
                     }
                 </Columns>
                 <TotalSummary>
-                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="TotCapi" FooterColumnName="TotCapi" DisplayFormat="{0:N0}" />
+                    <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="TotCapi" FooterColumnName="TotCapi" ValueDisplayFormat="{0:N0}" />
                     @for (var i = 1; i <= 16; i++)
                     {
                         var idx = i;
-                        <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="@($"Nr{idx}")" FooterColumnName="@($"Nr{idx}")" DisplayFormat="{0:N0}" />
+                        <DxGridSummaryItem SummaryType="GridSummaryItemType.Sum" FieldName="@($"Nr{idx}")" FooterColumnName="@($"Nr{idx}")" ValueDisplayFormat="{0:N0}" />
                     }
                 </TotalSummary>
             </DxGrid>

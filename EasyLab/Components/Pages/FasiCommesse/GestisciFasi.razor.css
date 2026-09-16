@@ -6,14 +6,6 @@
     background: #f8f9fa;
 }
 
-.header-divider {
-    width: 1px;
-    height: 30px;
-    background-color: #dee2e6;
-    margin: 0 20px;
-    flex-shrink: 0;
-}
-
 .articoli-toolbar,
 .articoli-filtri {
     flex-wrap: nowrap !important;
@@ -44,6 +36,30 @@
         border-radius: 3px;
     }
 
+.btn-icon-plain {
+    background: transparent;
+    border: none;
+    padding: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.btn-icon-search {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+}
+
+.header-divider {
+    width: 1px;
+    height: 30px;
+    background-color: #dee2e6;
+    margin: 0 20px;
+    flex-shrink: 0;
+}
+
 .btn-outline-orange {
     color: #ff8c00;
     border-color: #ff8c00;
@@ -67,22 +83,6 @@
         background-color: #e67a00;
         border-color: #e67a00;
     }
-
-.btn-icon-plain {
-    background: transparent;
-    border: none;
-    padding: 4px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-.btn-icon-search {
-    width: 32px;
-    height: 32px;
-    object-fit: contain;
-}
 
 .gantt-empty {
     padding: 40px;
@@ -109,7 +109,7 @@
     position: sticky;
     left: 0;
     z-index: 3;
-    width: 680px;
+    width: 930px;
     flex-shrink: 0;
     background: #fff;
     border-right: 1px solid #e9ecef;
@@ -192,7 +192,7 @@
     z-index: 1;
 }
 
-.gantt-row-brand .gantt-label-col {
+.gantt-row-fasegroup .gantt-label-col {
     background: #fff3cd;
     font-weight: 700;
     color: #8a6d00;
@@ -201,37 +201,13 @@
     letter-spacing: 0.05em;
 }
 
-.gantt-row-brand .gantt-timeline-cell {
+.gantt-row-fasegroup .gantt-timeline-cell {
     background: #fffdf5;
 }
-
-.gantt-row-commessa {
-    cursor: pointer;
-}
-
-    .gantt-row-commessa:hover .gantt-label-col {
-        background-color: #fff8f0;
-    }
-
-    .gantt-row-commessa:hover .gantt-timeline-cell {
-        background-color: rgba(255,140,0,0.06);
-    }
 
 .gantt-label-commessa {
     gap: 6px;
 }
-
-.gantt-expand-icon {
-    display: inline-flex;
-    flex-shrink: 0;
-    transform: rotate(-90deg);
-    transition: transform 0.15s ease;
-    color: #ff8c00;
-}
-
-    .gantt-expand-icon.expanded {
-        transform: rotate(0deg);
-    }
 
 .gantt-header-cols {
     font-weight: 700;
@@ -249,10 +225,76 @@
     white-space: nowrap;
 }
 
-.gantt-row-fase .gantt-col-descr {
-    padding-left: 24px;
-    color: #6c757d;
-    font-size: 0.76rem;
+.gantt-col-to {
+    flex-shrink: 0;
+    width: 32px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.72rem;
+    color: #495057;
+}
+
+.gantt-col-brand {
+    flex-shrink: 0;
+    width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.72rem;
+    color: #495057;
+}
+
+.gantt-col-nrcomm {
+    flex-shrink: 0;
+    width: 55px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.72rem;
+    color: #495057;
+}
+
+.gantt-col-ckfase {
+    flex-shrink: 0;
+    width: 84px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.72rem;
+    color: #28a745;
+    font-weight: 700;
+}
+
+.gantt-col-idgenefasi {
+    flex-shrink: 0;
+    width: 84px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.7rem;
+    color: #adb5bd;
+}
+
+.gantt-header-cols .gantt-col-ckfase,
+.gantt-header-cols .gantt-col-idgenefasi {
+    white-space: normal;
+    line-height: 1.05;
+    overflow: visible;
+}
+
+.gantt-col-lab {
+    flex-shrink: 0;
+    width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.72rem;
+    color: #495057;
 }
 
 .gantt-col-car,
@@ -292,33 +334,6 @@
     white-space: nowrap;
 }
 
-.gantt-col-torta {
-    flex-shrink: 0;
-    width: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.gantt-torta-circle {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.gantt-col-datacomm {
-    flex-shrink: 0;
-    width: 128px;
-    text-align: center;
-    font-size: 0.7rem;
-    color: #495057;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
 .gantt-col-rientro {
     flex-shrink: 0;
     width: 82px;
@@ -336,11 +351,6 @@
     background-image: repeating-linear-gradient(to right, transparent, transparent 21px, #f1f3f5 21px, #f1f3f5 22px);
 }
 
-.gantt-row-fase .gantt-timeline-cell,
-.gantt-row-fase .gantt-label-col {
-    height: 28px;
-}
-
 .gantt-bar {
     position: absolute;
     top: 8px;
@@ -351,21 +361,6 @@
     box-sizing: border-box;
     min-width: 4px;
     z-index: 1;
-}
-
-.gantt-row-fase .gantt-bar {
-    top: 6px;
-    height: 14px;
-}
-
-.gantt-bar-fase {
-    display: flex;
-    background: none;
-}
-
-.gantt-bar-passato,
-.gantt-bar-futuro {
-    height: 100%;
 }
 
 .gantt-bar-fill {
@@ -380,20 +375,3 @@
     .gantt-bar-saldo .gantt-bar-fill {
         background-color: #28a745;
     }
-
-.gantt-milestone-wrap {
-    position: absolute;
-    top: 1px;
-    width: 12px;
-    height: 12px;
-    margin-left: -6px;
-    z-index: 1;
-}
-
-.gantt-milestone-icon {
-    width: 100%;
-    height: 100%;
-    color: #dc3545;
-    filter: drop-shadow(0 0 1px #fff);
-    pointer-events: none;
-}

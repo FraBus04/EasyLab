@@ -1,8 +1,711 @@
 @page "/GestisciFasi"
 @attribute [Authorize]
 @rendermode InteractiveServer
+@using EasyLab.Colori
+@inject IToastNotificationService ToastService
 
-<PageTitle>Gestisci Fasi</PageTitle>
+<PageTitle>Gestione Fasi</PageTitle>
 
 <div class="articoli-page">
+
+@if (loading)
+{
+    <Loading></Loading>
+}
+
+@if (!MostraFiltri)
+{
+    <div class="articoli-toolbar d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+        <button type="button" class="btn btn-sm d-flex align-items-center gap-1"
+                style="background-color:#ff8c00;color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;opacity:0.85;"
+                @onclick="@(() => MostraFiltri = true)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
+            </svg>
+            Mostra filtri
+        </button>
+    </div>
+}
+
+@if (MostraFiltri)
+{
+    <div class="articoli-filtri p-2 mb-2 border rounded d-flex flex-wrap gap-3 align-items-end">
+        <button type="button" class="btn btn-sm d-flex align-items-center justify-content-center flex-shrink-0"
+                style="width:28px;height:28px;background:transparent;color:#ff8c00;border:1px solid #ff8c00;border-radius:50%;padding:0;"
+                title="Nascondi filtri"
+                @onclick="@(() => MostraFiltri = false)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M7.646 4.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1-.708.708L8 5.707l-5.646 5.647a.5.5 0 0 1-.708-.708l6-6z" />
+            </svg>
+        </button>
+
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Brand</label>
+            <CheckboxDropdown TItem="Contatti"
+                              Data="@Brands"
+                              @bind-SelectedItems="BrandSelezionati"
+                              TextFieldSelector="@(b => b.Societa1)"
+                              NullText="Nessun brand selezionato"
+                              SelectAllText="Tutti i brand" />
+        </div>
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Fase</label>
+            <CheckboxDropdown TItem="TabFasiLavorazione"
+                              Data="@Fasi"
+                              @bind-SelectedItems="FasiSelezionati"
+                              TextFieldSelector="@(f => f.Cod)"
+                              NullText="Nessuna fase selezionata"
+                              SelectAllText="Tutte le fasi" />
+        </div>
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Stagione</label>
+            <CheckboxDropdown TItem="TabStagioni"
+                              Data="@Stagioni"
+                              @bind-SelectedItems="StagioneSelezionati"
+                              TextFieldSelector="@(s => s.Cod)"
+                              NullText="Nessuna stagione selezionata"
+                              SelectAllText="Tutte le stagioni" />
+        </div>
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Laboratorio</label>
+            <CheckboxDropdown TItem="TabAnagCliFor"
+                              Data="@Laboratori"
+                              @bind-SelectedItems="LaboratoriSelezionati"
+                              TextFieldSelector="@(l => l.Anag1)"
+                              NullText="Nessun laboratorio selezionato"
+                              SelectAllText="Tutti i laboratori" />
+        </div>
+        <div style="width:220px;">
+            <label class="form-label small mb-0">Tipo Commessa</label>
+            <CheckboxDropdown TItem="TabTipoOrdineCl"
+                              Data="@TipiOrdine"
+                              @bind-SelectedItems="TipiOrdineSelezionati"
+                              TextFieldSelector="@(t => t.Cod)"
+                              NullText="Nessun tipo commessa selezionato"
+                              SelectAllText="Tutti i tipi commessa" />
+        </div>
+        <div class="d-flex flex-column align-items-center" style="gap:2px;">
+            <label class="form-label small mb-0" for="chkSoloAperte">Solo Aperte</label>
+            <input class="form-check-input m-0" type="checkbox" id="chkSoloAperte" style="cursor:pointer;accent-color:#ff8c00;" @bind="SoloFasiAperte">
+        </div>
+        <div class="d-flex flex-column align-items-center" style="gap:2px;">
+            <label class="form-label small mb-0" for="chkPrevisionale">Previsionale</label>
+            <input class="form-check-input m-0" type="checkbox" id="chkPrevisionale" style="cursor:pointer;accent-color:#ff8c00;" @bind="VistaPrevisionale">
+        </div>
+
+        <button type="button" class="btn-icon-plain" @onclick="Cerca" title="Cerca">
+            <img src="images/RefreshOranSVG1.svg" class="btn-icon-search" alt="Cerca" />
+        </button>
+
+        <button type="button" class="btn-icon-plain" @onclick="SalvaParametri" disabled="@isDbBusy" title="Salva Parametri" style="@(isDbBusy ? "opacity:0.5;cursor:default;" : null)">
+            <img src="images/Param32.png" class="btn-icon-search" alt="Salva Parametri" />
+        </button>
+
+        <div class="header-divider"></div>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm @(VistaSettimanale ? "btn-outline-orange" : "btn-orange-active")" @onclick="@(() => VistaSettimanale = false)">Giorni</button>
+            <button type="button" class="btn btn-sm @(VistaSettimanale ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => VistaSettimanale = true)">Settimane</button>
+        </div>
+    </div>
+}
+
+@if (loadingGantt)
+{
+    <Loading></Loading>
+}
+else if (RigheGantt != null)
+{
+    if (!GruppiFase.Any())
+    {
+        <div class="gantt-empty">Nessuna fase trovata con i filtri selezionati.</div>
+    }
+    else
+    {
+        <div class="gantt-scroll">
+            <div class="gantt-header-row">
+                <div class="gantt-label-col gantt-corner gantt-header-cols">
+                    <span class="gantt-col-to">TO</span>
+                    <span class="gantt-col-brand">Brand</span>
+                    <span class="gantt-col-nrcomm">NrCo</span>
+                    <span class="gantt-col-descr">Descr</span>
+                    <span class="gantt-col-lab">Lab</span>
+                    <span class="gantt-col-car">Car.</span>
+                    <span class="gantt-col-scar">Scar.</span>
+                    <span class="gantt-col-perc">%</span>
+                    <span class="gantt-col-rientro">Rientro</span>
+                    <span class="gantt-col-ckfase">CkFaseCar</span>
+                    <span class="gantt-col-idgenefasi">IdGeneFasi</span>
+                </div>
+                <div class="gantt-timeline-header" style="width:@(TimelineWidthPx.ToString(CultureInfo.InvariantCulture))px;">
+                    @foreach (var marker in MonthMarkers)
+                    {
+                        <div class="gantt-month-marker" style="left:@(marker.X.ToString(CultureInfo.InvariantCulture))px;">@marker.Label</div>
+                    }
+                    @if (VistaSettimanale)
+                    {
+                        @foreach (var settimana in WeekMarkers)
+                        {
+                            <div class="gantt-week-marker" style="left:@(settimana.X.ToString(CultureInfo.InvariantCulture))px;">@settimana.Label</div>
+                        }
+                    }
+                    else
+                    {
+                        @foreach (var giorno in DayMarkers)
+                        {
+                            <div class="gantt-day-marker" style="left:@(giorno.X.ToString(CultureInfo.InvariantCulture))px;">@giorno.Label</div>
+                        }
+                    }
+                    @if (TodayX is double tx0)
+                    {
+                        <div class="gantt-today-line" style="left:@(tx0.ToString(CultureInfo.InvariantCulture))px;" title="Oggi"></div>
+                    }
+                </div>
+            </div>
+
+            @foreach (var fase in GruppiFase)
+            {
+                <div class="gantt-row gantt-row-fasegroup">
+                    <div class="gantt-label-col">@fase.Descr</div>
+                    <div class="gantt-timeline-cell" style="width:@(TimelineWidthPx.ToString(CultureInfo.InvariantCulture))px;">
+                        @if (TodayX is double txFase)
+                        {
+                            <div class="gantt-today-line" style="left:@(txFase.ToString(CultureInfo.InvariantCulture))px;"></div>
+                        }
+                    </div>
+                </div>
+
+                @foreach (var comm in CommesseDiFase(fase.Id))
+                {
+                    <div class="gantt-row gantt-row-commessa">
+                        <div class="gantt-label-col gantt-label-commessa">
+                            <span class="gantt-col-to" title="@comm.OrdTipo">@comm.OrdTipo</span>
+                            <span class="gantt-col-brand" title="@comm.Brand">@comm.Brand</span>
+                            <span class="gantt-col-nrcomm">@comm.NrComm</span>
+                            <span class="gantt-col-descr" title="@comm.Descr">@comm.Descr</span>
+                            <span class="gantt-col-lab" title="@comm.Lab">@comm.Lab</span>
+                            <span class="gantt-col-car">@comm.TotCar</span>
+                            <span class="gantt-col-scar">@comm.TotScar</span>
+                            <span class="gantt-col-perc">
+                                @{ var (percChiaro, percScuro) = GetColoriAvanzamento(comm.CkSaldo); }
+                                <span class="gantt-perc-bar" style="background:@percChiaro;">
+                                    <span class="gantt-perc-fill" style="width:@((comm.Progress ?? 0).ToString(CultureInfo.InvariantCulture))%; background-color:@percScuro;"></span>
+                                </span>
+                                <span class="gantt-perc-text">@((comm.Progress ?? 0).ToString("N0"))%</span>
+                            </span>
+                            <span class="gantt-col-rientro">@(comm.DataConfRientro?.ToString("dd/MM/yyyy"))</span>
+                            <span class="gantt-col-ckfase">@(comm.CkFaseCar == true ? "✓" : "")</span>
+                            <span class="gantt-col-idgenefasi">@comm.IdGeneFasi</span>
+                        </div>
+                        <div class="gantt-timeline-cell" style="width:@(TimelineWidthPx.ToString(CultureInfo.InvariantCulture))px;">
+                            @if (TodayX is double txComm)
+                            {
+                                <div class="gantt-today-line" style="left:@(txComm.ToString(CultureInfo.InvariantCulture))px;"></div>
+                            }
+                            <div class="gantt-bar @(comm.CkSaldo == true ? "gantt-bar-saldo" : "gantt-bar-open")"
+                                 style="left:@(BarLeft(comm.DateDaDes).ToString(CultureInfo.InvariantCulture))px; width:@(BarWidth(comm.DateDaDes, comm.DateADes).ToString(CultureInfo.InvariantCulture))px;"
+                                 title="@GetCommTooltip(comm)">
+                                <div class="gantt-bar-fill" style="width:@((comm.Progress ?? 0).ToString(CultureInfo.InvariantCulture))%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
+}
+
 </div>
+
+<DxPopup @bind-Visible="_dialogVisible"
+         CloseOnOutsideClick="false"
+         ShowCloseButton="false"
+         ShowFooter="true"
+         HeaderText="@_dialogTitle"
+         Width="420px"
+         Height="auto">
+    <BodyContentTemplate>
+        <div style="white-space: pre-line; padding: 4px 0;">@_dialogMessage</div>
+    </BodyContentTemplate>
+    <FooterContentTemplate>
+        <DxButton Text="OK" RenderStyle="ButtonRenderStyle.Primary" Click="@(() => _dialogVisible = false)" />
+    </FooterContentTemplate>
+</DxPopup>
+
+@code {
+    // TabellaId dei permessi di lettura.
+    private const int IdTabellaStagioni = 1;
+    private const int IdTabellaBrand = 2;
+    private const int IdTabellaLaboratori = 3;
+    private const int IdTipoAnagLaboratorio = 4;
+
+    // TabellaId usato per salvare/caricare i filtri in ParametriUtente (Articoli=1, PianficazioneLanci=2, DiBa=3, FasiCommesse=4, Gantt=5).
+    private const int IdTabellaParametri = 6;
+
+    // idClasse della schermata "Gestisci Fasi" per la selezione memorizzata su Sel_ST (FasiCommesse=130, Gantt=131).
+    private const int IdClasseGestisciFasi = 132;
+    private const string ChiaveSelStContatti = "Contatti";
+    private const string ChiaveSelStStagioni = "Tab_Stagioni";
+    private const string ChiaveSelStTipoOrdine = "Tab_TipoOrdineCL";
+    private const string ChiaveSelStFasi = "Tab_Fasi_Lavorazione";
+    private const string ChiaveSelStLaboratori = "Tab_Anag_CliFor";
+
+    private const int PxPerDay = 22;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthStateTask { get; set; }
+
+    private string? UtentId;
+
+    private bool loading = true;
+    private bool isDbBusy = false;
+    private bool loadingGantt = false;
+    private bool MostraFiltri = true;
+
+    private bool SoloFasiAperte = false;
+    private bool VistaPrevisionale = false;
+    private bool VistaSettimanale = false;
+
+    private List<Contatti> Brands = new();
+    private List<TabStagioni> Stagioni = new();
+    private List<TabAnagCliFor> Laboratori = new();
+    private List<TabTipoOrdineCl> TipiOrdine = new();
+    private List<TabFasiLavorazione> Fasi = new();
+
+    private List<Contatti> BrandSelezionati = new();
+    private List<TabStagioni> StagioneSelezionati = new();
+    private List<TabAnagCliFor> LaboratoriSelezionati = new();
+    private List<TabTipoOrdineCl> TipiOrdineSelezionati = new();
+    private List<TabFasiLavorazione> FasiSelezionati = new();
+
+    private List<PlnProdGanttFasiRiga>? RigheGantt;
+    private DateOnly? _minDate;
+    private DateOnly? _maxDate;
+
+    private bool _dialogVisible;
+    private string _dialogTitle = "";
+    private string _dialogMessage = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            loading = true;
+            StateHasChanged();
+            try
+            {
+                if (AuthStateTask != null)
+                {
+                    var authState = await AuthStateTask;
+                    UtentId = UserManager.GetUserId(authState.User);
+                }
+
+                using var context = await DbFactory.CreateDbContextAsync();
+                Brands = await context.Contattis.AsNoTracking().OrderBy(b => b.Societa1).ToListAsync();
+                Stagioni = await context.TabStagionis.AsNoTracking().Where(x => x.Stato == "A").OrderByDescending(s => s.OrdPm).ToListAsync();
+                Laboratori = await context.TabAnagCliFors.AsNoTracking().Where(x => x.IdTipoAnag == IdTipoAnagLaboratorio).OrderBy(x => x.Anag1).ToListAsync();
+                TipiOrdine = await context.TabTipoOrdineCls.AsNoTracking().OrderBy(t => t.OrdPm).ToListAsync();
+                Fasi = await context.TabFasiLavoraziones.AsNoTracking().OrderBy(f => f.OrdPm).ToListAsync();
+                await ApplicaPermessiLettura();
+
+                var parametriCaricati = await CaricaParametriSalvati();
+                if (!parametriCaricati)
+                {
+                    BrandSelezionati = Brands.ToList();
+                    StagioneSelezionati = Stagioni.ToList();
+                    LaboratoriSelezionati = Laboratori.ToList();
+                    TipiOrdineSelezionati = TipiOrdine.ToList();
+                    FasiSelezionati = Fasi.ToList();
+                }
+            }
+            finally
+            {
+                loading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task ApplicaPermessiLettura()
+    {
+        if (UtentId == null) return;
+
+        var visibili = await DbContext.PermessiLetturaTabelles.AsNoTracking()
+            .Where(p => p.UtenteId == UtentId && p.Visualizza
+                && (p.TabellaId == IdTabellaStagioni || p.TabellaId == IdTabellaBrand || p.TabellaId == IdTabellaLaboratori))
+            .ToListAsync();
+
+        var brandVisibili = visibili.Where(p => p.TabellaId == IdTabellaBrand).Select(p => p.RigaCod).ToHashSet();
+        var stagioniVisibili = visibili.Where(p => p.TabellaId == IdTabellaStagioni).Select(p => p.RigaCod).ToHashSet();
+        var laboratoriVisibili = visibili.Where(p => p.TabellaId == IdTabellaLaboratori).Select(p => p.RigaCod).ToHashSet();
+
+        Brands = Brands.Where(b => brandVisibili.Contains(b.Id.ToString())).ToList();
+        Stagioni = Stagioni.Where(s => stagioniVisibili.Contains(s.Id.ToString())).ToList();
+        Laboratori = Laboratori.Where(l => laboratoriVisibili.Contains(l.Id.ToString())).ToList();
+    }
+
+    private async Task<bool> CaricaParametriSalvati()
+    {
+        if (UtentId == null) return false;
+
+        var parametroRecord = await DbContext.ParametriUtente.AsNoTracking()
+            .FirstOrDefaultAsync(p => p.UtenteId == UtentId && p.TabellaId == IdTabellaParametri);
+
+        if (parametroRecord?.Parametri == null || parametroRecord.Parametri.Count == 0)
+            return false;
+
+        var brandsString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Brands:"))?["Brands:".Length..];
+        if (!string.IsNullOrEmpty(brandsString))
+        {
+            var ids = brandsString.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            BrandSelezionati = Brands.Where(b => ids.Contains(b.Id.ToString())).ToList();
+        }
+
+        var stagString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Stagioni:"))?["Stagioni:".Length..];
+        if (!string.IsNullOrEmpty(stagString))
+        {
+            var ids = stagString.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            StagioneSelezionati = Stagioni.Where(s => ids.Contains(s.Id.ToString())).ToList();
+        }
+
+        var labString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Laboratori:"))?["Laboratori:".Length..];
+        if (!string.IsNullOrEmpty(labString))
+        {
+            var ids = labString.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            LaboratoriSelezionati = Laboratori.Where(l => ids.Contains(l.Id.ToString())).ToList();
+        }
+
+        var tipiOrdineString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("TipiOrdine:"))?["TipiOrdine:".Length..];
+        if (!string.IsNullOrEmpty(tipiOrdineString))
+        {
+            var codici = tipiOrdineString.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            TipiOrdineSelezionati = TipiOrdine.Where(t => codici.Contains(t.Cod)).ToList();
+        }
+
+        var fasiString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Fasi:"))?["Fasi:".Length..];
+        if (!string.IsNullOrEmpty(fasiString))
+        {
+            var codici = fasiString.Split('-', StringSplitOptions.RemoveEmptyEntries);
+            FasiSelezionati = Fasi.Where(f => codici.Contains(f.Cod)).ToList();
+        }
+
+        return true;
+    }
+
+    private async Task SalvaParametri()
+    {
+        if (isDbBusy || UtentId == null) return;
+
+        isDbBusy = true;
+        StateHasChanged();
+
+        try
+        {
+            string brands = "Brands:" + string.Join("-", BrandSelezionati.Select(b => b.Id));
+            string stagioni = "Stagioni:" + string.Join("-", StagioneSelezionati.Select(s => s.Id));
+            string laboratori = "Laboratori:" + string.Join("-", LaboratoriSelezionati.Select(l => l.Id));
+            string tipiOrdine = "TipiOrdine:" + string.Join("-", TipiOrdineSelezionati.Select(t => t.Cod));
+            string fasi = "Fasi:" + string.Join("-", FasiSelezionati.Select(f => f.Cod));
+
+            var parametri = new List<string> { brands, stagioni, laboratori, tipiOrdine, fasi };
+
+            var parametroEsistente = await DbContext.ParametriUtente
+                .FirstOrDefaultAsync(p => p.UtenteId == UtentId && p.TabellaId == IdTabellaParametri);
+
+            if (parametroEsistente != null)
+            {
+                parametroEsistente.NomeTabella = "GestisciFasi";
+                parametroEsistente.Parametri = parametri;
+                parametroEsistente.DataUpd = DateTime.Now;
+            }
+            else
+            {
+                DbContext.ParametriUtente.Add(new ParametroUtente
+                {
+                    UtenteId = UtentId,
+                    TabellaId = IdTabellaParametri,
+                    NomeTabella = "GestisciFasi",
+                    Parametri = parametri,
+                    DataUpd = DateTime.Now
+                });
+            }
+
+            await DbContext.SaveChangesAsync();
+            ToastService.ShowToast(new ToastOptions
+            {
+                Title = "Parametri salvati",
+                Text = "Filtri salvati correttamente.",
+                RenderStyle = ToastRenderStyle.Success,
+                CssClass = "toast-brand-orange",
+                ProviderName = "MainToastProvider"
+            });
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowToast(new ToastOptions
+            {
+                Title = "Errore",
+                Text = $"Si è verificato un errore durante il salvataggio dei parametri: {ex.Message}",
+                RenderStyle = ToastRenderStyle.Danger,
+                ProviderName = "MainToastProvider"
+            });
+        }
+        finally
+        {
+            isDbBusy = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task<int?> GetIdUteAsync()
+    {
+        if (AuthStateTask == null) return null;
+
+        var authState = await AuthStateTask;
+        var utente = await UserManager.GetUserAsync(authState.User);
+        return utente?.idEasyPLM;
+    }
+
+    private async Task Cerca()
+    {
+        loadingGantt = true;
+        RigheGantt = null;
+        StateHasChanged();
+        try
+        {
+            var idUte = await GetIdUteAsync();
+            if (idUte == null)
+            {
+                ShowDialog("Errore", "Impossibile determinare l'utente corrente.");
+                return;
+            }
+
+            using var context = await DbFactory.CreateDbContextAsync();
+
+            // Salva la selezione corrente su Sel_ST: la SP legge da lì i filtri da applicare.
+            await context.Database.ExecuteSqlInterpolatedAsync(
+                $"DELETE FROM Sel_ST WHERE idClasse={IdClasseGestisciFasi} AND idUte={idUte} AND Chiave IN ({ChiaveSelStContatti}, {ChiaveSelStStagioni}, {ChiaveSelStTipoOrdine}, {ChiaveSelStFasi}, {ChiaveSelStLaboratori})");
+
+            foreach (var brand in BrandSelezionati)
+            {
+                await context.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO Sel_ST (idClasse, idContatto, Chiave, idUte, id) VALUES ({IdClasseGestisciFasi}, 0, {ChiaveSelStContatti}, {idUte}, {brand.Id})");
+            }
+            foreach (var stagione in StagioneSelezionati)
+            {
+                await context.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO Sel_ST (idClasse, idContatto, Chiave, idUte, id) VALUES ({IdClasseGestisciFasi}, 0, {ChiaveSelStStagioni}, {idUte}, {stagione.Id})");
+            }
+            foreach (var tipoOrdine in TipiOrdineSelezionati)
+            {
+                await context.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO Sel_ST (idClasse, idContatto, Chiave, idUte, cd) VALUES ({IdClasseGestisciFasi}, 0, {ChiaveSelStTipoOrdine}, {idUte}, {tipoOrdine.Cod})");
+            }
+            foreach (var fase in FasiSelezionati)
+            {
+                await context.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO Sel_ST (idClasse, idContatto, Chiave, idUte, id) VALUES ({IdClasseGestisciFasi}, 0, {ChiaveSelStFasi}, {idUte}, {fase.IdFase})");
+            }
+            foreach (var lab in LaboratoriSelezionati)
+            {
+                await context.Database.ExecuteSqlInterpolatedAsync(
+                    $"INSERT INTO Sel_ST (idClasse, idContatto, Chiave, idUte, id) VALUES ({IdClasseGestisciFasi}, 0, {ChiaveSelStLaboratori}, {idUte}, {lab.Id})");
+            }
+
+            var connection = context.Database.GetDbConnection();
+            await connection.OpenAsync();
+
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "EXEC [doc].[SP_Doc3_MovFasi_CreaGanttManageFasi_Select_SelST] @idClasse, @idUte, @ckSoloFasiOpen, @ckVistaPrevisionale";
+            var pClasse = cmd.CreateParameter();
+            pClasse.ParameterName = "@idClasse";
+            pClasse.Value = IdClasseGestisciFasi;
+            cmd.Parameters.Add(pClasse);
+            var pUte = cmd.CreateParameter();
+            pUte.ParameterName = "@idUte";
+            pUte.Value = idUte.Value;
+            cmd.Parameters.Add(pUte);
+            var pSoloAperte = cmd.CreateParameter();
+            pSoloAperte.ParameterName = "@ckSoloFasiOpen";
+            pSoloAperte.Value = SoloFasiAperte;
+            cmd.Parameters.Add(pSoloAperte);
+            var pPrevisionale = cmd.CreateParameter();
+            pPrevisionale.ParameterName = "@ckVistaPrevisionale";
+            pPrevisionale.Value = VistaPrevisionale;
+            cmd.Parameters.Add(pPrevisionale);
+
+            var righe = new List<PlnProdGanttFasiRiga>();
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                righe.Add(new PlnProdGanttFasiRiga
+                {
+                    Id = (int)reader["id"],
+                    Livello = reader["Livello"] as string,
+                    IdParent = reader["idParent"] as int?,
+                    IdContatto = reader["idContatto"] as int?,
+                    Brand = reader["Brand"] as string,
+                    IdComm = reader["idComm"] as int?,
+                    IdMod = reader["idMod"] as int?,
+                    ACdAll = reader["A_cdALL"] as string,
+                    IdFase = reader["idFase"] as int?,
+                    OrdTipo = reader["OrdTipo"] as string,
+                    NrComm = reader["NrComm"] as int?,
+                    Descr = reader["Descr"] as string,
+                    DateDaDes = reader["DateDaDes"] is DateTime dDa ? DateOnly.FromDateTime(dDa) : (DateOnly?)null,
+                    DateADes = reader["DateADes"] is DateTime dA ? DateOnly.FromDateTime(dA) : (DateOnly?)null,
+                    Progress = reader["Progress"] == DBNull.Value ? null : Convert.ToDouble(reader["Progress"]),
+                    DateCommercMin = reader["DateCommercMin"] is DateTime dCMin ? DateOnly.FromDateTime(dCMin) : (DateOnly?)null,
+                    DateCommercMax = reader["DateCommercMax"] is DateTime dCMax ? DateOnly.FromDateTime(dCMax) : (DateOnly?)null,
+                    TotCar = reader["TotCar"] as int?,
+                    TotScar = reader["TotScar"] as int?,
+                    TotCapiComm = reader["TotCapiComm"] as int?,
+                    TotCapiFinComm = reader["TotCapiFinComm"] as int?,
+                    CkSaldo = reader["ckSaldo"] as bool?,
+                    CkSaldoComm = reader["ckSaldoComm"] as bool?,
+                    CkConfRientro = reader["ckConfRientro"] as bool?,
+                    CkFaseCar = reader["ckFaseCar"] as bool?,
+                    PercTotCapiFin = reader["PercTotCapiFin"] == DBNull.Value ? null : Convert.ToDouble(reader["PercTotCapiFin"]),
+                    DataConfRientro = reader["DataConfRientro"] is DateTime dConf ? DateOnly.FromDateTime(dConf) : (DateOnly?)null,
+                    Lab = reader["Lab"] as string,
+                    Fase = reader["Fase"] as string,
+                    IdGeneFasi = reader["idGeneFasi"] as int?,
+                });
+            }
+            await reader.CloseAsync();
+
+            RigheGantt = righe;
+
+            var date = righe
+                .Where(r => r.Livello == "C")
+                .SelectMany(r => new[] { r.DateDaDes, r.DateADes, r.DateCommercMin, r.DateCommercMax })
+                .Where(d => d.HasValue)
+                .Select(d => d!.Value)
+                .ToList();
+
+            if (date.Count > 0)
+            {
+                _minDate = date.Min();
+                _maxDate = date.Max();
+            }
+            else
+            {
+                _minDate = null;
+                _maxDate = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowDialog("Errore", $"Si è verificato un errore durante la ricerca: {ex.Message}");
+        }
+        finally
+        {
+            loadingGantt = false;
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<PlnProdGanttFasiRiga> GruppiFase =>
+        RigheGantt?.Where(r => r.Livello == "B").OrderBy(r => r.Descr) ?? Enumerable.Empty<PlnProdGanttFasiRiga>();
+
+    private IEnumerable<PlnProdGanttFasiRiga> CommesseDiFase(int idFaseRow) =>
+        RigheGantt?.Where(r => r.Livello == "C" && r.IdParent == idFaseRow).OrderBy(r => r.DateDaDes) ?? Enumerable.Empty<PlnProdGanttFasiRiga>();
+
+    private double TimelineWidthPx => _minDate.HasValue && _maxDate.HasValue
+        ? ((_maxDate.Value.DayNumber - _minDate.Value.DayNumber) + 2) * PxPerDay
+        : PxPerDay * 30;
+
+    private double BarLeft(DateOnly? d) =>
+        (!d.HasValue || !_minDate.HasValue) ? 0 : (d.Value.DayNumber - _minDate.Value.DayNumber) * PxPerDay;
+
+    private double BarWidth(DateOnly? from, DateOnly? to)
+    {
+        if (!from.HasValue) return PxPerDay;
+        var end = to ?? from.Value;
+        var days = Math.Max(1, (end.DayNumber - from.Value.DayNumber) + 1);
+        return days * PxPerDay;
+    }
+
+    private double? TodayX
+    {
+        get
+        {
+            if (!_minDate.HasValue || !_maxDate.HasValue) return null;
+            var today = DateOnly.FromDateTime(DateTime.Today);
+            if (today < _minDate.Value || today > _maxDate.Value) return null;
+            return (today.DayNumber - _minDate.Value.DayNumber) * PxPerDay;
+        }
+    }
+
+    private List<(double X, string Label)> MonthMarkers
+    {
+        get
+        {
+            var result = new List<(double, string)>();
+            if (!_minDate.HasValue || !_maxDate.HasValue) return result;
+
+            var current = new DateOnly(_minDate.Value.Year, _minDate.Value.Month, 1);
+            var culturaIt = CultureInfo.GetCultureInfo("it-IT");
+            while (current <= _maxDate.Value)
+            {
+                var x = Math.Max(0, (current.DayNumber - _minDate.Value.DayNumber)) * PxPerDay;
+                result.Add((x, current.ToString("MMM yyyy", culturaIt)));
+                current = current.AddMonths(1);
+            }
+            return result;
+        }
+    }
+
+    private List<(double X, string Label)> DayMarkers
+    {
+        get
+        {
+            var result = new List<(double, string)>();
+            if (!_minDate.HasValue || !_maxDate.HasValue) return result;
+
+            for (var d = _minDate.Value; d <= _maxDate.Value; d = d.AddDays(1))
+            {
+                var x = (d.DayNumber - _minDate.Value.DayNumber) * PxPerDay;
+                result.Add((x, d.Day.ToString()));
+            }
+            return result;
+        }
+    }
+
+    private List<(double X, string Label)> WeekMarkers
+    {
+        get
+        {
+            var result = new List<(double, string)>();
+            if (!_minDate.HasValue || !_maxDate.HasValue) return result;
+
+            // Parte dal lunedì della settimana che contiene _minDate.
+            var diffDaLunedi = ((int)_minDate.Value.DayOfWeek + 6) % 7;
+            var current = _minDate.Value.AddDays(-diffDaLunedi);
+
+            while (current <= _maxDate.Value)
+            {
+                var x = Math.Max(0, (current.DayNumber - _minDate.Value.DayNumber)) * PxPerDay;
+                var weekNum = ISOWeek.GetWeekOfYear(current.ToDateTime(TimeOnly.MinValue));
+                result.Add((x, $"WK {weekNum}"));
+                current = current.AddDays(7);
+            }
+            return result;
+        }
+    }
+
+    private static (string Chiaro, string Scuro) GetColoriAvanzamento(bool? saldo)
+    {
+        var chiave = saldo == true ? "S" : "A";
+        return (PaletteEasyPLM.GetColor("saldo", chiave, "light"), PaletteEasyPLM.GetColor("saldo", chiave, "dark"));
+    }
+
+    private static string GetCommTooltip(PlnProdGanttFasiRiga c) =>
+        $"{c.Descr}\nCommessa {c.NrComm} - {c.Brand}\nDal {c.DateDaDes:dd/MM/yyyy} al {c.DateADes:dd/MM/yyyy}\nAvanzamento: {(c.Progress ?? 0):N0}%";
+
+    private void ShowDialog(string title, string message)
+    {
+        _dialogTitle = title;
+        _dialogMessage = message;
+        _dialogVisible = true;
+    }
+}

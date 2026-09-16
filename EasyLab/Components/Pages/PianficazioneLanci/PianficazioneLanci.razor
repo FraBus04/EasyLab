@@ -31,11 +31,11 @@
         </button>
         <div class="d-flex align-items-end gap-2">
             <div class="header-divider"></div>
-            <button type="button" class="btn-icon-plain" @onclick="SelectSplitView" title="Tabella e Dettaglio" style="@(!DetailsPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
-                <img src="images/SplitCollps32.png" class="btn-icon-search" alt="Tabella e Dettaglio" />
+            <button type="button" class="btn-icon-plain" @onclick="ToggleListPane" title="Tabella" style="@(!ListPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
+                <img src="images/SplitOpen32.png" class="btn-icon-search" alt="Tabella" />
             </button>
-            <button type="button" class="btn-icon-plain" @onclick="SelectListOnly" title="Solo Tabella" style="@(DetailsPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
-                <img src="images/SplitOpen32.png" class="btn-icon-search" alt="Solo Tabella" />
+            <button type="button" class="btn-icon-plain" @onclick="ToggleDetailsPane" title="Dettaglio" style="@(!DetailsPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
+                <img src="images/SplitCollps32.png" class="btn-icon-search" alt="Dettaglio" />
             </button>
             <div class="header-divider"></div>
             <div class="btn-group" role="group">
@@ -136,11 +136,11 @@ else
         </button>
 
         <div class="header-divider"></div>
-        <button type="button" class="btn-icon-plain" @onclick="SelectSplitView" title="Tabella e Dettaglio" style="@(!DetailsPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
-            <img src="images/SplitCollps32.png" class="btn-icon-search" alt="Tabella e Dettaglio" />
+        <button type="button" class="btn-icon-plain" @onclick="ToggleListPane" title="Tabella" style="@(!ListPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
+            <img src="images/SplitOpen32.png" class="btn-icon-search" alt="Tabella" />
         </button>
-        <button type="button" class="btn-icon-plain" @onclick="SelectListOnly" title="Solo Tabella" style="@(DetailsPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
-            <img src="images/SplitOpen32.png" class="btn-icon-search" alt="Solo Tabella" />
+        <button type="button" class="btn-icon-plain" @onclick="ToggleDetailsPane" title="Dettaglio" style="@(!DetailsPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
+            <img src="images/SplitCollps32.png" class="btn-icon-search" alt="Dettaglio" />
         </button>
         <div class="header-divider"></div>
 
@@ -1563,16 +1563,18 @@ else if (VistaAttiva == "LanciCommesse")
         MostraDettagli = false;
     }
 
-    private void SelectSplitView()
+    private void ToggleListPane()
     {
-        ListPaneCollapsed = false;
-        DetailsPaneCollapsed = false;
+        if (!ListPaneCollapsed && DetailsPaneCollapsed)
+            return; // almeno un pannello deve restare selezionato
+        ListPaneCollapsed = !ListPaneCollapsed;
     }
 
-    private void SelectListOnly()
+    private void ToggleDetailsPane()
     {
-        ListPaneCollapsed = false;
-        DetailsPaneCollapsed = true;
+        if (!DetailsPaneCollapsed && ListPaneCollapsed)
+            return; // almeno un pannello deve restare selezionato
+        DetailsPaneCollapsed = !DetailsPaneCollapsed;
     }
 
     private async Task ExportToExcel()

@@ -64131,10 +64131,10 @@ public partial class SeaseTstContext : DbContext
             entity.Property(e => e.BHUtile).HasColumnName("B_HUtile");
             entity.Property(e => e.BNota).HasColumnName("B_Nota");
             entity.Property(e => e.BCdMag).HasColumnName("B_cdMag");
-            entity.Property(e => e.BQta).HasColumnName("B_Qta");
-            entity.Property(e => e.BQtaLorda).HasColumnName("B_QtaLorda");
-            entity.Property(e => e.BQtaEvaso).HasColumnName("B_QtaEvaso");
-            entity.Property(e => e.BQtaMov).HasColumnName("B_QtaMov");
+            entity.Property(e => e.BQta).HasColumnType("numeric(18, 3)").HasColumnName("B_Qta");
+            entity.Property(e => e.BQtaLorda).HasColumnType("numeric(18, 3)").HasColumnName("B_QtaLorda");
+            entity.Property(e => e.BQtaEvaso).HasColumnType("numeric(18, 3)").HasColumnName("B_QtaEvaso");
+            entity.Property(e => e.BQtaMov).HasColumnType("numeric(18, 3)").HasColumnName("B_QtaMov");
             entity.Property(e => e.CkInvLogistica).HasColumnName("ckInvLogistica");
             entity.Property(e => e.CkEvasoLogistica).HasColumnName("ckEvasoLogistica");
         });
@@ -64148,6 +64148,7 @@ public partial class SeaseTstContext : DbContext
             entity.Property(e => e.CdMag).HasColumnName("cdMag");
             entity.Property(e => e.CdCella).HasColumnName("cdCella");
             entity.Property(e => e.IdContatto).HasColumnName("idContatto");
+            entity.Property(e => e.Qta).HasColumnType("numeric(18, 3)");
         });
 
         modelBuilder.Entity<VProduzGeneCommesseTesta2>(entity =>

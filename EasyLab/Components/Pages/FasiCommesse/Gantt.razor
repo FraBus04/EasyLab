@@ -68,12 +68,9 @@
                               NullText="Nessun tipo commessa selezionato"
                               SelectAllText="Tutti i tipi commessa" />
         </div>
-        <div>
-            <label class="form-label small mb-0 d-block">Stato Commessa</label>
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-sm @(SoloCommesseAperte ? "btn-outline-orange" : "btn-orange-active")" @onclick="@(() => SoloCommesseAperte = false)">Tutte</button>
-                <button type="button" class="btn btn-sm @(SoloCommesseAperte ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => SoloCommesseAperte = true)">Solo Aperte</button>
-            </div>
+        <div class="d-flex flex-column align-items-center" style="gap:2px;">
+            <label class="form-label small mb-0" for="chkSoloAperte">Solo Aperte</label>
+            <input class="form-check-input m-0" type="checkbox" id="chkSoloAperte" style="cursor:pointer;accent-color:#ff8c00;" @bind="SoloCommesseAperte">
         </div>
 
         <button type="button" class="btn-icon-plain" @onclick="Cerca" title="Cerca">
@@ -83,6 +80,12 @@
         <button type="button" class="btn-icon-plain" @onclick="SalvaParametri" disabled="@isDbBusy" title="Salva Parametri" style="@(isDbBusy ? "opacity:0.5;cursor:default;" : null)">
             <img src="images/Param32.png" class="btn-icon-search" alt="Salva Parametri" />
         </button>
+
+        <div class="header-divider"></div>
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm @(VistaSettimanale ? "btn-outline-orange" : "btn-orange-active")" @onclick="@(() => VistaSettimanale = false)">Giorni</button>
+            <button type="button" class="btn btn-sm @(VistaSettimanale ? "btn-orange-active" : "btn-outline-orange")" @onclick="@(() => VistaSettimanale = true)">Settimane</button>
+        </div>
     </div>
 }
 
@@ -114,9 +117,19 @@ else if (RigheGantt != null)
                     {
                         <div class="gantt-month-marker" style="left:@(marker.X.ToString(CultureInfo.InvariantCulture))px;">@marker.Label</div>
                     }
-                    @foreach (var giorno in DayMarkers)
+                    @if (VistaSettimanale)
                     {
-                        <div class="gantt-day-marker" style="left:@(giorno.X.ToString(CultureInfo.InvariantCulture))px;">@giorno.Label</div>
+                        @foreach (var settimana in WeekMarkers)
+                        {
+                            <div class="gantt-week-marker" style="left:@(settimana.X.ToString(CultureInfo.InvariantCulture))px;">@settimana.Label</div>
+                        }
+                    }
+                    else
+                    {
+                        @foreach (var giorno in DayMarkers)
+                        {
+                            <div class="gantt-day-marker" style="left:@(giorno.X.ToString(CultureInfo.InvariantCulture))px;">@giorno.Label</div>
+                        }
                     }
                     @if (TodayX is double tx0)
                     {
@@ -286,6 +299,7 @@ else if (RigheGantt != null)
 
     private bool SoloCommesseAperte = false;
     private bool MostraFiltri = true;
+    private bool VistaSettimanale = false;
 
     private List<PlnProdGanttRiga>? RigheGantt;
     private HashSet<int> ExpandedCommesse = new();
@@ -657,6 +671,28 @@ else if (RigheGantt != null)
             {
                 var x = (d.DayNumber - _minDate.Value.DayNumber) * PxPerDay;
                 result.Add((x, d.Day.ToString()));
+            }
+            return result;
+        }
+    }
+
+    private List<(double X, string Label)> WeekMarkers
+    {
+        get
+        {
+            var result = new List<(double, string)>();
+            if (!_minDate.HasValue || !_maxDate.HasValue) return result;
+
+            // Parte dal lunedì della settimana che contiene _minDate.
+            var diffDaLunedi = ((int)_minDate.Value.DayOfWeek + 6) % 7;
+            var current = _minDate.Value.AddDays(-diffDaLunedi);
+
+            while (current <= _maxDate.Value)
+            {
+                var x = Math.Max(0, (current.DayNumber - _minDate.Value.DayNumber)) * PxPerDay;
+                var weekNum = ISOWeek.GetWeekOfYear(current.ToDateTime(TimeOnly.MinValue));
+                result.Add((x, $"WK {weekNum}"));
+                current = current.AddDays(7);
             }
             return result;
         }
