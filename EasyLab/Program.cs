@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +23,7 @@ builder.Services.AddDevExpressBlazor();
 
 builder.Services.AddSingleton<StateKeeperService>();
 builder.Services.AddScoped<DropdownPortalService>();
+builder.Services.AddMemoryCache();
 
 
 
@@ -139,6 +141,62 @@ app.MapPost("/auth/change-password", async (
 
     await signInManager.SignOutAsync();
     return Results.LocalRedirect("/login?pwdchanged=1");
+}).RequireAuthorization();
+
+// Serve i file della cartella Documentale di un articolo (letti dal filesystem del server).
+// Usato dalla tab "Documentale" di Articoli: l'anteprima (img/iframe/video/audio) punta
+// direttamente a questo URL invece di incorporare il file come data URI, perche' Chrome
+// non renderizza in modo affidabile PDF/video di dimensioni non banali passati come data URI.
+app.MapGet("/documentale/file", async (
+    string cartella,
+    string file,
+    bool? scarica,
+    IDbContextFactory<SeaseTstContext> dbFactory,
+    IMemoryCache cache) =>
+{
+    if (string.IsNullOrWhiteSpace(cartella) || string.IsNullOrWhiteSpace(file))
+        return Results.BadRequest();
+
+    // Il nome file deve essere un nome semplice: niente separatori di percorso o "..".
+    if (file.IndexOfAny(new[] { '/', '\\' }) >= 0 || file.Contains(".."))
+        return Results.BadRequest();
+
+    // Un client (es. il viewer PDF del browser) puo' emettere molte richieste Range per
+    // lo stesso file: senza cache ognuna riapriva una connessione al db per rileggere
+    // doc.Classi_Path, rendendo l'apertura visibilmente lenta.
+    var radici = await cache.GetOrCreateAsync("documentale:radici", async entry =>
+    {
+        entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+        using var context = await dbFactory.CreateDbContextAsync();
+        return await context.ClassiPaths.AsNoTracking()
+            .Select(c => c.Path)
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .ToListAsync();
+    }) ?? new List<string?>();
+
+    // La cartella richiesta deve ricadere sotto una delle radici configurate in doc.Classi_Path:
+    // evita che il parametro "cartella" venga usato per leggere file arbitrari dal server.
+    string cartellaNormalizzata;
+    try
+    {
+        cartellaNormalizzata = Path.GetFullPath(cartella);
+    }
+    catch
+    {
+        return Results.BadRequest();
+    }
+
+    var valida = radici.Any(r => cartellaNormalizzata.StartsWith(Path.GetFullPath(r!), StringComparison.OrdinalIgnoreCase));
+    if (!valida) return Results.StatusCode(StatusCodes.Status403Forbidden);
+
+    var percorsoCompleto = Path.Combine(cartellaNormalizzata, file);
+    if (!System.IO.File.Exists(percorsoCompleto)) return Results.NotFound();
+
+    var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+    if (!provider.TryGetContentType(percorsoCompleto, out var contentType))
+        contentType = "application/octet-stream";
+
+    return Results.File(percorsoCompleto, contentType, fileDownloadName: scarica == true ? file : null, enableRangeProcessing: true);
 }).RequireAuthorization();
 
 app.MapRazorComponents<App>()

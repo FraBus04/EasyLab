@@ -480,6 +480,7 @@
                             <button class="@(ActiveTab == "care" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "care")">CareLabel</button>
                             <button class="@(ActiveTab == "ordini"    ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "ordini")">Stato ordine</button>
                             <button class="@(ActiveTab == "note"      ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "note")">Note Aggiuntive</button>
+                            <button class="@(ActiveTab == "documentale" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "documentale")">Documentale</button>
                         </div>
                         <div class="p-2" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;">
                             @if (ActiveTab == "general")
@@ -510,6 +511,10 @@
                             else if (ActiveTab == "note")
                             {
                                 <ArticoliNoteAggiuntive ArticoloSelezionato="@ArticoloSelezionato"></ArticoliNoteAggiuntive>
+                            }
+                            else if (ActiveTab == "documentale")
+                            {
+                                <ArticoliDocumentale ArticoloSelezionato="@ArticoloSelezionato"></ArticoliDocumentale>
                             }
                         </div>
                     </div>
