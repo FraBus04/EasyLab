@@ -1,84 +1,118 @@
 @using EasyLab.Models
+@using EasyLab.Servizi
 @using System.IO
+@using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.EntityFrameworkCore
 @inject IDbContextFactory<SeaseTstContext> DbFactory
+@inject AviTranscoderService AviTranscoder
+@inject OfficeToPdfConverterService OfficeConverter
+@inject IJSRuntime JSRuntime
 
 @if (ArticoloSelezionato != null)
 {
     <div class="d-flex flex-column h-100" style="min-height:0;">
-        <div class="p-2 border-bottom small text-muted flex-shrink-0 documentale-path-bar">
-            <strong>Percorso:</strong> @CartellaPath
+        <div class="p-2 border-bottom small text-muted flex-shrink-0 documentale-path-bar d-flex align-items-center justify-content-between gap-2">
+            <span><strong>Percorso:</strong> @CartellaPath</span>
+            <label class="btn-icon-plain mb-0 d-flex align-items-center flex-shrink-0"
+                   style="@((CartellaEsiste && !CaricamentoUpload) ? "cursor:pointer;" : "cursor:default;opacity:0.4;")"
+                   title="Allega nuovo file">
+                @if (CaricamentoUpload)
+                {
+                    <img src="/images/GIF_Criceto_2x.gif" style="width:20px;height:20px;" alt="Caricamento" />
+                }
+                else
+                {
+                    <img src="images/Allega32.svg" class="btn-icon-search" alt="Allega nuovo file" />
+                }
+                <InputFile OnChange="CaricaNuovoFile" disabled="@(!CartellaEsiste || CaricamentoUpload)" style="display:none;" />
+            </label>
         </div>
-        <div class="d-flex flex-grow-1" style="min-height:0;">
-            <div class="border-end flex-shrink-0" style="width:200px; overflow-y:auto;">
-                @if (!CartellaEsiste)
-                {
-                    <p class="text-muted small p-2">Cartella non trovata.</p>
-                }
-                else if (File.Count == 0)
-                {
-                    <p class="text-muted small p-2">Nessun file presente.</p>
-                }
-                else
-                {
-                    <ul class="list-group list-group-flush">
-                        @foreach (var file in File)
-                        {
-                            <li class="list-group-item list-group-item-action d-flex align-items-center gap-1 py-1 px-2 small @(file == FileSelezionato ? "active" : "")"
-                                style="cursor:pointer;"
-                                @onclick="@(() => SelezionaFile(file))">
-                                <img src="images/@IconaFile(file)" style="width:16px;height:16px;flex-shrink:0;" alt="" />
-                                <span class="text-truncate">@file</span>
-                            </li>
-                        }
-                    </ul>
-                }
-            </div>
-            <div class="flex-grow-1 p-2 position-relative" style="overflow:auto; min-width:0;">
-                @if (FileSelezionato == null)
-                {
-                    <p class="text-muted">Nessun file selezionato.</p>
-                }
-                else if (EImmagine(FileSelezionato))
-                {
-                    <img src="@FileUrl(FileSelezionato)" style="max-width:100%; max-height:100%;" @onload="FineCaricamento" @onerror="FineCaricamentoConErrore" />
-                }
-                else if (EPdf(FileSelezionato) || ETesto(FileSelezionato))
-                {
-                    <iframe src="@FileUrl(FileSelezionato)" style="width:100%; height:100%; border:none;" @onload="FineCaricamento"></iframe>
-                }
-                else if (EVideo(FileSelezionato))
-                {
-                    <video controls autoplay style="max-width:100%; max-height:100%;" @onloadeddata="FineCaricamento" @onerror="FineCaricamentoConErrore">
-                        <source src="@FileUrl(FileSelezionato)" type="@ContentType(FileSelezionato)" />
-                    </video>
-                }
-                else if (EAudio(FileSelezionato))
-                {
-                    <audio controls autoplay style="width:100%;" @onloadeddata="FineCaricamento" @onerror="FineCaricamentoConErrore">
-                        <source src="@FileUrl(FileSelezionato)" type="@ContentType(FileSelezionato)" />
-                    </audio>
-                }
-                else
-                {
-                    <div class="d-flex flex-column align-items-center justify-content-center h-100 gap-2">
-                        <img src="images/@IconaFile(FileSelezionato)" style="width:64px;height:64px;" alt="" />
-                        <span>@FileSelezionato</span>
-                        <a class="btn btn-sm btn-outline-secondary" href="@FileUrl(FileSelezionato, scarica: true)">Scarica</a>
-                        <span class="text-muted small">Anteprima non disponibile per questo tipo di file.</span>
-                    </div>
-                }
-                @if (CaricamentoAnteprima)
-                {
-                    <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white bg-opacity-75">
-                        <img src="/images/GIF_Criceto_2x.gif" alt="Caricamento" style="width:64px;height:64px;" />
-                    </div>
-                }
-                @if (ErroreAnteprima)
-                {
-                    <p class="text-muted">Impossibile visualizzare il file "@FileSelezionato".</p>
-                }
-            </div>
+        <div class="flex-grow-1" style="min-height:0;">
+            <DxSplitter Height="100%">
+                <Panes>
+                    <DxSplitterPane Size="200px" MinSize="120px">
+                        <div style="height:100%; overflow-y:auto;">
+                            @if (!CartellaEsiste)
+                            {
+                                <p class="text-muted small p-2">Cartella non trovata.</p>
+                            }
+                            else if (File.Count == 0)
+                            {
+                                <p class="text-muted small p-2">Nessun file presente.</p>
+                            }
+                            else
+                            {
+                                <ul class="list-group list-group-flush">
+                                    @foreach (var file in File)
+                                    {
+                                        <li class="list-group-item list-group-item-action d-flex align-items-center gap-1 py-1 px-2 small @(file == FileSelezionato ? "active" : "")"
+                                            style="cursor:pointer;"
+                                            @onclick="@(() => SelezionaFile(file))"
+                                            @ondblclick="@(() => ApriInNuovaScheda(file))">
+                                            <img src="images/@IconaFile(file)" style="width:16px;height:16px;flex-shrink:0;" alt="" />
+                                            <span class="text-truncate">@file</span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    </DxSplitterPane>
+                    <DxSplitterPane MinSize="200px">
+                        <div class="p-2 position-relative" style="height:100%; overflow:auto;">
+                            @if (FileSelezionato == null)
+                            {
+                                <p class="text-muted">Nessun file selezionato.</p>
+                            }
+                            else if (EImmagine(FileSelezionato))
+                            {
+                                <img src="@FileUrl(FileSelezionato)" style="max-width:100%; max-height:100%;" @onload="FineCaricamento" @onerror="FineCaricamentoConErrore" />
+                            }
+                            else if ((EPdf(FileSelezionato) || EOffice(FileSelezionato)) && !ErroreAnteprima)
+                            {
+                                <iframe src="@FileUrl(FileSelezionato)" style="width:100%; height:100%; border:none;" @onload="FineCaricamento"></iframe>
+                            }
+                            else if (ETesto(FileSelezionato))
+                            {
+                                @if (TestoAnteprima != null)
+                                {
+                                    <pre class="small" style="white-space:pre-wrap; word-break:break-word;">@TestoAnteprima</pre>
+                                }
+                            }
+                            else if (EVideo(FileSelezionato) && !ErroreAnteprima)
+                            {
+                                <video controls autoplay style="max-width:100%; max-height:100%;" @onloadeddata="FineCaricamento" @onerror="FineCaricamentoConErrore">
+                                    <source src="@FileUrl(FileSelezionato)" type="@ContentType(FileSelezionato)" />
+                                </video>
+                            }
+                            else if (EAudio(FileSelezionato))
+                            {
+                                <audio controls autoplay style="width:100%;" @onloadeddata="FineCaricamento" @onerror="FineCaricamentoConErrore">
+                                    <source src="@FileUrl(FileSelezionato)" type="@ContentType(FileSelezionato)" />
+                                </audio>
+                            }
+                            else
+                            {
+                                <div class="d-flex flex-column align-items-center justify-content-center h-100 gap-2">
+                                    <img src="images/@IconaFile(FileSelezionato)" style="width:64px;height:64px;" alt="" />
+                                    <span>@FileSelezionato</span>
+                                    <a class="btn btn-sm btn-outline-secondary" href="@FileUrl(FileSelezionato, scarica: true)" data-enhance-nav="false">Scarica</a>
+                                    <span class="text-muted small">Anteprima non disponibile per questo tipo di file.</span>
+                                </div>
+                            }
+                            @if (CaricamentoAnteprima)
+                            {
+                                <div class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white bg-opacity-75">
+                                    <img src="/images/GIF_Criceto_2x.gif" alt="Caricamento" style="width:64px;height:64px;" />
+                                </div>
+                            }
+                            @if (ErroreAnteprima)
+                            {
+                                <p class="text-muted">Impossibile visualizzare il file "@FileSelezionato".</p>
+                            }
+                        </div>
+                    </DxSplitterPane>
+                </Panes>
+            </DxSplitter>
         </div>
     </div>
 }
@@ -100,7 +134,9 @@ else
     private bool CartellaEsiste;
     private string CartellaPath = "";
     private bool CaricamentoAnteprima;
+    private bool CaricamentoUpload;
     private bool ErroreAnteprima;
+    private string? TestoAnteprima;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -118,7 +154,9 @@ else
         CartellaPath = "";
         CartellaEsiste = false;
         CaricamentoAnteprima = false;
+        CaricamentoUpload = false;
         ErroreAnteprima = false;
+        TestoAnteprima = null;
 
         if (ArticoloSelezionato == null) return;
 
@@ -167,14 +205,118 @@ else
         }
     }
 
-    private void SelezionaFile(string file)
+    private async Task CaricaNuovoFile(InputFileChangeEventArgs e)
     {
+        if (!CartellaEsiste || CaricamentoUpload) return;
+
+        CaricamentoUpload = true;
+        ErroreAnteprima = false;
+        StateHasChanged();
+
+        try
+        {
+            var browserFile = e.File;
+            var destinazione = Path.Combine(CartellaPath, browserFile.Name);
+
+            await using (var stream = browserFile.OpenReadStream(maxAllowedSize: 500L * 1024 * 1024))
+            await using (var writer = System.IO.File.Create(destinazione))
+            {
+                await stream.CopyToAsync(writer);
+            }
+
+            File = Directory.GetFiles(CartellaPath)
+                .Select(Path.GetFileName)
+                .Where(f => f != null)
+                .Select(f => f!)
+                .OrderBy(f => f)
+                .ToList();
+
+            CaricamentoUpload = false;
+            await SelezionaFile(browserFile.Name);
+        }
+        catch
+        {
+            CaricamentoUpload = false;
+            ErroreAnteprima = true;
+        }
+    }
+
+    private async Task SelezionaFile(string file)
+    {
+        // Ricliccare lo stesso file gia' selezionato non deve rifare nulla: il browser non
+        // "ricarica" un <img>/<video> il cui src non e' cambiato, quindi onload/onloadeddata
+        // non scatterebbe piu' e lo spinner (appena riacceso qui sotto) resterebbe bloccato.
+        if (file == FileSelezionato && !ErroreAnteprima)
+        {
+            return;
+        }
+
         FileSelezionato = file;
         ErroreAnteprima = false;
-        // Il visualizzatore (img/iframe/video/audio) carica il file da un URL: la spunta si
-        // spegne all'onload/onerror per gli elementi che lo supportano, o subito per il
-        // fallback "Scarica" che non ha nulla da attendere.
+        TestoAnteprima = null;
+        CaricamentoAnteprima = false;
+
+        if (ETesto(file))
+        {
+            try
+            {
+                TestoAnteprima = System.IO.File.ReadAllText(Path.Combine(CartellaPath, file));
+            }
+            catch (IOException)
+            {
+                ErroreAnteprima = true;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                ErroreAnteprima = true;
+            }
+            return;
+        }
+
+        if (EAvi(file))
+        {
+            CaricamentoAnteprima = true;
+            StateHasChanged();
+            try
+            {
+                await AviTranscoder.GetMp4Async(Path.Combine(CartellaPath, file));
+            }
+            catch
+            {
+                ErroreAnteprima = true;
+            }
+            finally
+            {
+                CaricamentoAnteprima = false;
+            }
+            return;
+        }
+
+        if (EOffice(file))
+        {
+            CaricamentoAnteprima = true;
+            StateHasChanged();
+            try
+            {
+                await OfficeConverter.GetPdfAsync(Path.Combine(CartellaPath, file));
+            }
+            catch
+            {
+                ErroreAnteprima = true;
+            }
+            finally
+            {
+                CaricamentoAnteprima = false;
+            }
+            return;
+        }
+
         CaricamentoAnteprima = HaAnteprimaDaCaricare(file);
+    }
+
+    private async Task ApriInNuovaScheda(string file)
+    {
+        await JSRuntime.InvokeVoidAsync("open", FileUrl(file), "_blank");
     }
 
     private void FineCaricamento()
@@ -189,17 +331,21 @@ else
     }
 
     private static bool HaAnteprimaDaCaricare(string file) =>
-        EImmagine(file) || EPdf(file) || EVideo(file) || EAudio(file) || ETesto(file);
+        EImmagine(file) || EPdf(file) || EOffice(file) || EVideo(file) || EAudio(file);
 
     private string FileUrl(string file, bool scarica = false)
     {
         var url = $"/documentale/file?cartella={Uri.EscapeDataString(CartellaPath)}&file={Uri.EscapeDataString(file)}";
-        return scarica ? url + "&scarica=1" : url;
+        return scarica ? url + "&scarica=true" : url;
     }
 
-    private static bool EImmagine(string file) => Path.GetExtension(file).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp";
+    private static bool EImmagine(string file) => Path.GetExtension(file).ToLowerInvariant() is ".jpg" or ".jpeg" or ".png" or ".gif" or ".bmp" or ".webp" or ".svg";
 
     private static bool EPdf(string file) => Path.GetExtension(file).ToLowerInvariant() == ".pdf";
+
+    private static bool EOffice(string file) => Path.GetExtension(file).ToLowerInvariant() is ".ppt" or ".pptx" or ".doc" or ".docx" or ".odt" or ".xls" or ".xlsx" or ".rtf";
+
+    private static bool EAvi(string file) => Path.GetExtension(file).ToLowerInvariant() == ".avi";
 
     private static bool EVideo(string file) => Path.GetExtension(file).ToLowerInvariant() is ".mp4" or ".avi" or ".mov" or ".wmv";
 
@@ -234,9 +380,9 @@ else
         ".gif" => "image/gif",
         ".bmp" => "image/bmp",
         ".webp" => "image/webp",
+        ".svg" => "image/svg+xml",
         ".pdf" => "application/pdf",
-        ".mp4" => "video/mp4",
-        ".avi" => "video/x-msvideo",
+        ".mp4" or ".avi" => "video/mp4",
         ".mov" => "video/quicktime",
         ".wmv" => "video/x-ms-wmv",
         ".mp3" => "audio/mpeg",

@@ -101,7 +101,7 @@ else if (RigheGantt != null)
     }
     else
     {
-        <div class="gantt-scroll">
+        <div class="gantt-scroll" style="max-height:@(MostraFiltri ? "calc(100vh - 216px)" : "calc(100vh - 161px)");">
             <div class="gantt-header-row">
                 <div class="gantt-label-col gantt-corner gantt-header-cols">
                     <span class="gantt-col-descr">Descrizione</span>

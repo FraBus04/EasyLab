@@ -24,6 +24,14 @@ builder.Services.AddDevExpressBlazor();
 builder.Services.AddSingleton<StateKeeperService>();
 builder.Services.AddScoped<DropdownPortalService>();
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton(sp => new AviTranscoderService
+{
+    FfmpegPath = builder.Configuration["Ffmpeg:Path"] ?? "ffmpeg"
+});
+builder.Services.AddSingleton(sp => new OfficeToPdfConverterService
+{
+    SofficePath = builder.Configuration["LibreOffice:Path"] ?? "soffice"
+});
 
 
 
@@ -152,7 +160,9 @@ app.MapGet("/documentale/file", async (
     string file,
     bool? scarica,
     IDbContextFactory<SeaseTstContext> dbFactory,
-    IMemoryCache cache) =>
+    IMemoryCache cache,
+    AviTranscoderService aviTranscoder,
+    OfficeToPdfConverterService officeConverter) =>
 {
     if (string.IsNullOrWhiteSpace(cartella) || string.IsNullOrWhiteSpace(file))
         return Results.BadRequest();
@@ -191,6 +201,39 @@ app.MapGet("/documentale/file", async (
 
     var percorsoCompleto = Path.Combine(cartellaNormalizzata, file);
     if (!System.IO.File.Exists(percorsoCompleto)) return Results.NotFound();
+
+    // I browser non riproducono l'AVI nel tag <video> (codec/contenitore non supportati):
+    // per l'anteprima (non per il download) lo si converte al volo in mp4 con ffmpeg,
+    // in cache su disco cosi' la conversione avviene una sola volta per file.
+    if (Path.GetExtension(percorsoCompleto).Equals(".avi", StringComparison.OrdinalIgnoreCase) && scarica != true)
+    {
+        try
+        {
+            var mp4 = await aviTranscoder.GetMp4Async(percorsoCompleto);
+            return Results.File(mp4, "video/mp4", enableRangeProcessing: true);
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status503ServiceUnavailable, title: "Conversione video non riuscita");
+        }
+    }
+
+    // DevExpress non ha un visualizzatore per Word/Excel/PowerPoint: per l'anteprima
+    // (non per il download) questi formati vengono convertiti al volo in PDF con
+    // LibreOffice e mostrati con lo stesso iframe gia' usato per i PDF nativi.
+    string[] estensioniOffice = [".ppt", ".pptx", ".doc", ".docx", ".odt", ".xls", ".xlsx", ".rtf"];
+    if (estensioniOffice.Contains(Path.GetExtension(percorsoCompleto).ToLowerInvariant()) && scarica != true)
+    {
+        try
+        {
+            var pdf = await officeConverter.GetPdfAsync(percorsoCompleto);
+            return Results.File(pdf, "application/pdf", enableRangeProcessing: true);
+        }
+        catch (Exception ex)
+        {
+            return Results.Problem(detail: ex.Message, statusCode: StatusCodes.Status503ServiceUnavailable, title: "Conversione documento non riuscita");
+        }
+    }
 
     var provider = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
     if (!provider.TryGetContentType(percorsoCompleto, out var contentType))

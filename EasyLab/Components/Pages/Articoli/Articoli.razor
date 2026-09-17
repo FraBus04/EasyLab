@@ -33,32 +33,6 @@
             </svg>
             Mostra filtri
         </button>
-        <div class="d-flex align-items-end gap-2">
-            <div class="header-divider"></div>
-            <button type="button" class="btn-icon-plain" @onclick="ToggleListPane" title="Tabella" style="@(!ListPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
-                <img src="images/SplitOpen32.png" class="btn-icon-search" alt="Tabella" />
-            </button>
-            <button type="button" class="btn-icon-plain" @onclick="ToggleDetailsPane" title="Dettaglio" style="@(!DetailsPaneCollapsed ? "background-color:rgba(255,140,0,0.15);border-radius:6px;" : null)">
-                <img src="images/SplitCollps32.png" class="btn-icon-search" alt="Dettaglio" />
-            </button>
-            <div class="header-divider"></div>
-            <DxMenu CssClass="modern-menu" Title="">
-                <Items>
-                    <DxMenuItem CssClass="border-0">
-                        <TextTemplate>
-                            <img src="images/print_32x323.png" class="btn-icon-search" alt="Funzioni" />
-                        </TextTemplate>
-                        <Items>
-                            <DxMenuItem Click="ExportToExcel">
-                            <TextTemplate>
-                                <img src="images/excel.png" style="width:16px;height:16px;" class="me-1" /> Esporta Excel
-                            </TextTemplate>
-                        </DxMenuItem>
-                        </Items>
-                    </DxMenuItem>
-                </Items>
-            </DxMenu>
-        </div>
     </div>
 }
 
@@ -145,7 +119,7 @@
     </div>
 }
 
-<DxSplitter Height="@(MostraFiltri ? "calc(100vh - 300px)" : "calc(100vh - 212px)")">
+<DxSplitter Height="@(MostraFiltri ? "calc(100vh - 216px)" : "calc(100vh - 161px)")">
     <Panes>
         <DxSplitterPane Size="60%" MinSize="300px" @bind-Collapsed="@ListPaneCollapsed">
             <DxGrid @ref="MyGrid"
