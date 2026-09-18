@@ -1,3 +1,4 @@
+using System.Data;
 using DevExpress.Blazor;
 using EasyLab.Components;
 using EasyLab.Components.Utils;
@@ -244,52 +245,99 @@ app.MapGet("/documentale/file", async (
     return Results.File(percorsoCompleto, contentType, fileDownloadName: scarica == true ? file : null, enableRangeProcessing: true);
 }).RequireAuthorization();
 
-// Genera il PDF del report .rdlc originale (cartella wwwroot/Report) per gli id materiale
-// indicati, usato dal menu "Stampa" di Articoli che apre l'URL in una nuova scheda per la
-// stampa. Rendering con ReportViewerCore.NETCore (Microsoft.Reporting.NETCore.LocalReport)
-app.MapGet("/report/stampa", async (
+// Helper comuni ai due endpoint di stampa report sotto: validazione del nome file .rdlc (niente
+// separatore di percorso o "..", stesso controllo di /documentale/file), parsing degli id in
+// query string, e rendering finale con ReportViewerCore.NETCore (Microsoft.Reporting.NETCore.LocalReport).
+static string? RisolviPercorsoReport(string nome, IWebHostEnvironment env)
+{
+    if (string.IsNullOrWhiteSpace(nome) || nome.IndexOfAny(new[] { '/', '\\' }) >= 0 || nome.Contains(".."))
+        return null;
+
+    var percorso = Path.Combine(env.WebRootPath, "Report", nome);
+    if (!string.Equals(Path.GetExtension(percorso), ".rdlc", StringComparison.OrdinalIgnoreCase)
+        || !System.IO.File.Exists(percorso))
+        return null;
+
+    return percorso;
+}
+
+static List<int> LeggiIds(string ids) => (ids ?? string.Empty)
+    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+    .Select(s => int.TryParse(s, out var id) ? id : (int?)null)
+    .Where(id => id.HasValue)
+    .Select(id => id!.Value)
+    .Distinct()
+    .ToList();
+
+static byte[] RenderizzaReport(string percorsoReport, DataTable tabella, bool immaginiEsterne = false)
+{
+    using var fs = System.IO.File.OpenRead(percorsoReport);
+    var report = new Microsoft.Reporting.NETCore.LocalReport();
+    report.LoadReportDefinition(fs);
+    report.DataSources.Add(new Microsoft.Reporting.NETCore.ReportDataSource("DataSet1", tabella));
+    report.EnableExternalImages = immaginiEsterne;
+    return report.Render("PDF");
+}
+
+// Report basati su VBasiMateriali (materiali): "ids" sono IdMat.
+app.MapGet("/report/stampa-materiali", async (
     string nome,
     string ids,
     IDbContextFactory<SeaseTstContext> dbFactory,
     IWebHostEnvironment env) =>
 {
-    // Nessun separatore di percorso o "..": evita che "nome" venga usato per leggere file
-    // arbitrari dal server (stesso controllo di /documentale/file).
-    if (string.IsNullOrWhiteSpace(nome) || nome.IndexOfAny(new[] { '/', '\\' }) >= 0 || nome.Contains(".."))
-        return Results.BadRequest();
-
-    var percorsoReport = Path.Combine(env.WebRootPath, "Report", nome);
-    if (!string.Equals(Path.GetExtension(percorsoReport), ".rdlc", StringComparison.OrdinalIgnoreCase)
-        || !System.IO.File.Exists(percorsoReport))
+    var percorsoReport = RisolviPercorsoReport(nome, env);
+    if (percorsoReport == null)
         return Results.NotFound();
 
-    var idMat = (ids ?? string.Empty)
-        .Split(',', StringSplitOptions.RemoveEmptyEntries)
-        .Select(s => int.TryParse(s, out var id) ? id : (int?)null)
-        .Where(id => id.HasValue)
-        .Select(id => id!.Value)
-        .Distinct()
-        .ToList();
-
+    var idMat = LeggiIds(ids);
     if (idMat.Count == 0)
         return Results.BadRequest("Nessun materiale selezionato.");
 
     using var context = await dbFactory.CreateDbContextAsync();
-
     var righe = await context.VBasiMaterialis.AsNoTracking()
         .Where(m => idMat.Contains(m.IdMat))
         .ToListAsync();
 
     var tabella = GestioneMaterialiRdlcBuilder.Build(righe);
 
-    using var fs = System.IO.File.OpenRead(percorsoReport);
-    var report = new Microsoft.Reporting.NETCore.LocalReport();
-    report.LoadReportDefinition(fs);
-    report.DataSources.Add(new Microsoft.Reporting.NETCore.ReportDataSource("DataSet1", tabella));
+    return Results.File(RenderizzaReport(percorsoReport, tabella), "application/pdf");
+}).RequireAuthorization();
 
-    byte[] pdf = report.Render("PDF");
+// Report basati su VElencoProdotti2 (prodotti): "ids" sono Id modello (IdMod), non IdMat.
+app.MapGet("/report/stampa-prodotti", async (
+    string nome,
+    string ids,
+    IDbContextFactory<SeaseTstContext> dbFactory,
+    IWebHostEnvironment env) =>
+{
+    var percorsoReport = RisolviPercorsoReport(nome, env);
+    if (percorsoReport == null)
+        return Results.NotFound();
 
-    return Results.File(pdf, "application/pdf");
+    var idMod = LeggiIds(ids);
+    if (idMod.Count == 0)
+        return Results.BadRequest("Nessun prodotto selezionato.");
+
+    using var context = await dbFactory.CreateDbContextAsync();
+    var righe = await context.VElencoProdotti2s.AsNoTracking()
+        .Where(m => idMod.Contains(m.Id))
+        .ToListAsync();
+
+    var idContatti = righe.Select(r => r.IdContatto).Distinct().ToList();
+    var loghi = await context.Contattis.AsNoTracking()
+        .Where(c => idContatti.Contains(c.Id))
+        .ToDictionaryAsync(c => c.Id, c => c.PathLogo);
+
+    var idStatoMod = righe.Where(r => r.IdStatoMod.HasValue).Select(r => r.IdStatoMod!.Value).Distinct().ToList();
+    var statiModello = await context.TabStatoModellos.AsNoTracking()
+        .Where(s => idStatoMod.Contains(s.Id))
+        .ToDictionaryAsync(s => s.Id, s => (s.StatoMod, s.Cod));
+
+    var tabella = GestioneProdottiRdlcBuilder.Build(righe, loghi, statiModello);
+
+    // A differenza dei report materiali, questo referenzia immagini esterne (foto prodotto/logo).
+    return Results.File(RenderizzaReport(percorsoReport, tabella, immaginiEsterne: true), "application/pdf");
 }).RequireAuthorization();
 
 app.MapRazorComponents<App>()

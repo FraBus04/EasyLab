@@ -23,7 +23,6 @@
     <Loading></Loading>
 }
 
-
 @if (!MostraFiltri)
 {
     <div class="articoli-toolbar d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
@@ -109,9 +108,28 @@
                         <img src="images/print_32x323.png" class="btn-icon-search" alt="Funzioni" />
                     </TextTemplate>
                     <Items>
-                            <DxMenuItem Click='@(() => StampaReport("Report_Gestione_Materiali_Report_Tecnici.rdlc"))'>
+                        <DxMenuItem Click='@(() => StampaReportMateriali("Report_Gestione_Materiali_Report_Tecnici.rdlc"))'>
                             <TextTemplate>
-                                <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Report Gestione Materiali
+                                <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Report Anagrafico Tecnico
+                            </TextTemplate>
+                        </DxMenuItem>
+
+                        <DxMenuItem Click='@(() => StampaReportMateriali("Report_Gestione_Materiali2.rdlc"))'>
+                            <TextTemplate>
+                                <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Report per Fornitore (Sel)
+                            </TextTemplate>
+                        </DxMenuItem>
+
+                        <DxMenuItem Click='@(() => StampaReportMateriali("Report_Gestione_Materiali_Report_ListinoBase.rdlc"))'>
+                            <TextTemplate>
+                                <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Report Anagrafico Listino
+                            </TextTemplate>
+                        </DxMenuItem>
+
+                        <DxMenuItem Click='@(() => StampaReportProdotti("Report_Modellario_Prodotto1.rdlc"))'>
+                            <TextTemplate>
+                                    <img src="images/PrintSVG1.svg" style="width:16px;height:16px;" class="me-1" /> Report Modellario Prodotto
+
                             </TextTemplate>
                         </DxMenuItem>
 
@@ -401,17 +419,17 @@
                             </div>
                         </div>
                     }
+                    else
+                    {
+                        <button type="button" class="btn btn-sm d-flex align-items-center gap-1 mb-2 align-self-start"
+                                style="background-color:#ff8c00;color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;opacity:0.85;"
+                                @onclick="ShowDetails">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
+                            </svg>
+                            Dettagli
+                        </button>
                     }
-                else
-                {
-                    <button type="button" class="btn btn-sm d-flex align-items-center gap-1 mb-2 align-self-start"
-                            style="background-color:#ff8c00;color:#fff;border:none;border-radius:16px;padding:3px 14px;font-size:0.78rem;opacity:0.85;"
-                            @onclick="ShowDetails">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                            <path d="M6 10.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z" />
-                        </svg>
-                        Dettagli
-                    </button>
                 }
                     <div class="detail-tabs-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
                         <div class="art-tab-nav flex-shrink-0">
@@ -1067,46 +1085,64 @@
         }
     }
 
-    private async Task StampaReport(string nome)
+    private void AvvisoReportNonDisponibile(string testo)
+    {
+        ToastService.ShowToast(new ToastOptions
+        {
+            Title = "Report non disponibile",
+            Text = testo,
+            RenderStyle = ToastRenderStyle.Warning,
+            ProviderName = "MainToastProvider"
+        });
+    }
+
+    private async Task StampaReportMateriali(string nome)
     {
         if (DataSource == null || DataSource.Count == 0)
         {
-            ToastService.ShowToast(new ToastOptions
-            {
-                Title = "Report non disponibile",
-                Text = "Non ci sono articoli da stampare: applica un filtro prima di stampare.",
-                RenderStyle = ToastRenderStyle.Warning,
-                ProviderName = "MainToastProvider"
-            });
+            AvvisoReportNonDisponibile("Non ci sono articoli da stampare: applica un filtro prima di stampare.");
             return;
         }
 
         if (DataSource.Any(a => a.Tipo != "MP"))
         {
-            ToastService.ShowToast(new ToastOptions
-            {
-                Title = "Report non disponibile",
-                Text = "Questo report è disponibile solo quando gli articoli filtrati sono tutti di tipo Materiali.",
-                RenderStyle = ToastRenderStyle.Warning,
-                ProviderName = "MainToastProvider"
-            });
+            AvvisoReportNonDisponibile("Questo report è disponibile solo quando gli articoli filtrati sono tutti di tipo Materiali.");
             return;
         }
 
         var idMat = DataSource.Select(a => a.IdMat).Where(id => id != 0).Distinct().ToList();
         if (idMat.Count == 0)
         {
-            ToastService.ShowToast(new ToastOptions
-            {
-                Title = "Report non disponibile",
-                Text = "Nessun materiale valido trovato tra gli articoli filtrati.",
-                RenderStyle = ToastRenderStyle.Warning,
-                ProviderName = "MainToastProvider"
-            });
+            AvvisoReportNonDisponibile("Nessun materiale valido trovato tra gli articoli filtrati.");
             return;
         }
 
-        var url = $"/report/stampa?nome={Uri.EscapeDataString(nome)}&ids={string.Join(",", idMat)}";
+        var url = $"/report/stampa-materiali?nome={Uri.EscapeDataString(nome)}&ids={string.Join(",", idMat)}";
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    private async Task StampaReportProdotti(string nome)
+    {
+        if (DataSource == null || DataSource.Count == 0)
+        {
+            AvvisoReportNonDisponibile("Non ci sono articoli da stampare: applica un filtro prima di stampare.");
+            return;
+        }
+
+        if (DataSource.Any(a => a.Tipo != "PR"))
+        {
+            AvvisoReportNonDisponibile("Questo report è disponibile solo quando gli articoli filtrati sono tutti di tipo Prodotti.");
+            return;
+        }
+
+        var idMod = DataSource.Select(a => a.IdMod).Where(id => id != 0).Distinct().ToList();
+        if (idMod.Count == 0)
+        {
+            AvvisoReportNonDisponibile("Nessun prodotto valido trovato tra gli articoli filtrati.");
+            return;
+        }
+
+        var url = $"/report/stampa-prodotti?nome={Uri.EscapeDataString(nome)}&ids={string.Join(",", idMod)}";
         await JSRuntime.InvokeVoidAsync("open", url, "_blank");
     }
 }

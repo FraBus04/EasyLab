@@ -11,6 +11,7 @@ namespace EasyLab.Servizi
 
             table.Columns.Add("Stato", typeof(string));
             table.Columns.Add("idContatto", typeof(int));
+            table.Columns.Add("RifIdContatto", typeof(string));
             table.Columns.Add("Mat", typeof(string));
             table.Columns.Add("DescMat", typeof(string));
             table.Columns.Add("idFornitore", typeof(int));
@@ -101,6 +102,7 @@ namespace EasyLab.Servizi
 
                 row["Stato"] = (object?)r.Stato ?? DBNull.Value;
                 row["idContatto"] = r.IdContatto;
+                row["RifIdContatto"] = r.IdContatto.ToString();
                 row["Mat"] = (object?)r.Mat ?? DBNull.Value;
                 row["DescMat"] = (object?)r.DescMat ?? DBNull.Value;
                 row["idFornitore"] = r.IdFornitore;
