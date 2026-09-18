@@ -356,6 +356,24 @@ app.MapGet("/report/stampa-commesse", (int idComm) =>
     return Results.File(stream.ToArray(), "application/pdf");
 }).RequireAuthorization();
 
+// Report Sintesi Stato Commesse: non riguarda una singola commessa ma la selezione filtrata
+// corrente di FasiCommesse.razor, gia' sincronizzata su Sel_ST (idClasse=130) dall'ultima
+// ricerca (Cerca()). idClasse e idUte sono gli stessi usati per scrivere quelle righe.
+app.MapGet("/report/stampa-commesse-stato", (int idClasse, int idUte) =>
+{
+    if (idClasse <= 0 || idUte < 0)
+        return Results.BadRequest("Parametri non validi.");
+
+    var report = new EasyLab.ReportsVb.XtraReport_Produz_GeneCommesse_Testa_AvanzFasi();
+    report.ImpostaConnessione(connectionString!);
+    report.ImpostaParametri(idClasse, idUte);
+
+    using var stream = new MemoryStream();
+    report.ExportToPdf(stream, new DevExpress.XtraPrinting.PdfExportOptions());
+
+    return Results.File(stream.ToArray(), "application/pdf");
+}).RequireAuthorization();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

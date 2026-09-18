@@ -105,8 +105,14 @@
                     <Items>
                         <DxMenuItem Click="StampaReportSintesi">
                             <TextTemplate>
-                                <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Report Sintesi Movimenti Commessa
+                                <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Report Movimenti Sintesi Commessa
                             </TextTemplate>
+                        </DxMenuItem>
+
+                        <DxMenuItem Click="StampaReportStatoCommesse">
+                             <TextTemplate>
+                                <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Report Sintesi Stato Commesse
+                             </TextTemplate>
                         </DxMenuItem>
 
                         <DxMenuItem Click="ExportToExcel">
@@ -403,7 +409,6 @@
     {
         if (UtentId == null) return;
 
-        // Una riga senza permesso esplicito NON è visibile: serve un permesso con Visualizza = true.
         var visibili = await DbContext.PermessiLetturaTabelles.AsNoTracking()
             .Where(p => p.UtenteId == UtentId && p.Visualizza
                 && (p.TabellaId == IdTabellaStagioni || p.TabellaId == IdTabellaBrand || p.TabellaId == IdTabellaLaboratori))
@@ -567,7 +572,6 @@
         _ => null
     };
 
-    // TortaAvanzFasi arriva dalla SP come bucket 0-4 (vedi CASE nella SP), non come percentuale esatta.
     private static int GetTortaPercent(int? bucket) => bucket switch
     {
         1 => 25,
@@ -577,7 +581,6 @@
         _ => 0
     };
 
-    // Coppia chiaro/scuro per barra % e torta avanzamento, presa da Colori.json (palette "saldo").
     private static (string Chiaro, string Scuro) GetColoriSaldo(string? saldo)
     {
         var chiave = saldo switch
@@ -604,7 +607,6 @@
 
             using var context = await DbFactory.CreateDbContextAsync();
 
-            // Salva la selezione corrente su Sel_ST: la SP di report legge da lì i filtri da applicare.
             await context.Database.ExecuteSqlInterpolatedAsync(
                 $"DELETE FROM Sel_ST WHERE idClasse={IdClasseFasiCommesse} AND idUte={idUte} AND Chiave IN ({ChiaveSelStContatti}, {ChiaveSelStStagioni}, {ChiaveSelStTipoOrdine}, {ChiaveSelStFasi})");
 
@@ -758,7 +760,6 @@
                 });
             }
 
-            // La SP non filtra per laboratorio: lo applichiamo lato client sul risultato.
             var laboratorioIds = LaboratoriSelezionati.Select(l => l.Id).ToHashSet();
             DataSource = righe.Where(r => r.IdLab != null && laboratorioIds.Contains(r.IdLab.Value)).ToList();
             FasiColonneAttive = Math.Min(Fasi.Count, 15);
@@ -798,6 +799,31 @@
         await JSRuntime.InvokeVoidAsync("open", url, "_blank");
     }
 
+    private async Task StampaReportStatoCommesse()
+    {
+        if (DataSource.Count == 0)
+        {
+            ToastService.ShowToast(new ToastOptions
+            {
+                Title = "Report non disponibile",
+                Text = "Esegui una ricerca prima di stampare.",
+                RenderStyle = ToastRenderStyle.Warning,
+                ProviderName = "MainToastProvider"
+            });
+            return;
+        }
+
+        var idUte = await GetIdUteAsync();
+        if (idUte == null)
+        {
+            ShowDialog("Errore", "Impossibile determinare l'utente corrente.");
+            return;
+        }
+
+        var url = $"/report/stampa-commesse-stato?idClasse={IdClasseFasiCommesse}&idUte={idUte}";
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+
     private void ShowDialog(string title, string message)
     {
         _dialogTitle = title;
@@ -827,14 +853,14 @@
     private void ToggleListPane()
     {
         if (!ListPaneCollapsed && DetailsPaneCollapsed)
-            return; // almeno un pannello deve restare selezionato
+            return; 
         ListPaneCollapsed = !ListPaneCollapsed;
     }
 
     private void ToggleDetailsPane()
     {
         if (!DetailsPaneCollapsed && ListPaneCollapsed)
-            return; // almeno un pannello deve restare selezionato
+            return; 
         DetailsPaneCollapsed = !DetailsPaneCollapsed;
     }
 }
