@@ -5,11 +5,13 @@
 @using EasyLab.Models
 @using EasyLab.Components.Utils
 @using Microsoft.EntityFrameworkCore
+@using Microsoft.Extensions.Caching.Memory
 @using System.Text.Json
 @rendermode InteractiveServer
 @inject NavigationManager NavigationManager
 @inject IDbContextFactory<SeaseTstContext> DbFactory
 @inject IToastNotificationService ToastService
+@inject IMemoryCache Cache
 @implements IDisposable
 
 <PageTitle>Articoli</PageTitle>
@@ -107,6 +109,12 @@
                         <img src="images/print_32x323.png" class="btn-icon-search" alt="Funzioni" />
                     </TextTemplate>
                     <Items>
+                            <DxMenuItem Click='@(() => StampaReport("Report_Gestione_Materiali_Report_Tecnici.rdlc"))'>
+                            <TextTemplate>
+                                <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Report Gestione Materiali
+                            </TextTemplate>
+                        </DxMenuItem>
+
                         <DxMenuItem Click="ExportToExcel">
                             <TextTemplate>
                                 <img src="images/excel.png" style="width:16px;height:16px;" class="me-1" /> Esporta Excel
@@ -390,48 +398,9 @@
 
                             <div class="ms-auto d-flex align-items-center gap-2 flex-shrink-0">
                                 <span class="type-badge me-2">@ArticoloSelezionato.Tipo</span>
-
-                                <div class="header-divider h-25 mx-2"></div>
-
-                                <div class="dropdown-actions d-flex gap-3">
-                                        <div class="header-btn-container" title="Reports">
-                                        <DxMenu CssClass="modern-menu" Title="">
-                                            <Items>
-                                                <DxMenuItem CssClass="border-0">
-                                                    <TextTemplate>
-                                                            <img src="images/print_32x323.png" class="menu-icon-img" alt="Reports" />
-                                                    </TextTemplate>
-                                                    <Items>
-                                                        <DxMenuItem Text="Stampa" IconCssClass="oi oi-print text-primary" />
-                                                        <DxMenuItem Text="Scheda Tecnica" IconCssClass="oi oi-file text-info" />
-                                                        <DxMenuItem Text="Esporta in Excel" IconCssClass="oi oi-spreadsheet text-success" Click="ExportToExcel" />
-                                                    </Items>
-                                                </DxMenuItem>
-                                            </Items>
-                                        </DxMenu>
-                                    </div>
-
-                                    <div class="header-btn-container" title="Azioni">
-                                        <DxMenu CssClass="modern-menu" Title="">
-                                            <Items>
-                                                <DxMenuItem CssClass="border-0">
-                                                    <TextTemplate>
-                                                        <img src="images/Funzioni32.png" class="menu-icon-img" alt="Azioni" />
-                                                    </TextTemplate>
-                                                    <Items>
-                                                        <DxMenuItem Text="Cambia Chiave" IconCssClass="oi oi-key text-secondary"  />
-                                                        <DxMenuItem Text="Genera EAN" IconCssClass="oi oi-barcode text-info"  />
-                                                        <DxMenuItem Text="DiBa" IconCssClass="oi oi-barcode text-info" />
-                                                        <DxMenuItem Text="Regole Misura" IconCssClass="oi oi-resize-both text-success"  />
-                                                        <DxMenuItem Text="Vedi Utilizzo" IconCssClass="oi oi-list-rich text-primary"  />
-                                                    </Items>
-                                                </DxMenuItem>
-                                            </Items>
-                                        </DxMenu>
-                                    </div>
-                                </div>
                             </div>
                         </div>
+                    }
                     }
                 else
                 {
@@ -443,7 +412,6 @@
                         </svg>
                         Dettagli
                     </button>
-                }
                 }
                     <div class="detail-tabs-container" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
                         <div class="art-tab-nav flex-shrink-0">
@@ -656,17 +624,35 @@
         _ => tipo
     };
 
+    private static readonly TimeSpan DurataCacheLookup = TimeSpan.FromMinutes(15);
+
     private async Task CaricaLookups()
     {
-        using var context = await DbFactory.CreateDbContextAsync();
-        Lookups["Nazione"] = SafeDictionary(await context.TabNazionis.AsNoTracking().ToListAsync(),
-            n => n.Id, n => n.Nazione ?? n.Cod ?? n.Id.ToString());
-        Lookups["Modello"] = SafeDictionary(await context.BasiModellis.AsNoTracking().ToListAsync(),
-            m => m.Id, m => string.IsNullOrWhiteSpace(m.Nome) ? m.Mdl : m.Nome);
-        Lookups["Materiale"] = SafeDictionary(await context.BasiMaterialis.AsNoTracking().ToListAsync(),
-            m => m.Id, m => m.DescMat);
-        Lookups["TipoMateriale"] = SafeDictionary(await context.TabTipoMateriales.AsNoTracking().ToListAsync(),
-            t => t.Id, t => t.Descr ?? t.CdTipoMat);
+        Lookups["Nazione"] = await CaricaLookupConCache("lookup:Nazione", async context =>
+            SafeDictionary(await context.TabNazionis.AsNoTracking().ToListAsync(),
+                n => n.Id, n => n.Nazione ?? n.Cod ?? n.Id.ToString()));
+
+        Lookups["Modello"] = await CaricaLookupConCache("lookup:Modello", async context =>
+            SafeDictionary(await context.BasiModellis.AsNoTracking().ToListAsync(),
+                m => m.Id, m => string.IsNullOrWhiteSpace(m.Nome) ? m.Mdl : m.Nome));
+
+        Lookups["Materiale"] = await CaricaLookupConCache("lookup:Materiale", async context =>
+            SafeDictionary(await context.BasiMaterialis.AsNoTracking().ToListAsync(),
+                m => m.Id, m => m.DescMat));
+
+        Lookups["TipoMateriale"] = await CaricaLookupConCache("lookup:TipoMateriale", async context =>
+            SafeDictionary(await context.TabTipoMateriales.AsNoTracking().ToListAsync(),
+                t => t.Id, t => t.Descr ?? t.CdTipoMat));
+    }
+
+    private async Task<Dictionary<int, string>> CaricaLookupConCache(string chiave, Func<SeaseTstContext, Task<Dictionary<int, string>>> carica)
+    {
+        return await Cache.GetOrCreateAsync(chiave, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = DurataCacheLookup;
+            using var context = await DbFactory.CreateDbContextAsync();
+            return await carica(context);
+        }) ?? new();
     }
 
     private static Dictionary<int, string> SafeDictionary<T>(List<T> items, Func<T, int> keySelector, Func<T, string?> textSelector)
@@ -701,7 +687,7 @@
 
             var laboratorioIds = LaboratoriSelezionati.Select(l => l.Id).ToList();
 
-            query = query.Where(a => laboratorioIds.Contains(a.IdLabPrev.Value));
+            query = query.Where(a => a.Tipo == "MP" || (a.IdLabPrev != null && laboratorioIds.Contains(a.IdLabPrev.Value)));
 
             DataSource = await query.OrderBy(a => a.Cd).ToListAsync();
 
@@ -1079,5 +1065,48 @@
             isDbBusy = false;
             StateHasChanged();
         }
+    }
+
+    private async Task StampaReport(string nome)
+    {
+        if (DataSource == null || DataSource.Count == 0)
+        {
+            ToastService.ShowToast(new ToastOptions
+            {
+                Title = "Report non disponibile",
+                Text = "Non ci sono articoli da stampare: applica un filtro prima di stampare.",
+                RenderStyle = ToastRenderStyle.Warning,
+                ProviderName = "MainToastProvider"
+            });
+            return;
+        }
+
+        if (DataSource.Any(a => a.Tipo != "MP"))
+        {
+            ToastService.ShowToast(new ToastOptions
+            {
+                Title = "Report non disponibile",
+                Text = "Questo report è disponibile solo quando gli articoli filtrati sono tutti di tipo Materiali.",
+                RenderStyle = ToastRenderStyle.Warning,
+                ProviderName = "MainToastProvider"
+            });
+            return;
+        }
+
+        var idMat = DataSource.Select(a => a.IdMat).Where(id => id != 0).Distinct().ToList();
+        if (idMat.Count == 0)
+        {
+            ToastService.ShowToast(new ToastOptions
+            {
+                Title = "Report non disponibile",
+                Text = "Nessun materiale valido trovato tra gli articoli filtrati.",
+                RenderStyle = ToastRenderStyle.Warning,
+                ProviderName = "MainToastProvider"
+            });
+            return;
+        }
+
+        var url = $"/report/stampa?nome={Uri.EscapeDataString(nome)}&ids={string.Join(",", idMat)}";
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
     }
 }

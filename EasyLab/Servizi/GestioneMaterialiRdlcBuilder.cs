@@ -1,0 +1,194 @@
+using System.Data;
+using EasyLab.Models;
+
+namespace EasyLab.Servizi
+{
+    public static class GestioneMaterialiRdlcBuilder
+    {
+        public static DataTable Build(IEnumerable<VBasiMateriali> righe)
+        {
+            var table = new DataTable("DataSet1");
+
+            table.Columns.Add("Stato", typeof(string));
+            table.Columns.Add("idContatto", typeof(int));
+            table.Columns.Add("Mat", typeof(string));
+            table.Columns.Add("DescMat", typeof(string));
+            table.Columns.Add("idFornitore", typeof(int));
+            table.Columns.Add("Fornitore", typeof(string));
+            table.Columns.Add("CodArtFornitore", typeof(string));
+            table.Columns.Add("UM", typeof(string));
+            table.Columns.Add("UMPeso", typeof(string));
+            table.Columns.Add("Peso", typeof(short));
+            table.Columns.Add("PesoMTQ", typeof(short));
+            table.Columns.Add("HForn", typeof(short));
+            table.Columns.Add("HUtile", typeof(short));
+            table.Columns.Add("cdOP", typeof(string));
+            table.Columns.Add("OP", typeof(string));
+            table.Columns.Add("cdNazioni", typeof(string));
+            table.Columns.Add("Nazioni", typeof(string));
+            table.Columns.Add("Taric", typeof(string));
+            table.Columns.Add("LeadTimeGG", typeof(int));
+            table.Columns.Add("cdTipoMat", typeof(string));
+            table.Columns.Add("cdCatTag", typeof(string));
+            table.Columns.Add("idComp", typeof(int));
+            table.Columns.Add("Composizione", typeof(string));
+            table.Columns.Add("Lav1", typeof(string));
+            table.Columns.Add("Lav2", typeof(string));
+            table.Columns.Add("Lav3", typeof(string));
+            table.Columns.Add("Lav4", typeof(string));
+            table.Columns.Add("Lav5", typeof(string));
+            table.Columns.Add("Lav6", typeof(string));
+            table.Columns.Add("idStagUltima", typeof(int));
+            table.Columns.Add("StagUltima", typeof(string));
+            table.Columns.Add("PathImg", typeof(string));
+            table.Columns.Add("DataIns", typeof(DateTime));
+            table.Columns.Add("DataUpd", typeof(DateTime));
+            table.Columns.Add("idUteIns", typeof(int));
+            table.Columns.Add("idUteUpd", typeof(int));
+            table.Columns.Add("cdFamMat", typeof(string));
+            table.Columns.Add("MacroGruppo", typeof(string));
+            table.Columns.Add("MinProd", typeof(string));
+            table.Columns.Add("LungPezze", typeof(string));
+            table.Columns.Add("Mat___Desc", typeof(string));
+            table.Columns.Add("idComp2", typeof(int));
+            table.Columns.Add("idComp3", typeof(int));
+            table.Columns.Add("idPos1", typeof(int));
+            table.Columns.Add("idPos2", typeof(int));
+            table.Columns.Add("idPos3", typeof(int));
+            table.Columns.Add("TP", typeof(string));
+            table.Columns.Add("Composizione2", typeof(string));
+            table.Columns.Add("Composizione3", typeof(string));
+            table.Columns.Add("Posizione", typeof(string));
+            table.Columns.Add("Posizione2", typeof(string));
+            table.Columns.Add("Posizione3", typeof(string));
+            table.Columns.Add("TP_Desc", typeof(string));
+            table.Columns.Add("Pz", typeof(double));
+            table.Columns.Add("TipoMatDesc", typeof(string));
+            table.Columns.Add("TipoMatOrdPM", typeof(int));
+            table.Columns.Add("CatTagDesc", typeof(string));
+            table.Columns.Add("DescCommerc", typeof(string));
+            table.Columns.Add("ckMatMis", typeof(bool));
+            table.Columns.Add("Contatto", typeof(string));
+            table.Columns.Add("idMat", typeof(int));
+            table.Columns.Add("MisCostoFisso", typeof(double));
+            table.Columns.Add("MisCostoVar", typeof(double));
+            table.Columns.Add("MisCostoSco", typeof(double));
+            table.Columns.Add("Nota", typeof(string));
+            table.Columns.Add("cdValuta", typeof(string));
+            table.Columns.Add("Tempo", typeof(double));
+            table.Columns.Add("ckMatTaglio", typeof(bool));
+            table.Columns.Add("ckMatColore", typeof(bool));
+            table.Columns.Add("ckAbbModello", typeof(bool));
+            table.Columns.Add("UMAcq", typeof(string));
+            table.Columns.Add("LeadTime", typeof(string));
+            table.Columns.Add("idMPScar", typeof(int));
+            table.Columns.Add("idTipoMat", typeof(int));
+            table.Columns.Add("PathLogo", typeof(string));
+            table.Columns.Add("idlav1", typeof(int));
+            table.Columns.Add("idlav2", typeof(int));
+            table.Columns.Add("idlav3", typeof(int));
+            table.Columns.Add("idlav4", typeof(int));
+            table.Columns.Add("idlav5", typeof(int));
+            table.Columns.Add("idlav6", typeof(int));
+            table.Columns.Add("ckSemilav", typeof(bool));
+            table.Columns.Add("idMod", typeof(int));
+            table.Columns.Add("idStagFabb", typeof(bool));
+            table.Columns.Add("ContattoImg", typeof(byte[]));
+
+            foreach (var r in righe.OrderBy(r => r.Mat))
+            {
+                var row = table.NewRow();
+
+                row["Stato"] = (object?)r.Stato ?? DBNull.Value;
+                row["idContatto"] = r.IdContatto;
+                row["Mat"] = (object?)r.Mat ?? DBNull.Value;
+                row["DescMat"] = (object?)r.DescMat ?? DBNull.Value;
+                row["idFornitore"] = r.IdFornitore;
+                row["Fornitore"] = (object?)r.Fornitore ?? DBNull.Value;
+                row["CodArtFornitore"] = (object?)r.CodArtFornitore ?? DBNull.Value;
+                row["UM"] = (object?)r.Um ?? DBNull.Value;
+                row["UMPeso"] = (object?)r.Umpeso ?? DBNull.Value;
+                row["Peso"] = (object?)r.Peso ?? DBNull.Value;
+                row["PesoMTQ"] = (object?)r.PesoMtq ?? DBNull.Value;
+                row["HForn"] = (object?)r.Hforn ?? DBNull.Value;
+                row["HUtile"] = (object?)r.Hutile ?? DBNull.Value;
+                row["cdOP"] = (object?)r.CdOp ?? DBNull.Value;
+                row["OP"] = (object?)r.Op ?? DBNull.Value;
+                row["cdNazioni"] = (object?)r.CdNazioni ?? DBNull.Value;
+                row["Nazioni"] = (object?)r.Nazioni ?? DBNull.Value;
+                row["Taric"] = (object?)r.HsCode ?? DBNull.Value;
+                row["LeadTimeGG"] = (object?)r.LeadTimeGg ?? DBNull.Value;
+                row["cdTipoMat"] = (object?)r.CdTipoMat ?? DBNull.Value;
+                row["cdCatTag"] = (object?)r.CdCatTag ?? DBNull.Value;
+                row["idComp"] = (object?)r.IdComp ?? DBNull.Value;
+                row["Composizione"] = (object?)r.Composizione ?? DBNull.Value;
+                row["Lav1"] = (object?)r.Lav1 ?? DBNull.Value;
+                row["Lav2"] = (object?)r.Lav2 ?? DBNull.Value;
+                row["Lav3"] = (object?)r.Lav3 ?? DBNull.Value;
+                row["Lav4"] = (object?)r.Lav4 ?? DBNull.Value;
+                row["Lav5"] = (object?)r.Lav5 ?? DBNull.Value;
+                row["Lav6"] = (object?)r.Lav6 ?? DBNull.Value;
+                row["idStagUltima"] = (object?)r.IdStagUltima ?? DBNull.Value;
+                row["StagUltima"] = (object?)r.StagUltima ?? DBNull.Value;
+                row["PathImg"] = (object?)r.PathImg ?? DBNull.Value;
+                row["DataIns"] = (object?)r.DataIns ?? DBNull.Value;
+                row["DataUpd"] = (object?)r.DataUpd ?? DBNull.Value;
+                row["idUteIns"] = (object?)r.IdUteIns ?? DBNull.Value;
+                row["idUteUpd"] = (object?)r.IdUteUpd ?? DBNull.Value;
+                row["cdFamMat"] = (object?)r.CdFamMat ?? DBNull.Value;
+                row["MacroGruppo"] = (object?)r.MacroGruppo ?? DBNull.Value;
+                row["MinProd"] = (object?)r.MinProd ?? DBNull.Value;
+                row["LungPezze"] = (object?)r.LungPezze ?? DBNull.Value;
+                row["Mat___Desc"] = (object?)r.MatDesc ?? DBNull.Value;
+                row["idComp2"] = (object?)r.IdComp2 ?? DBNull.Value;
+                row["idComp3"] = (object?)r.IdComp3 ?? DBNull.Value;
+                row["idPos1"] = (object?)r.IdPos1 ?? DBNull.Value;
+                row["idPos2"] = (object?)r.IdPos2 ?? DBNull.Value;
+                row["idPos3"] = (object?)r.IdPos3 ?? DBNull.Value;
+                row["TP"] = (object?)r.Tp ?? DBNull.Value;
+                row["Composizione2"] = (object?)r.Composizione2 ?? DBNull.Value;
+                row["Composizione3"] = (object?)r.Composizione3 ?? DBNull.Value;
+                row["Posizione"] = (object?)r.Posizione ?? DBNull.Value;
+                row["Posizione2"] = (object?)r.Posizione2 ?? DBNull.Value;
+                row["Posizione3"] = (object?)r.Posizione3 ?? DBNull.Value;
+                row["TP_Desc"] = (object?)r.TpDesc ?? DBNull.Value;
+                row["Pz"] = (object?)r.Pz ?? DBNull.Value;
+                row["TipoMatDesc"] = (object?)r.TipoMatDesc ?? DBNull.Value;
+                row["TipoMatOrdPM"] = (object?)r.TipoMatOrdPm ?? DBNull.Value;
+                row["CatTagDesc"] = (object?)r.CatTagDesc ?? DBNull.Value;
+                row["DescCommerc"] = (object?)r.DescCommerc ?? DBNull.Value;
+                row["ckMatMis"] = r.CkMatMis;
+                row["Contatto"] = (object?)r.Contatto ?? DBNull.Value;
+                row["idMat"] = r.IdMat;
+                row["MisCostoFisso"] = (object?)r.MisCostoFisso ?? DBNull.Value;
+                row["MisCostoVar"] = (object?)r.MisCostoVar ?? DBNull.Value;
+                row["MisCostoSco"] = (object?)r.MisCostoSco ?? DBNull.Value;
+                row["Nota"] = (object?)r.Nota ?? DBNull.Value;
+                row["cdValuta"] = (object?)r.CdValuta ?? DBNull.Value;
+                row["Tempo"] = (object?)r.Tempo ?? DBNull.Value;
+                row["ckMatTaglio"] = r.CkMatTaglio;
+                row["ckMatColore"] = r.CkMatColore;
+                row["ckAbbModello"] = r.CkAbbModello;
+                row["UMAcq"] = (object?)r.Umacq ?? DBNull.Value;
+                row["LeadTime"] = (object?)r.LeadTime ?? DBNull.Value;
+                row["idMPScar"] = (object?)r.IdMpscar ?? DBNull.Value;
+                row["idTipoMat"] = r.IdTipoMat;
+                row["PathLogo"] = (object?)r.PathLogo ?? DBNull.Value;
+                row["idlav1"] = (object?)r.Idlav1 ?? DBNull.Value;
+                row["idlav2"] = (object?)r.Idlav2 ?? DBNull.Value;
+                row["idlav3"] = (object?)r.Idlav3 ?? DBNull.Value;
+                row["idlav4"] = (object?)r.Idlav4 ?? DBNull.Value;
+                row["idlav5"] = (object?)r.Idlav5 ?? DBNull.Value;
+                row["idlav6"] = (object?)r.Idlav6 ?? DBNull.Value;
+                row["ckSemilav"] = r.CkSemilav;
+                row["idMod"] = (object?)r.IdMod ?? DBNull.Value;
+                row["idStagFabb"] = (object?)r.IdStagFabb ?? DBNull.Value;
+                row["ContattoImg"] = DBNull.Value;
+
+                table.Rows.Add(row);
+            }
+
+            return table;
+        }
+    }
+}

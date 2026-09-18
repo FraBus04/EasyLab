@@ -42,8 +42,10 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContextFactory<SeaseTstContext>(options =>
     options.UseSqlServer(connectionString, sql => sql.UseCompatibilityLevel(120)));
 
-builder.Services.AddDbContext<EasyLabDbContext>(options =>
+builder.Services.AddDbContextFactory<EasyLabDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("LocalConnection")));
+builder.Services.AddScoped(sp =>
+    sp.GetRequiredService<IDbContextFactory<EasyLabDbContext>>().CreateDbContext());
 
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -240,6 +242,54 @@ app.MapGet("/documentale/file", async (
         contentType = "application/octet-stream";
 
     return Results.File(percorsoCompleto, contentType, fileDownloadName: scarica == true ? file : null, enableRangeProcessing: true);
+}).RequireAuthorization();
+
+// Genera il PDF del report .rdlc originale (cartella wwwroot/Report) per gli id materiale
+// indicati, usato dal menu "Stampa" di Articoli che apre l'URL in una nuova scheda per la
+// stampa. Rendering con ReportViewerCore.NETCore (Microsoft.Reporting.NETCore.LocalReport)
+app.MapGet("/report/stampa", async (
+    string nome,
+    string ids,
+    IDbContextFactory<SeaseTstContext> dbFactory,
+    IWebHostEnvironment env) =>
+{
+    // Nessun separatore di percorso o "..": evita che "nome" venga usato per leggere file
+    // arbitrari dal server (stesso controllo di /documentale/file).
+    if (string.IsNullOrWhiteSpace(nome) || nome.IndexOfAny(new[] { '/', '\\' }) >= 0 || nome.Contains(".."))
+        return Results.BadRequest();
+
+    var percorsoReport = Path.Combine(env.WebRootPath, "Report", nome);
+    if (!string.Equals(Path.GetExtension(percorsoReport), ".rdlc", StringComparison.OrdinalIgnoreCase)
+        || !System.IO.File.Exists(percorsoReport))
+        return Results.NotFound();
+
+    var idMat = (ids ?? string.Empty)
+        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+        .Select(s => int.TryParse(s, out var id) ? id : (int?)null)
+        .Where(id => id.HasValue)
+        .Select(id => id!.Value)
+        .Distinct()
+        .ToList();
+
+    if (idMat.Count == 0)
+        return Results.BadRequest("Nessun materiale selezionato.");
+
+    using var context = await dbFactory.CreateDbContextAsync();
+
+    var righe = await context.VBasiMaterialis.AsNoTracking()
+        .Where(m => idMat.Contains(m.IdMat))
+        .ToListAsync();
+
+    var tabella = GestioneMaterialiRdlcBuilder.Build(righe);
+
+    using var fs = System.IO.File.OpenRead(percorsoReport);
+    var report = new Microsoft.Reporting.NETCore.LocalReport();
+    report.LoadReportDefinition(fs);
+    report.DataSources.Add(new Microsoft.Reporting.NETCore.ReportDataSource("DataSet1", tabella));
+
+    byte[] pdf = report.Render("PDF");
+
+    return Results.File(pdf, "application/pdf");
 }).RequireAuthorization();
 
 app.MapRazorComponents<App>()

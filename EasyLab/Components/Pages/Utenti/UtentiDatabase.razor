@@ -1,3 +1,5 @@
+@inject IDbContextFactory<EasyLabDbContext> LocalDbFactory
+
 @if (Utente == null)
 {
     <div class="d-flex align-items-center justify-content-center text-muted" style="height: 200px;">
@@ -321,7 +323,9 @@ else
 
     private async Task<Dictionary<string, bool>> CaricaECompletaPermessi(int idTabella, IEnumerable<string> righeCod)
     {
-        var permessi = await DbContext.PermessiLetturaTabelles.AsNoTracking()
+        using var context = await LocalDbFactory.CreateDbContextAsync();
+
+        var permessi = await context.PermessiLetturaTabelles.AsNoTracking()
             .Where(p => p.UtenteId == Utente!.Id && p.TabellaId == idTabella)
             .ToDictionaryAsync(p => p.RigaCod, p => p.Visualizza);
 
@@ -330,7 +334,7 @@ else
         {
             foreach (var rigaCod in mancanti)
             {
-                DbContext.PermessiLetturaTabelles.Add(new PermessiLetturaTabelle
+                context.PermessiLetturaTabelles.Add(new PermessiLetturaTabelle
                 {
                     TabellaId = idTabella,
                     UtenteId = Utente!.Id,
@@ -340,7 +344,7 @@ else
                 permessi[rigaCod] = false;
             }
 
-            await DbContext.SaveChangesAsync();
+            await context.SaveChangesAsync();
         }
 
         return permessi;
@@ -374,12 +378,14 @@ else
     {
         if (Utente == null) return;
 
-        var permesso = await DbContext.PermessiLetturaTabelles
+        using var context = await LocalDbFactory.CreateDbContextAsync();
+
+        var permesso = await context.PermessiLetturaTabelles
             .FirstOrDefaultAsync(p => p.UtenteId == Utente.Id && p.TabellaId == idTabella && p.RigaCod == rigaCod);
 
         if (permesso == null)
         {
-            DbContext.PermessiLetturaTabelles.Add(new PermessiLetturaTabelle
+            context.PermessiLetturaTabelles.Add(new PermessiLetturaTabelle
             {
                 TabellaId = idTabella,
                 UtenteId = Utente.Id,
@@ -392,6 +398,6 @@ else
             permesso.Visualizza = nuovoValore;
         }
 
-        await DbContext.SaveChangesAsync();
+        await context.SaveChangesAsync();
     }
 }
