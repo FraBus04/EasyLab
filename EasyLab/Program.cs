@@ -248,12 +248,12 @@ app.MapGet("/documentale/file", async (
 // Helper comuni ai due endpoint di stampa report sotto: validazione del nome file .rdlc (niente
 // separatore di percorso o "..", stesso controllo di /documentale/file), parsing degli id in
 // query string, e rendering finale con ReportViewerCore.NETCore (Microsoft.Reporting.NETCore.LocalReport).
-static string? RisolviPercorsoReport(string nome, IWebHostEnvironment env)
+static string? RisolviPercorsoReport(string nome, string sottocartella, IWebHostEnvironment env)
 {
     if (string.IsNullOrWhiteSpace(nome) || nome.IndexOfAny(new[] { '/', '\\' }) >= 0 || nome.Contains(".."))
         return null;
 
-    var percorso = Path.Combine(env.WebRootPath, "Report", nome);
+    var percorso = Path.Combine(env.WebRootPath, "Report", sottocartella, nome);
     if (!string.Equals(Path.GetExtension(percorso), ".rdlc", StringComparison.OrdinalIgnoreCase)
         || !System.IO.File.Exists(percorso))
         return null;
@@ -286,7 +286,7 @@ app.MapGet("/report/stampa-materiali", async (
     IDbContextFactory<SeaseTstContext> dbFactory,
     IWebHostEnvironment env) =>
 {
-    var percorsoReport = RisolviPercorsoReport(nome, env);
+    var percorsoReport = RisolviPercorsoReport(nome, "Materiale", env);
     if (percorsoReport == null)
         return Results.NotFound();
 
@@ -311,7 +311,7 @@ app.MapGet("/report/stampa-prodotti", async (
     IDbContextFactory<SeaseTstContext> dbFactory,
     IWebHostEnvironment env) =>
 {
-    var percorsoReport = RisolviPercorsoReport(nome, env);
+    var percorsoReport = RisolviPercorsoReport(nome, "Prodotto", env);
     if (percorsoReport == null)
         return Results.NotFound();
 
@@ -338,6 +338,22 @@ app.MapGet("/report/stampa-prodotti", async (
 
     // A differenza dei report materiali, questo referenzia immagini esterne (foto prodotto/logo).
     return Results.File(RenderizzaReport(percorsoReport, tabella, immaginiEsterne: true), "application/pdf");
+}).RequireAuthorization();
+
+// Report Sintesi Fasi Commesse: non e' un .rdlc caricato da disco, ma un vero XtraReport compilato 
+app.MapGet("/report/stampa-commesse", (int idComm) =>
+{
+    if (idComm <= 0)
+        return Results.BadRequest("Nessuna commessa selezionata.");
+
+    var report = new EasyLab.ReportsVb.XtraReport_CommesseFasi3Sintesi();
+    report.ImpostaConnessione(connectionString!);
+    report.ImpostaIdCommessa(idComm);
+
+    using var stream = new MemoryStream();
+    report.ExportToPdf(stream, new DevExpress.XtraPrinting.PdfExportOptions());
+
+    return Results.File(stream.ToArray(), "application/pdf");
 }).RequireAuthorization();
 
 app.MapRazorComponents<App>()

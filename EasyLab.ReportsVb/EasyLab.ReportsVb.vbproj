@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>EasyLab.ReportsVb</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DevExpress.Reporting.Core" Version="25.2.5" />
+    <PackageReference Include="DevExpress.DataAccess" Version="25.2.5" />
+    <!-- SqlDataSource cerca a runtime Microsoft.Data.SqlClient/System.Data.SqlClient via reflection:
+         non basta che lo referenzi EasyLab.csproj, serve anche qui. -->
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="5.1.7" />
+  </ItemGroup>
+
+</Project>

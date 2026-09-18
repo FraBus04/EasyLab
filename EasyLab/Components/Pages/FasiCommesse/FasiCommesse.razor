@@ -7,6 +7,7 @@
 @rendermode InteractiveServer
 @inject IDbContextFactory<SeaseTstContext> DbFactory
 @inject IToastNotificationService ToastService
+@inject IJSRuntime JSRuntime
 
 <PageTitle>Fasi Commesse</PageTitle>
 
@@ -70,15 +71,6 @@
                               SelectAllText="Tutti i laboratori" />
         </div>
         <div style="width:220px;">
-            <label class="form-label small mb-0">Fase</label>
-            <CheckboxDropdown TItem="TabFasiLavorazione"
-                              Data="@Fasi"
-                              @bind-SelectedItems="FasiSelezionati"
-                              TextFieldSelector="@(f => f.Cod)"
-                              NullText="Nessuna fase selezionata"
-                              SelectAllText="Tutte le fasi" />
-        </div>
-        <div style="width:220px;">
             <label class="form-label small mb-0">Tipo Commessa</label>
             <CheckboxDropdown TItem="TabTipoOrdineCl"
                               Data="@TipiOrdine"
@@ -111,6 +103,12 @@
                         <img src="images/print_32x323.png" class="btn-icon-search" alt="Funzioni" />
                     </TextTemplate>
                     <Items>
+                        <DxMenuItem Click="StampaReportSintesi">
+                            <TextTemplate>
+                                <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Report Sintesi Movimenti Commessa
+                            </TextTemplate>
+                        </DxMenuItem>
+
                         <DxMenuItem Click="ExportToExcel">
                             <TextTemplate>
                                 <img src="images/excel.png" style="width:16px;height:16px;" class="me-1" /> Esporta Excel
@@ -136,7 +134,8 @@
         CssClass="h-100"
         HighlightRowOnHover="true"
         FocusedRowEnabled="true"
-        FocusedRowChanged="RigaSelezionataCambiata">
+        FocusedRowChanged="RigaSelezionataCambiata"
+        RowDoubleClick="RigaDoppioClick">
     <Columns>
         <DxGridCommandColumn Width="40px" EditButtonVisible="false" DeleteButtonVisible="false" NewButtonVisible="false" ShowInColumnChooser="false">
             <HeaderTemplate Context="hdr">
@@ -258,6 +257,7 @@
                 <div class="art-tab-nav flex-shrink-0">
                     <button class="@(ActiveTab == "generale" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "generale")">Generale</button>
                     <button class="@(ActiveTab == "sintesi" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "sintesi")">Sintesi Movimenti</button>
+                    <button class="@(ActiveTab == "documentale" ? "art-tab-btn art-tab-active" : "art-tab-btn")" @onclick="@(() => ActiveTab = "documentale")">Documentale</button>
                 </div>
                 <div class="p-2" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;">
                     @if (ActiveTab == "generale")
@@ -267,6 +267,13 @@
                     else if (ActiveTab == "sintesi")
                     {
                         <SintesiMovimenti CommessaSelezionata="@CommessaSelezionata"></SintesiMovimenti>
+                    }
+                    else if (ActiveTab == "documentale")
+                    {
+                        <Documentale IdClasse="IdClasseDocCommessa"
+                                     Identificatore="@CommessaSelezionata?.NrScheda?.ToString()"
+                                     IdBrand="@IdBrandCommessaSelezionata"
+                                     ChiaveSelezione="@CommessaSelezionata?.IdComm.ToString()" />
                     }
                 </div>
             </div>
@@ -311,6 +318,9 @@
     private const string ChiaveSelStFasi = "Tab_Fasi_Lavorazione";
     private const string ChiaveSelStTipoOrdine = "Tab_TipoOrdineCL";
 
+    // IdClasse della tabella doc.Classi_Path per il tab Documentale.
+    private const int IdClasseDocCommessa = 7;
+
     // TabellaId usato per salvare/caricare filtri e layout griglia in ParametriUtente.
     private const int IdTabellaParametri = 4;
 
@@ -332,7 +342,6 @@
     private List<Contatti> BrandSelezionati = new();
     private List<TabStagioni> StagioneSelezionati = new();
     private List<TabAnagCliFor> LaboratoriSelezionati = new();
-    private List<TabFasiLavorazione> FasiSelezionati = new();
     private List<TabTipoOrdineCl> TipiOrdineSelezionati = new();
 
     private DxGrid MyGrid = default!;
@@ -340,6 +349,9 @@
     private List<ProduzGeneCommesseAvanzFasiRiga> DataSource = new();
     private int FasiColonneAttive = 0;
     private ProduzGeneCommesseAvanzFasiRiga? CommessaSelezionata;
+
+    private int? IdBrandCommessaSelezionata =>
+        Brands.FirstOrDefault(b => b.Societa1 == CommessaSelezionata?.Contatto)?.Id;
     private string ActiveTab = "generale";
     private bool ListPaneCollapsed = false;
     private bool DetailsPaneCollapsed = false;
@@ -376,7 +388,6 @@
                     BrandSelezionati = Brands.ToList();
                     StagioneSelezionati = Stagioni.ToList();
                     LaboratoriSelezionati = Laboratori.ToList();
-                    FasiSelezionati = Fasi.ToList();
                     TipiOrdineSelezionati = TipiOrdine.ToList();
                 }
             }
@@ -438,13 +449,6 @@
             LaboratoriSelezionati = Laboratori.Where(l => ids.Contains(l.Id.ToString())).ToList();
         }
 
-        var fasiString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("Fasi:"))?["Fasi:".Length..];
-        if (!string.IsNullOrEmpty(fasiString))
-        {
-            var codici = fasiString.Split('-', StringSplitOptions.RemoveEmptyEntries);
-            FasiSelezionati = Fasi.Where(f => codici.Contains(f.Cod)).ToList();
-        }
-
         var tipiOrdineString = parametroRecord.Parametri.FirstOrDefault(p => p.StartsWith("TipiOrdine:"))?["TipiOrdine:".Length..];
         if (!string.IsNullOrEmpty(tipiOrdineString))
         {
@@ -477,13 +481,12 @@
             string brands = "Brands:" + string.Join("-", BrandSelezionati.Select(b => b.Id));
             string stagioni = "Stagioni:" + string.Join("-", StagioneSelezionati.Select(s => s.Id));
             string laboratori = "Laboratori:" + string.Join("-", LaboratoriSelezionati.Select(l => l.Id));
-            string fasi = "Fasi:" + string.Join("-", FasiSelezionati.Select(f => f.Cod));
             string tipiOrdine = "TipiOrdine:" + string.Join("-", TipiOrdineSelezionati.Select(t => t.Cod));
 
             var layout = MyGrid.SaveLayout();
             string jsonLayout = "Layout:" + JsonSerializer.Serialize(layout);
 
-            var parametri = new List<string> { brands, stagioni, laboratori, fasi, tipiOrdine, jsonLayout };
+            var parametri = new List<string> { brands, stagioni, laboratori, tipiOrdine, jsonLayout };
 
             var parametroEsistente = await DbContext.ParametriUtente
                 .FirstOrDefaultAsync(p => p.UtenteId == UtentId && p.TabellaId == IdTabellaParametri);
@@ -544,7 +547,7 @@
 
     private string GetFaseCaption(int posizione)
     {
-        var fase = FasiSelezionati.OrderBy(f => f.OrdPm).ElementAtOrDefault(posizione - 1);
+        var fase = Fasi.OrderBy(f => f.OrdPm).ElementAtOrDefault(posizione - 1);
         return fase?.Cod ?? $"Fase {posizione}";
     }
 
@@ -620,7 +623,7 @@
                 await context.Database.ExecuteSqlInterpolatedAsync(
                     $"INSERT INTO Sel_ST (idClasse, idContatto, Chiave, idUte, cd) VALUES ({IdClasseFasiCommesse}, 0, {ChiaveSelStTipoOrdine}, {idUte}, {tipoOrdine.Cod})");
             }
-            foreach (var fase in FasiSelezionati)
+            foreach (var fase in Fasi)
             {
                 await context.Database.ExecuteSqlInterpolatedAsync(
                     $"INSERT INTO Sel_ST (idClasse, idContatto, Chiave, idUte, id) VALUES ({IdClasseFasiCommesse}, 0, {ChiaveSelStFasi}, {idUte}, {fase.IdFase})");
@@ -758,7 +761,7 @@
             // La SP non filtra per laboratorio: lo applichiamo lato client sul risultato.
             var laboratorioIds = LaboratoriSelezionati.Select(l => l.Id).ToHashSet();
             DataSource = righe.Where(r => r.IdLab != null && laboratorioIds.Contains(r.IdLab.Value)).ToList();
-            FasiColonneAttive = Math.Min(FasiSelezionati.Count, 15);
+            FasiColonneAttive = Math.Min(Fasi.Count, 15);
         }
         catch (Exception ex)
         {
@@ -777,6 +780,24 @@
         await MyGrid.ExportToXlsxAsync(fileName, new GridXlExportOptions());
     }
 
+    private async Task StampaReportSintesi()
+    {
+        if (CommessaSelezionata == null)
+        {
+            ToastService.ShowToast(new ToastOptions
+            {
+                Title = "Report non disponibile",
+                Text = "Seleziona una commessa in griglia prima di stampare.",
+                RenderStyle = ToastRenderStyle.Warning,
+                ProviderName = "MainToastProvider"
+            });
+            return;
+        }
+
+        var url = $"/report/stampa-commesse?idComm={CommessaSelezionata.IdComm}";
+        await JSRuntime.InvokeVoidAsync("open", url, "_blank");
+    }
+
     private void ShowDialog(string title, string message)
     {
         _dialogTitle = title;
@@ -787,6 +808,20 @@
     private void RigaSelezionataCambiata(GridFocusedRowChangedEventArgs e)
     {
         CommessaSelezionata = e.DataItem as ProduzGeneCommesseAvanzFasiRiga;
+    }
+
+    private void RigaDoppioClick(GridRowClickEventArgs e)
+    {
+        CommessaSelezionata = MyGrid.GetDataItem(e.VisibleIndex) as ProduzGeneCommesseAvanzFasiRiga;
+
+        if (DetailsPaneCollapsed)
+        {
+            DetailsPaneCollapsed = false;
+        }
+        else
+        {
+            ListPaneCollapsed = true;
+        }
     }
 
     private void ToggleListPane()

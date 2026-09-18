@@ -108,29 +108,42 @@
                         <img src="images/print_32x323.png" class="btn-icon-search" alt="Funzioni" />
                     </TextTemplate>
                     <Items>
-                        <DxMenuItem Click='@(() => StampaReportMateriali("Report_Gestione_Materiali_Report_Tecnici.rdlc"))'>
-                            <TextTemplate>
-                                <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Report Anagrafico Tecnico
-                            </TextTemplate>
+                            <DxMenuItem Text="Report Materiali">
+                            <Items>
+                                <DxMenuItem Click='@(() => StampaReportMateriali("Report_Gestione_Materiali_Report_Tecnici.rdlc"))'>
+                                    <TextTemplate>
+                                        <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Anagrafico Tecnico
+                                    </TextTemplate>
+                                </DxMenuItem>
+
+                                <DxMenuItem Click='@(() => StampaReportMateriali("Report_Gestione_Materiali2.rdlc"))'>
+                                    <TextTemplate>
+                                        <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Per Fornitore (Sel)
+                                    </TextTemplate>
+                                </DxMenuItem>
+
+                                <DxMenuItem Click='@(() => StampaReportMateriali("Report_Gestione_Materiali_Report_ListinoBase.rdlc"))'>
+                                    <TextTemplate>
+                                        <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Anagrafico Listino
+                                    </TextTemplate>
+                                </DxMenuItem>
+                            </Items>
                         </DxMenuItem>
 
-                        <DxMenuItem Click='@(() => StampaReportMateriali("Report_Gestione_Materiali2.rdlc"))'>
-                            <TextTemplate>
-                                <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Report per Fornitore (Sel)
-                            </TextTemplate>
-                        </DxMenuItem>
+                            <DxMenuItem Text="Report Prodotti">
+                            <Items>
+                                <DxMenuItem Click='@(() => StampaReportProdotti("Report_Modellario_Prodotto1.rdlc"))'>
+                                    <TextTemplate>
+                                        <img src="images/PrintSVG1.svg" style="width:16px;height:16px;" class="me-1" /> Modellario Prodotto 1
+                                    </TextTemplate>
+                                </DxMenuItem>
 
-                        <DxMenuItem Click='@(() => StampaReportMateriali("Report_Gestione_Materiali_Report_ListinoBase.rdlc"))'>
-                            <TextTemplate>
-                                <img src="images/print_16x16.png" style="width:16px;height:16px;" class="me-1" /> Report Anagrafico Listino
-                            </TextTemplate>
-                        </DxMenuItem>
-
-                        <DxMenuItem Click='@(() => StampaReportProdotti("Report_Modellario_Prodotto1.rdlc"))'>
-                            <TextTemplate>
-                                    <img src="images/PrintSVG1.svg" style="width:16px;height:16px;" class="me-1" /> Report Modellario Prodotto
-
-                            </TextTemplate>
+                                <DxMenuItem Click='@(() => StampaReportProdotti("Report_Modellario_Prodotto2.rdlc"))'>
+                                    <TextTemplate>
+                                        <img src="images/PrintSVG1.svg" style="width:16px;height:16px;" class="me-1" /> Modellario Prodotto 2
+                                    </TextTemplate>
+                                </DxMenuItem>
+                            </Items>
                         </DxMenuItem>
 
                         <DxMenuItem Click="ExportToExcel">
@@ -163,7 +176,8 @@
                     EditModelSaving="OnEditModelSaving"
                     DataItemDeleting="OnDelete"
                     FocusedRowEnabled="true"
-                    FocusedRowChanged="RigaSelezionataCambiata">
+                    FocusedRowChanged="RigaSelezionataCambiata"
+                    RowDoubleClick="RigaDoppioClick">
                 <Columns>
                     <DxGridCommandColumn Width="90px" EditButtonVisible="false" DeleteButtonVisible="false" ShowInColumnChooser="false">
                         <HeaderTemplate Context="hdr">
@@ -474,7 +488,10 @@
                             }
                             else if (ActiveTab == "documentale")
                             {
-                                <ArticoliDocumentale ArticoloSelezionato="@ArticoloSelezionato"></ArticoliDocumentale>
+                                <Documentale IdClasse="@(ArticoloSelezionato?.Tipo == "MP" ? IdClasseDocMateriale : IdClasseDocProdotto)"
+                                             Identificatore="@ArticoloSelezionato?.Parte"
+                                             IdBrand="@ArticoloSelezionato?.IdContatto"
+                                             ChiaveSelezione="@ArticoloSelezionato?.Cd" />
                             }
                         </div>
                     </div>
@@ -518,6 +535,10 @@
     // Il "Tipo" non ha una tabella a database: le righe sono le sigle PR/MP/SM.
     private const int IdTabellaTipo = 4;
     private const int IdTipoAnagLaboratorio = 4;
+
+    // IdClasse della tabella doc.Classi_Path, usati dal tab Documentale.
+    private const int IdClasseDocMateriale = 2;
+    private const int IdClasseDocProdotto = 3;
 
     // TabellaId usato per salvare/caricare filtri e layout griglia in ParametriUtente.
     private const int IdTabellaParametri = 1;
@@ -915,6 +936,18 @@
     private void OnDialogButtonClick(string value)
     {
         _dialogVisible = false;
+    }
+
+    private void RigaDoppioClick(GridRowClickEventArgs e)
+    {
+        if (DetailsPaneCollapsed)
+        {
+            DetailsPaneCollapsed = false;
+        }
+        else
+        {
+            ListPaneCollapsed = true;
+        }
     }
 
     private void ToggleListPane()

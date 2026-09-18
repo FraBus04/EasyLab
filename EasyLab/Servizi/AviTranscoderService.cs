@@ -34,7 +34,7 @@ namespace EasyLab.Servizi
             {
                 if (File.Exists(destinazione)) return destinazione;
 
-                var temp = destinazione + ".tmp";
+                var temp = Path.ChangeExtension(destinazione, null) + ".tmp.mp4";
                 var psi = new ProcessStartInfo
                 {
                     FileName = FfmpegPath,

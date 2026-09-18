@@ -155,7 +155,8 @@ else
                     DataItemDeleting="OnDeleteCommessa"
                     EditModelSaving="OnEditModelSaving"
                     FocusedRowEnabled="true"
-                    FocusedRowChanged="RigaSelezionataCambiata">
+                    FocusedRowChanged="RigaSelezionataCambiata"
+                    RowDoubleClick="RigaDoppioClick">
                 <Columns>
                     <DxGridCommandColumn Width="90px" EditButtonVisible="false" DeleteButtonVisible="false" NewButtonVisible="false" ShowInColumnChooser="false">
                         <HeaderTemplate Context="hdr">
@@ -597,7 +598,8 @@ else if (VistaAttiva == "LanciCommesse")
                                 CssClass="h-100"
                                 HighlightRowOnHover="true"
                                 FocusedRowEnabled="true"
-                                FocusedRowChanged="RigaSelezionataCambiataPr">
+                                FocusedRowChanged="RigaSelezionataCambiataPr"
+                                RowDoubleClick="RigaDoppioClickPr">
                             <Columns>
                                 <DxGridDataColumn FieldName="Gender" Caption="Gender" Width="90px" />
                                 <DxGridDataColumn FieldName="Mod" Caption="Mod" Width="100px" />
@@ -848,7 +850,8 @@ else if (VistaAttiva == "LanciCommesse")
                                 CssClass="h-100"
                                 HighlightRowOnHover="true"
                                 FocusedRowEnabled="true"
-                                FocusedRowChanged="RigaSelezionataCambiataLibera">
+                                FocusedRowChanged="RigaSelezionataCambiataLibera"
+                                RowDoubleClick="RigaDoppioClickLibera">
                             <Columns>
                                 <DxGridDataColumn Caption="Img" Width="70px">
                                     <CellDisplayTemplate Context="ctx">
@@ -1316,6 +1319,14 @@ else if (VistaAttiva == "LanciCommesse")
         DetailsPaneCollapsedPr = false;
     }
 
+    private void RigaDoppioClickPr(GridRowClickEventArgs e)
+    {
+        if (DetailsPaneCollapsedPr)
+            ShowSplitViewPr();
+        else
+            ShowDetailsOnlyPr();
+    }
+
     private async Task CercaLibera()
     {
         loadingLibera = true;
@@ -1409,6 +1420,14 @@ else if (VistaAttiva == "LanciCommesse")
     {
         ListPaneCollapsedLibera = true;
         DetailsPaneCollapsedLibera = false;
+    }
+
+    private void RigaDoppioClickLibera(GridRowClickEventArgs e)
+    {
+        if (DetailsPaneCollapsedLibera)
+            ShowSplitViewLibera();
+        else
+            ShowDetailsOnlyLibera();
     }
 
     private async Task SimulaLanciPr()
@@ -1514,6 +1533,18 @@ else if (VistaAttiva == "LanciCommesse")
     private void HideDetails()
     {
         MostraDettagli = false;
+    }
+
+    private void RigaDoppioClick(GridRowClickEventArgs e)
+    {
+        if (DetailsPaneCollapsed)
+        {
+            DetailsPaneCollapsed = false;
+        }
+        else
+        {
+            ListPaneCollapsed = true;
+        }
     }
 
     private void ToggleListPane()

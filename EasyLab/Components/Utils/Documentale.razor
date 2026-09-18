@@ -8,13 +8,13 @@
 @inject OfficeToPdfConverterService OfficeConverter
 @inject IJSRuntime JSRuntime
 
-@if (ArticoloSelezionato != null)
+@if (!string.IsNullOrEmpty(ChiaveSelezione))
 {
     <div class="d-flex flex-column h-100" style="min-height:0;">
         <div class="p-2 border-bottom small text-muted flex-shrink-0 documentale-path-bar d-flex align-items-center justify-content-between gap-2">
             <span><strong>Percorso:</strong> @CartellaPath</span>
             <label class="btn-icon-plain mb-0 d-flex align-items-center flex-shrink-0"
-                   style="@((CartellaEsiste && !CaricamentoUpload) ? "cursor:pointer;" : "cursor:default;opacity:0.4;")"
+                   style="@((!string.IsNullOrEmpty(CartellaPath) && !CaricamentoUpload) ? "cursor:pointer;" : "cursor:default;opacity:0.4;")"
                    title="Allega nuovo file">
                 @if (CaricamentoUpload)
                 {
@@ -24,7 +24,7 @@
                 {
                     <img src="images/Allega32.svg" class="btn-icon-search" alt="Allega nuovo file" />
                 }
-                <InputFile OnChange="CaricaNuovoFile" disabled="@(!CartellaEsiste || CaricamentoUpload)" style="display:none;" />
+                <InputFile OnChange="CaricaNuovoFile" disabled="@(string.IsNullOrEmpty(CartellaPath) || CaricamentoUpload)" style="display:none;" />
             </label>
         </div>
         <div class="flex-grow-1" style="min-height:0;">
@@ -32,9 +32,9 @@
                 <Panes>
                     <DxSplitterPane Size="200px" MinSize="120px">
                         <div style="height:100%; overflow-y:auto;">
-                            @if (!CartellaEsiste)
+                            @if (string.IsNullOrEmpty(CartellaPath))
                             {
-                                <p class="text-muted small p-2">Cartella non trovata.</p>
+                                <p class="text-muted small p-2">Percorso documentale non configurato.</p>
                             }
                             else if (File.Count == 0)
                             {
@@ -80,13 +80,13 @@
                             }
                             else if (EVideo(FileSelezionato) && !ErroreAnteprima)
                             {
-                                <video controls autoplay style="max-width:100%; max-height:100%;" @onloadeddata="FineCaricamento" @onerror="FineCaricamentoConErrore">
+                                <video @key="FileSelezionato" controls autoplay style="max-width:100%; max-height:100%;" @onloadeddata="FineCaricamento" @onerror="FineCaricamentoConErrore">
                                     <source src="@FileUrl(FileSelezionato)" type="@ContentType(FileSelezionato)" />
                                 </video>
                             }
                             else if (EAudio(FileSelezionato))
                             {
-                                <audio controls autoplay style="width:100%;" @onloadeddata="FineCaricamento" @onerror="FineCaricamentoConErrore">
+                                <audio @key="FileSelezionato" controls autoplay style="width:100%;" @onloadeddata="FineCaricamento" @onerror="FineCaricamentoConErrore">
                                     <source src="@FileUrl(FileSelezionato)" type="@ContentType(FileSelezionato)" />
                                 </audio>
                             }
@@ -118,17 +118,26 @@
 }
 else
 {
-    <p class="text-muted p-3">Nessun articolo selezionato.</p>
+    <p class="text-muted p-3">Nessun elemento selezionato.</p>
 }
 
 @code {
-    [Parameter] public BasiAll? ArticoloSelezionato { get; set; }
+    // IdClasse della tabella doc.Classi_Path (es. 2 = Materiale, 3 = Prodotto, 7 = Commessa).
+    [Parameter, EditorRequired] public int IdClasse { get; set; }
 
-    // IdClasse della tabella doc.Classi_Path: 2 = Materiale, 3 = Prodotto.
-    private const int IdClasseMateriale = 2;
-    private const int IdClasseProdotto = 3;
+    // Suffisso della cartella <idBrand>_<Identificatore> da cercare (Parte per gli articoli,
+    // NrScheda per le commesse).
+    [Parameter] public string? Identificatore { get; set; }
 
-    private string? ultimoArticoloCd;
+    // Prefisso idBrand usato solo per comporre il nome di una cartella nuova (nella ricerca di
+    // una cartella gia' esistente l'idBrand viene ignorato, vedi CaricaFile).
+    [Parameter] public int? IdBrand { get; set; }
+
+    // Cambia ogni volta che l'elemento selezionato cambia (Cd per gli articoli, IdComm per le
+    // commesse): serve solo a capire quando ricaricare l'elenco file.
+    [Parameter] public string? ChiaveSelezione { get; set; }
+
+    private string? ultimaChiave;
     private List<string> File = new();
     private string? FileSelezionato;
     private bool CartellaEsiste;
@@ -140,10 +149,14 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
-        if (ArticoloSelezionato != null && ArticoloSelezionato.Cd != ultimoArticoloCd)
+        if (!string.IsNullOrEmpty(ChiaveSelezione) && ChiaveSelezione != ultimaChiave)
         {
-            ultimoArticoloCd = ArticoloSelezionato.Cd;
+            ultimaChiave = ChiaveSelezione;
             await CaricaFile();
+        }
+        else if (string.IsNullOrEmpty(ChiaveSelezione))
+        {
+            ultimaChiave = null;
         }
     }
 
@@ -158,42 +171,49 @@ else
         ErroreAnteprima = false;
         TestoAnteprima = null;
 
-        if (ArticoloSelezionato == null) return;
-
-        var idClasse = ArticoloSelezionato.Tipo == "MP" ? IdClasseMateriale : IdClasseProdotto;
+        if (string.IsNullOrWhiteSpace(Identificatore)) return;
 
         using var context = await DbFactory.CreateDbContextAsync();
         var basePath = await context.ClassiPaths.AsNoTracking()
-            .Where(c => c.IdClasse == idClasse)
+            .Where(c => c.IdClasse == IdClasse)
             .Select(c => c.Path)
             .FirstOrDefaultAsync();
 
-        if (string.IsNullOrWhiteSpace(basePath) || string.IsNullOrWhiteSpace(ArticoloSelezionato.Parte)) return;
+        if (string.IsNullOrWhiteSpace(basePath)) return;
 
         try
         {
-            // Le cartelle sono nominate <idBrand>_<Parte>. Ignoro idBrand
-            var cartellaTrovata = Directory.Exists(basePath)
-                ? Directory.GetDirectories(basePath)
-                    .FirstOrDefault(d =>
-                    {
-                        var nome = Path.GetFileName(d);
-                        var idx = nome.IndexOf('_');
-                        var suffisso = idx >= 0 ? nome[(idx + 1)..] : nome;
-                        return string.Equals(suffisso, ArticoloSelezionato.Parte, StringComparison.OrdinalIgnoreCase);
-                    })
-                : null;
+            if (!Directory.Exists(basePath)) return;
 
-            if (cartellaTrovata == null) return;
+            // Le cartelle sono nominate <idBrand>_<Identificatore>. Ignoro idBrand quando cerco
+            // una cartella gia' esistente: potrebbe essere stata creata con un prefisso storico
+            // diverso da quello che useremmo noi oggi.
+            var cartellaTrovata = Directory.GetDirectories(basePath)
+                .FirstOrDefault(d =>
+                {
+                    var nome = Path.GetFileName(d);
+                    var idx = nome.IndexOf('_');
+                    var suffisso = idx >= 0 ? nome[(idx + 1)..] : nome;
+                    return string.Equals(suffisso, Identificatore, StringComparison.OrdinalIgnoreCase);
+                });
 
-            CartellaPath = cartellaTrovata;
-            CartellaEsiste = true;
-            File = Directory.GetFiles(CartellaPath)
-                .Select(Path.GetFileName)
-                .Where(f => f != null)
-                .Select(f => f!)
-                .OrderBy(f => f)
-                .ToList();
+            if (cartellaTrovata != null)
+            {
+                CartellaPath = cartellaTrovata;
+                CartellaEsiste = true;
+                File = Directory.GetFiles(CartellaPath)
+                    .Select(Path.GetFileName)
+                    .Where(f => f != null)
+                    .Select(f => f!)
+                    .OrderBy(f => f)
+                    .ToList();
+            }
+            else
+            {
+                // Non esiste ancora: si crea al primo allegato (CaricaNuovoFile), non subito qui,
+                // per non riempire il disco di cartelle vuote solo aprendo la scheda di un elemento.
+                CartellaPath = Path.Combine(basePath, $"{IdBrand ?? 0}_{Identificatore}");
+            }
         }
         catch (IOException)
         {
@@ -207,7 +227,7 @@ else
 
     private async Task CaricaNuovoFile(InputFileChangeEventArgs e)
     {
-        if (!CartellaEsiste || CaricamentoUpload) return;
+        if (string.IsNullOrEmpty(CartellaPath) || CaricamentoUpload) return;
 
         CaricamentoUpload = true;
         ErroreAnteprima = false;
@@ -215,6 +235,12 @@ else
 
         try
         {
+            if (!CartellaEsiste)
+            {
+                Directory.CreateDirectory(CartellaPath);
+                CartellaEsiste = true;
+            }
+
             var browserFile = e.File;
             var destinazione = Path.Combine(CartellaPath, browserFile.Name);
 
